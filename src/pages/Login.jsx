@@ -30,9 +30,13 @@ export default function Login() {
     }
 
     try {
-      await login(email, password)
-      // Navigate immediately after successful login
-      navigate('/dashboard', { replace: true })
+      const { user } = await login(email, password)
+      // Navigate based on role
+      if (user.role === 'mentor') {
+        navigate('/mentor-dashboard', { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
     } catch (err) {
       setErrors({ submit: err.message || 'Login failed' })
     }

@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
-import { doubtAPI, communityAPI } from '../services/api'
+import { doubtAPI, communityAPI, roomAPI } from '../services/api'
 import Card from '../components/Card'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
-import { Link } from 'react-router-dom'
-import { MessageSquare, Users, BookOpen, Zap, TrendingUp, Award } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { MessageSquare, Users, BookOpen, Zap, TrendingUp, Award, X, MessageCircle } from 'lucide-react'
 
 export default function Dashboard() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [doubts, setDoubts] = useState([])
   const [communities, setCommunities] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedMatch, setSelectedMatch] = useState(null)
+  const [showMatchModal, setShowMatchModal] = useState(false)
+  const [matchedRoom, setMatchedRoom] = useState(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,6 +53,35 @@ export default function Dashboard() {
     { icon: BookOpen, label: 'Resources', value: 0, color: 'bg-green-500', bgColor: 'bg-green-50 dark:bg-green-900/20' },
     { icon: Zap, label: 'XP Points', value: user?.xp || 0, color: 'bg-yellow-500', bgColor: 'bg-yellow-50 dark:bg-yellow-900/20' },
   ]
+
+  const handleViewMatch = async (doubt, e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (doubt.status !== 'matched') return
+    
+    try {
+      const roomsRes = await roomAPI.list()
+      const rooms = roomsRes.data.data?.rooms || roomsRes.data.data || []
+      
+      const room = rooms.find(r => {
+        const doubt1Id = r.doubt1?._id || r.doubt1
+        const doubt2Id = r.doubt2?._id || r.doubt2
+        return String(doubt1Id) === String(doubt._id) || String(doubt2Id) === String(doubt._id)
+      })
+      
+      if (room) {
+        setSelectedMatch(doubt)
+        setMatchedRoom(room)
+        setShowMatchModal(true)
+      } else {
+        alert('Match details not found')
+      }
+    } catch (error) {
+      console.error('Failed to fetch match details:', error)
+      alert('Failed to load match details')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -161,20 +194,34 @@ export default function Dashboard() {
           ) : doubts.length > 0 ? (
             <div className="space-y-4">
               {doubts.map((doubt) => (
-                <Link key={doubt._id} to={`/doubts/${doubt._id}`}>
-                  <Card className="hover:shadow-lg transition-shadow border-l-4 border-blue-500 cursor-pointer">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-white hover:text-blue-600 transition">{doubt.title}</h3>
-                        <p className="text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{doubt.description}</p>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">{doubt.topic}</Badge>
-                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">{doubt.status}</Badge>
-                        </div>
+                <Card key={doubt._id} className="hover:shadow-lg transition-shadow border-l-4 border-blue-500">
+                  <div className="flex justify-between items-start">
+                    <Link to={`/doubts/${doubt._id}`} className="flex-1">
+                      <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-white hover:text-blue-600 transition">{doubt.title}</h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{doubt.description}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">{doubt.topic}</Badge>
+                        {doubt.status === 'matched' ? (
+                          <button
+                            onClick={(e) => handleViewMatch(doubt, e)}
+                            className="inline-flex"
+                          >
+                            <Badge variant="success" className="cursor-pointer hover:opacity-80 transition">
+                              {doubt.status} - Click to view
+                            </Badge>
+                          </button>
+                        ) : (
+                          <Badge 
+                            variant={doubt.status === 'resolved' ? 'success' : 'warning'}
+                            className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                          >
+                            {doubt.status}
+                          </Badge>
+                        )}
                       </div>
-                    </div>
-                  </Card>
-                </Link>
+                    </Link>
+                  </div>
+                </Card>
               ))}
             </div>
           ) : (
@@ -236,6 +283,110 @@ export default function Dashboard() {
             </Card>
           )}
         </motion.div>
+
+        {/* Match Details Modal */}
+        <AnimatePresence>
+          {showMatchModal && selectedMatch && matchedRoom && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setShowMatchModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className="sticky top-0 bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-t-2xl">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">🎉 Match Found!</h2>
+                      <p className="text-green-100">You've been matched with another student</p>
+                    </div>
+                    <button
+                      onClick={() => setShowMatchModal(false)}
+                      className="p-2 hover:bg-white/20 rounded-lg transition"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Content */}
+                <div className="p-6 space-y-6">
+                  {/* Your Doubt */}
+                  <div>
+                    <h3 className="text-lg font-bold mb-3 text-gray-900 dark:text-white">Your Doubt:</h3>
+                    <Card className="bg-blue-50 dark:bg-blue-900/20">
+                      <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-2">{selectedMatch.title}</h4>
+                      <p className="text-gray-700 dark:text-gray-300 text-sm mb-3">{selectedMatch.description}</p>
+                      <div className="flex gap-2">
+                        <Badge>{selectedMatch.topic}</Badge>
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* Matched User's Doubt */}
+                  <div>
+                    <h3 className="text-lg font-bold mb-3 text-gray-900 dark:text-white">Matched Student's Doubt:</h3>
+                    {(() => {
+                      const matchedDoubt = matchedRoom.doubt1?._id === selectedMatch._id 
+                        ? matchedRoom.doubt2 
+                        : matchedRoom.doubt1
+                      const matchedUser = matchedRoom.student1?._id === user._id 
+                        ? matchedRoom.student2 
+                        : matchedRoom.student1
+                      
+                      return (
+                        <>
+                          <Card className="bg-green-50 dark:bg-green-900/20 mb-4">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                                {matchedUser?.name?.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900 dark:text-white">{matchedUser?.name}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{matchedUser?.email}</p>
+                              </div>
+                            </div>
+                            <h4 className="font-bold text-green-900 dark:text-green-100 mb-2">{matchedDoubt?.title}</h4>
+                            <p className="text-gray-700 dark:text-gray-300 text-sm mb-3">{matchedDoubt?.description}</p>
+                            <div className="flex gap-2">
+                              <Badge>{matchedDoubt?.topic}</Badge>
+                            </div>
+                          </Card>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-3">
+                            <Button
+                              variant="primary"
+                              className="flex-1 flex items-center justify-center gap-2"
+                              onClick={() => navigate(`/chat/${matchedRoom._id}`)}
+                            >
+                              <MessageCircle size={20} />
+                              Start Chat
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              onClick={() => setShowMatchModal(false)}
+                            >
+                              Close
+                            </Button>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )

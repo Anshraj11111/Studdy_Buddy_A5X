@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
 import { initSocket, disconnectSocket } from './services/socket'
@@ -8,6 +8,7 @@ import IncomingCallModal from './components/IncomingCallModal'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
+import MentorDashboard from './pages/MentorDashboard'
 import Doubts from './pages/Doubts'
 import PostDoubt from './pages/PostDoubt'
 import EditDoubt from './pages/EditDoubt'
@@ -24,6 +25,22 @@ import AIBot from './pages/AIBot'
 function ProtectedRoute({ children }) {
   const { token } = useAuthStore()
   return token ? children : <Navigate to="/login" />
+}
+
+// Mentor Only Route Component
+function MentorRoute({ children }) {
+  const { token, user } = useAuthStore()
+  if (!token) return <Navigate to="/login" />
+  if (user?.role !== 'mentor') return <Navigate to="/dashboard" />
+  return children
+}
+
+// Student Only Route Component
+function StudentRoute({ children }) {
+  const { token, user } = useAuthStore()
+  if (!token) return <Navigate to="/login" />
+  if (user?.role === 'mentor') return <Navigate to="/mentor-dashboard" />
+  return children
 }
 
 export default function App() {
@@ -70,33 +87,81 @@ export default function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <StudentRoute>
                 <Dashboard />
-              </ProtectedRoute>
+              </StudentRoute>
+            }
+          />
+          <Route
+            path="/mentor-dashboard"
+            element={
+              <MentorRoute>
+                <MentorDashboard />
+              </MentorRoute>
             }
           />
           <Route
             path="/doubts"
             element={
-              <ProtectedRoute>
+              <StudentRoute>
                 <Doubts />
-              </ProtectedRoute>
+              </StudentRoute>
             }
           />
           <Route
             path="/doubts/new"
             element={
-              <ProtectedRoute>
+              <StudentRoute>
                 <PostDoubt />
-              </ProtectedRoute>
+              </StudentRoute>
             }
           />
           <Route
             path="/doubts/:id/edit"
             element={
-              <ProtectedRoute>
+              <StudentRoute>
                 <EditDoubt />
-              </ProtectedRoute>
+              </StudentRoute>
+            }
+          />
+          <Route
+            path="/chats"
+            element={
+              <StudentRoute>
+                <Chats />
+              </StudentRoute>
+            }
+          />
+          <Route
+            path="/chat/:roomId"
+            element={
+              <StudentRoute>
+                <Chat />
+              </StudentRoute>
+            }
+          />
+          <Route
+            path="/video-call/:roomId"
+            element={
+              <StudentRoute>
+                <VideoCall />
+              </StudentRoute>
+            }
+          />
+          <Route
+            path="/mentors"
+            element={
+              <StudentRoute>
+                <Mentors />
+              </StudentRoute>
+            }
+          />
+          <Route
+            path="/ai-bot"
+            element={
+              <StudentRoute>
+                <AIBot />
+              </StudentRoute>
             }
           />
           <Route
@@ -116,14 +181,6 @@ export default function App() {
             }
           />
           <Route
-            path="/chats"
-            element={
-              <ProtectedRoute>
-                <Chats />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/profile"
             element={
               <ProtectedRoute>
@@ -131,41 +188,9 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/chat/:roomId"
-            element={
-              <ProtectedRoute>
-                <Chat />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/video-call/:roomId"
-            element={
-              <ProtectedRoute>
-                <VideoCall />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/mentors"
-            element={
-              <ProtectedRoute>
-                <Mentors />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/ai-bot"
-            element={
-              <ProtectedRoute>
-                <AIBot />
-              </ProtectedRoute>
-            }
-          />
 
           {/* Default Route */}
-          <Route path="/" element={<Navigate to={token ? '/dashboard' : '/login'} replace />} />
+          <Route path="/" element={<Navigate to={token ? (user?.role === 'mentor' ? '/mentor-dashboard' : '/dashboard') : '/login'} replace />} />
         </Routes>
       </div>
     </Router>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { resourceAPI } from '../services/api'
+import { useAuthStore } from '../store/authStore'
 import Card from '../components/Card'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
@@ -9,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { Download, Search } from 'lucide-react'
 
 export default function Resources() {
+  const { user } = useAuthStore()
   const [resources, setResources] = useState([])
   const [search, setSearch] = useState('')
   const [topic, setTopic] = useState('')
@@ -52,9 +54,11 @@ export default function Resources() {
         >
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-4xl font-bold">Resources</h1>
-            <Link to="/resources/upload">
-              <Button variant="primary">Upload Resource</Button>
-            </Link>
+            {user?.role === 'mentor' && (
+              <Link to="/resources/upload">
+                <Button variant="primary">Upload Resource</Button>
+              </Link>
+            )}
           </div>
 
           {/* Search and Filters */}

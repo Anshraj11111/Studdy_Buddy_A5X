@@ -8,12 +8,13 @@ export const useAuthStore = create((set) => ({
   error: null,
   isInitialized: false,
 
-  register: async (email, password, name, role) => {
+  register: async (email, password, name, role, mentorCode) => {
     set({ loading: true, error: null })
     try {
-      const response = await authAPI.register({ email, password, name, role })
+      const response = await authAPI.register({ email, password, name, role, mentorCode })
       const { token, user } = response.data.data // Backend returns { success, data: { user, token } }
       localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(user))
       set({ user, token, loading: false, error: null })
       return response.data.data
     } catch (error) {
@@ -29,6 +30,7 @@ export const useAuthStore = create((set) => ({
       const response = await authAPI.login({ email, password })
       const { token, user } = response.data.data // Backend returns { success, data: { user, token } }
       localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(user))
       set({ user, token, loading: false, error: null })
       return response.data.data
     } catch (error) {

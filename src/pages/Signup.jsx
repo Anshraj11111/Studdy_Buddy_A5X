@@ -12,6 +12,7 @@ export default function Signup() {
     password: '',
     confirmPassword: '',
     role: 'student',
+    mentorCode: '',
   })
   const [errors, setErrors] = useState({})
   const { register, loading } = useAuthStore()
@@ -25,6 +26,9 @@ export default function Signup() {
     if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters'
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match'
+    }
+    if (formData.role === 'mentor' && !formData.mentorCode) {
+      newErrors.mentorCode = 'Mentor code is required'
     }
     return newErrors
   }
@@ -45,9 +49,13 @@ export default function Signup() {
     }
 
     try {
-      await register(formData.email, formData.password, formData.name, formData.role)
-      // Navigate immediately after successful registration
-      navigate('/dashboard', { replace: true })
+      await register(formData.email, formData.password, formData.name, formData.role, formData.mentorCode)
+      // Navigate based on role
+      if (formData.role === 'mentor') {
+        navigate('/mentor-dashboard', { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
     } catch (err) {
       setErrors({ submit: err.message || 'Registration failed' })
     }
@@ -112,7 +120,7 @@ export default function Signup() {
 
             <div>
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Role
+                I am a
               </label>
               <select
                 name="role"
@@ -124,6 +132,19 @@ export default function Signup() {
                 <option value="mentor">Mentor</option>
               </select>
             </div>
+
+            {/* Mentor Code Field - Only show if role is mentor */}
+            {formData.role === 'mentor' && (
+              <Input
+                label="Mentor Code"
+                type="text"
+                name="mentorCode"
+                placeholder="Enter your mentor code"
+                value={formData.mentorCode}
+                onChange={handleChange}
+                error={errors.mentorCode}
+              />
+            )}
 
             {errors.submit && (
               <div className="p-3 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-lg text-sm">

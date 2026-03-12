@@ -57,6 +57,7 @@ export const doubtAPI = {
   delete: (id) => api.delete(`/doubts/${id}`),
   update: (id, data) => api.put(`/doubts/${id}`, data),
   findMatch: (id) => api.post(`/doubts/${id}/find-match`),
+  addReply: (id, data) => api.post(`/doubts/${id}/replies`, data),
 }
 
 export const resourceAPI = {

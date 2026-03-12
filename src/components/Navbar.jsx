@@ -32,24 +32,37 @@ export default function Navbar() {
           <div className="hidden md:flex items-center space-x-2">
             {user && (
               <>
-                <Link 
-                  to="/dashboard" 
-                  className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
-                >
-                  Dashboard
-                </Link>
-                <Link 
-                  to="/doubts" 
-                  className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
-                >
-                  Doubts
-                </Link>
-                <Link 
-                  to="/chats" 
-                  className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
-                >
-                  Chats
-                </Link>
+                {user.role === 'student' ? (
+                  <>
+                    <Link 
+                      to="/dashboard" 
+                      className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link 
+                      to="/doubts" 
+                      className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
+                    >
+                      My Doubts
+                    </Link>
+                    <Link 
+                      to="/chats" 
+                      className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
+                    >
+                      Chats
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link 
+                      to="/mentor-dashboard" 
+                      className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
+                    >
+                      Dashboard
+                    </Link>
+                  </>
+                )}
                 <Link 
                   to="/resources" 
                   className="px-4 py-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-700 dark:text-gray-200 hover:text-green-600 dark:hover:text-green-400 transition-all font-medium"
@@ -139,27 +152,41 @@ export default function Navbar() {
                     <div className="text-sm text-gray-500 dark:text-gray-400">View Profile</div>
                   </div>
                 </Link>
-                <Link
-                  to="/dashboard"
-                  className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  to="/doubts"
-                  className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Doubts
-                </Link>
-                <Link
-                  to="/chats"
-                  className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Chats
-                </Link>
+                {user.role === 'student' ? (
+                  <>
+                    <Link
+                      to="/dashboard"
+                      className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      to="/doubts"
+                      className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      My Doubts
+                    </Link>
+                    <Link
+                      to="/chats"
+                      className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Chats
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/mentor-dashboard"
+                      className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                  </>
+                )}
                 <Link
                   to="/resources"
                   className="block px-4 py-2.5 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
