@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { doubtAPI } from '../services/api'
+import { useAuthStore } from '../store/authStore'
 import Card from '../components/Card'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
-import { MessageSquare, CheckCircle, Upload, Users } from 'lucide-react'
+import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User } from 'lucide-react'
 
 export default function MentorDashboard() {
+  const { user } = useAuthStore()
   const [doubts, setDoubts] = useState([])
   const [loading, setLoading] = useState(true)
   const [replyingTo, setReplyingTo] = useState(null)
+  const [editingReply, setEditingReply] = useState(null)
   const [replyText, setReplyText] = useState('')
   const [stats, setStats] = useState({
     totalDoubts: 0,
@@ -45,13 +48,45 @@ export default function MentorDashboard() {
     if (!replyText.trim()) return
     
     try {
-      await doubtAPI.addReply(doubtId, { content: replyText })
+      if (editingReply) {
+        // Edit existing reply
+        await doubtAPI.editReply(doubtId, editingReply, { content: replyText })
+        setEditingReply(null)
+      } else {
+        // Add new reply
+        await doubtAPI.addReply(doubtId, { content: replyText })
+      }
       setReplyText('')
       setReplyingTo(null)
       fetchAllDoubts() // Refresh list
     } catch (error) {
-      console.error('Failed to add reply:', error)
+      console.error('Failed to handle reply:', error)
+      alert(error.response?.data?.error?.message || 'Failed to save reply')
     }
+  }
+
+  const handleEditReply = (doubtId, reply) => {
+    setReplyingTo(doubtId)
+    setEditingReply(reply._id)
+    setReplyText(reply.content)
+  }
+
+  const handleDeleteReply = async (doubtId, replyId) => {
+    if (!window.confirm('Are you sure you want to delete this reply?')) return
+    
+    try {
+      await doubtAPI.deleteReply(doubtId, replyId)
+      fetchAllDoubts() // Refresh list
+    } catch (error) {
+      console.error('Failed to delete reply:', error)
+      alert(error.response?.data?.error?.message || 'Failed to delete reply')
+    }
+  }
+
+  const cancelReply = () => {
+    setReplyingTo(null)
+    setEditingReply(null)
+    setReplyText('')
   }
 
   return (
@@ -111,49 +146,93 @@ export default function MentorDashboard() {
                   transition={{ delay: index * 0.05 }}
                 >
                   <Card>
-                    <div className="flex justify-between items-start mb-3">
+                    {/* Doubt Header with User Info */}
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                        {doubt.userId?.name?.charAt(0).toUpperCase() || 'U'}
+                      </div>
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg mb-2">{doubt.title}</h3>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h3 className="font-bold text-lg">{doubt.title}</h3>
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              <User size={14} />
+                              <span className="font-medium">{doubt.userId?.name || 'Unknown User'}</span>
+                              <span>•</span>
+                              <span>{new Date(doubt.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Badge variant={doubt.status === 'resolved' ? 'success' : doubt.status === 'matched' ? 'warning' : 'default'}>
+                              {doubt.status}
+                            </Badge>
+                            <Badge>{doubt.topic}</Badge>
+                          </div>
+                        </div>
+                        <p className="text-gray-600 dark:text-gray-400 text-sm">
                           {doubt.description}
                         </p>
-                        <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                          <span>Posted by: {doubt.user?.name || 'Unknown'}</span>
-                          <span>•</span>
-                          <span>{new Date(doubt.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Badge variant={doubt.status === 'resolved' ? 'success' : 'warning'}>
-                          {doubt.status}
-                        </Badge>
-                        <Badge>{doubt.subject}</Badge>
                       </div>
                     </div>
 
                     {/* Replies */}
                     {doubt.replies && doubt.replies.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-sm font-semibold mb-2">Replies:</p>
-                        {doubt.replies.map((reply, idx) => (
-                          <div key={idx} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg mb-2">
-                            <p className="text-sm">{reply.content}</p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {reply.user?.name} • {new Date(reply.createdAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                        ))}
+                        <p className="text-sm font-semibold mb-3 flex items-center gap-2">
+                          <MessageSquare size={16} />
+                          Replies ({doubt.replies.length})
+                        </p>
+                        <div className="space-y-3">
+                          {doubt.replies.map((reply) => (
+                            <div key={reply._id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                    {reply.user?.name?.charAt(0).toUpperCase() || 'M'}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-semibold">{reply.user?.name || 'Mentor'}</p>
+                                    <p className="text-xs text-gray-500">{new Date(reply.createdAt).toLocaleDateString()}</p>
+                                  </div>
+                                </div>
+                                {/* Edit/Delete buttons - only show if current user is the reply author */}
+                                {user && reply.user?._id === user._id && (
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => handleEditReply(doubt._id, reply)}
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
+                                      title="Edit reply"
+                                    >
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteReply(doubt._id, reply._id)}
+                                      className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition"
+                                      title="Delete reply"
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-700 dark:text-gray-300">{reply.content}</p>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
                     {/* Reply Form */}
                     {replyingTo === doubt._id ? (
                       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <label className="block text-sm font-medium mb-2">
+                          {editingReply ? 'Edit Reply' : 'Write a Reply'}
+                        </label>
                         <textarea
                           value={replyText}
                           onChange={(e) => setReplyText(e.target.value)}
                           placeholder="Write your reply..."
-                          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
+                          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           rows="3"
                         />
                         <div className="flex gap-2 mt-2">
@@ -162,15 +241,12 @@ export default function MentorDashboard() {
                             size="sm"
                             onClick={() => handleReply(doubt._id)}
                           >
-                            Send Reply
+                            {editingReply ? 'Update Reply' : 'Send Reply'}
                           </Button>
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => {
-                              setReplyingTo(null)
-                              setReplyText('')
-                            }}
+                            onClick={cancelReply}
                           >
                             Cancel
                           </Button>

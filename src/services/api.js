@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://studdy-buddy-backend-a5x.onrender.com'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -58,6 +58,8 @@ export const doubtAPI = {
   update: (id, data) => api.put(`/doubts/${id}`, data),
   findMatch: (id) => api.post(`/doubts/${id}/find-match`),
   addReply: (id, data) => api.post(`/doubts/${id}/replies`, data),
+  editReply: (id, replyId, data) => api.put(`/doubts/${id}/replies/${replyId}`, data),
+  deleteReply: (id, replyId) => api.delete(`/doubts/${id}/replies/${replyId}`),
 }
 
 export const resourceAPI = {
