@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
 import { initSocket, disconnectSocket } from './services/socket'
@@ -20,6 +20,17 @@ import Chat from './pages/Chat'
 import VideoCall from './pages/VideoCall'
 import Mentors from './pages/Mentors'
 import AIBot from './pages/AIBot'
+
+// Scroll to top on route change
+function ScrollToTop() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [pathname])
+
+  return null
+}
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -75,6 +86,7 @@ export default function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen bg-background-light dark:bg-background-dark">
         {token && <Navbar />}
         {token && <IncomingCallModal />}

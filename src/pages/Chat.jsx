@@ -130,10 +130,18 @@ export default function Chat() {
         userId: user._id,
         content: content.trim()
       })
+      console.log('Message sent:', { roomId, userId: user._id, content: content.trim() })
+    } else {
+      console.error('Socket not connected')
     }
     
     setContent('')
     setTyping(false)
+    
+    // Scroll to bottom after sending
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 100)
   }
 
   const handleTypingChange = (e) => {
@@ -163,43 +171,43 @@ export default function Chat() {
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
-      {/* Chat Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      {/* Chat Header - Mobile Optimized */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 py-3 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
             <Link to="/chats">
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition flex-shrink-0 active:scale-95">
                 <ArrowLeft size={20} />
               </button>
             </Link>
             
             {/* Other User Info */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                 {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
-              <div>
-                <h2 className="font-bold text-lg">{otherUser?.name || 'Unknown User'}</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{room?.topic}</p>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold text-sm sm:text-lg truncate">{otherUser?.name || 'Unknown User'}</h2>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{room?.topic}</p>
               </div>
             </div>
           </div>
 
-          {/* Video Call Button */}
-          <Link to={`/video-call/${roomId}`}>
-            <button className="flex items-center gap-2 px-4 py-2 text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg transition shadow-md">
-              <Video size={18} />
-              <span className="text-sm font-medium">Video Call</span>
+          {/* Video Call Button - Mobile Optimized */}
+          <Link to={`/video-call/${roomId}`} className="flex-shrink-0">
+            <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg transition shadow-md active:scale-95 min-h-[40px]">
+              <Video size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span className="text-xs sm:text-sm font-medium hidden xs:inline">Video</span>
             </button>
           </Link>
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 max-w-7xl mx-auto w-full bg-gray-50 dark:bg-gray-900">
+      {/* Messages Area - Mobile Optimized */}
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 max-w-7xl mx-auto w-full bg-gray-50 dark:bg-gray-900">
         {messages.length === 0 ? (
           <div className="text-center py-12 text-gray-600 dark:text-gray-400">
-            <p>No messages yet. Start the conversation!</p>
+            <p className="text-sm sm:text-base">No messages yet. Start the conversation!</p>
           </div>
         ) : (
           messages.map((msg, index) => {
@@ -211,19 +219,19 @@ export default function Chat() {
                 key={msg._id || index}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                className={`flex items-end gap-1 sm:gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
               >
                 {/* Other user avatar on left */}
                 {!isOwnMessage && showAvatar && (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
                     {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
                   </div>
                 )}
-                {!isOwnMessage && !showAvatar && <div className="w-8" />}
+                {!isOwnMessage && !showAvatar && <div className="w-6 sm:w-8" />}
                 
                 {/* Message bubble */}
                 <div
-                  className={`max-w-xs md:max-w-md px-4 py-2 rounded-2xl shadow-sm ${
+                  className={`max-w-[75%] sm:max-w-xs md:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm ${
                     isOwnMessage
                       ? 'bg-green-500 text-white rounded-br-none'
                       : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-none'
@@ -245,11 +253,11 @@ export default function Chat() {
         )}
 
         {typingUsers.length > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
               {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
             </div>
-            <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-2xl rounded-bl-none shadow-sm">
+            <div className="bg-white dark:bg-gray-800 px-3 sm:px-4 py-2 rounded-2xl rounded-bl-none shadow-sm">
               <div className="flex space-x-1">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
@@ -262,25 +270,25 @@ export default function Chat() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+      {/* Message Input - Mobile Optimized */}
+      <div className="border-t border-gray-200 dark:border-gray-700 p-3 sm:p-4 bg-white dark:bg-gray-800 sticky bottom-0">
         <div className="max-w-7xl mx-auto">
-          <form onSubmit={handleSendMessage} className="flex gap-2">
-            <Input
+          <form onSubmit={handleSendMessage} className="flex gap-2 items-end">
+            <input
               type="text"
               placeholder="Type a message..."
               value={content}
               onChange={handleTypingChange}
-              className="flex-1"
+              className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[44px]"
+              autoComplete="off"
             />
-            <Button
+            <button
               type="submit"
-              variant="primary"
               disabled={!content.trim()}
-              className="px-4"
+              className="px-3 sm:px-4 py-2 sm:py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition flex items-center justify-center min-w-[44px] min-h-[44px] active:scale-95"
             >
-              <Send size={20} />
-            </Button>
+              <Send size={20} className="sm:w-5 sm:h-5" />
+            </button>
           </form>
         </div>
       </div>
