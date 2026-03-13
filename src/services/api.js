@@ -1,8 +1,8 @@
 import axios from "axios";
 
 const API_BASE_URL =
-import.meta.env.VITE_API_URL ||
-"https://studdy-buddy-backend-a5x.onrender.com";
+  import.meta.env.VITE_API_URL ||
+  "https://studdy-buddy-backend-a5x.onrender.com/api";
 
 const api = axios.create({
 baseURL: API_BASE_URL,
@@ -42,122 +42,122 @@ api.interceptors.response.use(
 /* ---------------- AUTH ---------------- */
 
 export const authAPI = {
-register: (data) => api.post("/api/auth/register", data),
-login: (data) => api.post("/api/auth/login", data),
-getProfile: () => api.get("/api/auth/profile"),
-updateProfile: (data) => api.put("/api/auth/profile", data),
+  register: (data) => api.post("/auth/register", data),
+  login: (data) => api.post("/auth/login", data),
+  getProfile: () => api.get("/auth/profile"),
+  updateProfile: (data) => api.put("/auth/profile", data),
 };
 
 /* ---------------- DOUBTS ---------------- */
 
 export const doubtAPI = {
-create: (data) => api.post("/api/doubts", data),
+  create: (data) => api.post("/doubts", data),
 
-list: (page = 1, limit = 10) =>
-api.get(`/api/doubts?page=${page}&limit=${limit}`),
+  list: (page = 1, limit = 10) =>
+    api.get(`/doubts?page=${page}&limit=${limit}`),
 
-getById: (id) => api.get(`/api/doubts/${id}`),
+  getById: (id) => api.get(`/doubts/${id}`),
 
-search: (query) =>
-api.get(`/api/doubts/search?keyword=${query}`),
+  search: (query) =>
+    api.get(`/doubts/search?keyword=${query}`),
 
-getByTopic: (topic, page = 1) =>
-api.get(`/api/doubts/topic/${topic}?page=${page}`),
+  getByTopic: (topic, page = 1) =>
+    api.get(`/doubts/topic/${topic}?page=${page}`),
 
-delete: (id) => api.delete(`/api/doubts/${id}`),
+  delete: (id) => api.delete(`/doubts/${id}`),
 
-update: (id, data) => api.put(`/api/doubts/${id}`, data),
+  update: (id, data) => api.put(`/doubts/${id}`, data),
 
-findMatch: (id) =>
-api.post(`/api/doubts/${id}/find-match`),
+  findMatch: (id) =>
+    api.post(`/doubts/${id}/find-match`),
 
-addReply: (id, data) =>
-api.post(`/api/doubts/${id}/replies`, data),
+  addReply: (id, data) =>
+    api.post(`/doubts/${id}/replies`, data),
 
-editReply: (id, replyId, data) =>
-api.put(`/api/doubts/${id}/replies/${replyId}`, data),
+  editReply: (id, replyId, data) =>
+    api.put(`/doubts/${id}/replies/${replyId}`, data),
 
-deleteReply: (id, replyId) =>
-api.delete(`/api/doubts/${id}/replies/${replyId}`),
+  deleteReply: (id, replyId) =>
+    api.delete(`/doubts/${id}/replies/${replyId}`),
 };
 
 /* ---------------- RESOURCES ---------------- */
 
 export const resourceAPI = {
-create: (data) => api.post("/api/resources", data),
+  create: (data) => api.post("/resources", data),
 
-list: (page = 1, limit = 10) =>
-api.get(`/api/resources?page=${page}&limit=${limit}`),
+  list: (page = 1, limit = 10) =>
+    api.get(`/resources?page=${page}&limit=${limit}`),
 
-getById: (id) => api.get(`/api/resources/${id}`),
+  getById: (id) => api.get(`/resources/${id}`),
 
-search: (query) =>
-api.get(`/api/resources/search?q=${query}`),
+  search: (query) =>
+    api.get(`/resources/search?q=${query}`),
 
-getByTopic: (topic, page = 1) =>
-api.get(`/api/resources/topic/${topic}?page=${page}`),
+  getByTopic: (topic, page = 1) =>
+    api.get(`/resources/topic/${topic}?page=${page}`),
 
-download: (id) =>
-api.post(`/api/resources/${id}/download`),
+  download: (id) =>
+    api.post(`/resources/${id}/download`),
 
-delete: (id) =>
-api.delete(`/api/resources/${id}`),
+  delete: (id) =>
+    api.delete(`/resources/${id}`),
 };
 
 /* ---------------- COMMUNITIES ---------------- */
 
 export const communityAPI = {
-create: (data) =>
-api.post("/api/communities", data),
+  create: (data) =>
+    api.post("/communities", data),
 
-list: (page = 1, limit = 10) =>
-api.get(`/api/communities?page=${page}&limit=${limit}`),
+  list: (page = 1, limit = 10) =>
+    api.get(`/communities?page=${page}&limit=${limit}`),
 
-getById: (id) =>
-api.get(`/api/communities/${id}`),
+  getById: (id) =>
+    api.get(`/communities/${id}`),
 
-join: (id) =>
-api.post(`/api/communities/${id}/join`),
+  join: (id) =>
+    api.post(`/communities/${id}/join`),
 
-leave: (id) =>
-api.post(`/api/communities/${id}/leave`),
+  leave: (id) =>
+    api.post(`/communities/${id}/leave`),
 
-createPost: (id, data) =>
-api.post(`/api/communities/${id}/posts`, data),
+  createPost: (id, data) =>
+    api.post(`/communities/${id}/posts`, data),
 
-getPosts: (id, page = 1) =>
-api.get(`/api/communities/${id}/posts?page=${page}`),
+  getPosts: (id, page = 1) =>
+    api.get(`/communities/${id}/posts?page=${page}`),
 };
 
 /* ---------------- MENTOR ---------------- */
 
 export const mentorAPI = {
-request: (data) =>
-api.post("/api/mentor/request", data),
+  request: (data) =>
+    api.post("/mentor/request", data),
 
-getPending: () =>
-api.get("/api/mentor/requests/pending"),
+  getPending: () =>
+    api.get("/mentor/requests/pending"),
 
-getMyRequests: () =>
-api.get("/api/mentor/requests"),
+  getMyRequests: () =>
+    api.get("/mentor/requests"),
 
-accept: (id) =>
-api.put(`/api/mentor/requests/${id}/accept`),
+  accept: (id) =>
+    api.put(`/mentor/requests/${id}/accept`),
 
-reject: (id) =>
-api.put(`/api/mentor/requests/${id}/reject`),
+  reject: (id) =>
+    api.put(`/mentor/requests/${id}/reject`),
 
-complete: (id) =>
-api.put(`/api/mentor/requests/${id}/complete`),
+  complete: (id) =>
+    api.put(`/mentor/requests/${id}/complete`),
 };
 
 /* ---------------- ROOMS ---------------- */
 
 export const roomAPI = {
-list: () => api.get("/api/rooms"),
+  list: () => api.get("/rooms"),
 
-getById: (id) =>
-api.get(`/api/rooms/${id}`),
+  getById: (id) =>
+    api.get(`/rooms/${id}`),
 };
 
 export default api;
