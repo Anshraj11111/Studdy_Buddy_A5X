@@ -9,71 +9,9 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-maskable-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-1.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "/screenshot-2.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    }
-  ],
-  "categories": ["education", "productivity"],
-  "shortcuts": [
-    {
-      "name": "Post Doubt",
-      "short_name": "Post Doubt",
-      "description": "Quickly post a new doubt",
-      "url": "/doubts/new",
-      "icons": [
-        {
-          "src": "/icon-96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "View Resources",
-      "short_name": "Resources",
-      "description": "Browse learning resources",
-      "url": "/resources",
-      "icons": [
-        {
-          "src": "/icon-96.png",
-          "sizes": "96x96",
-          "type": "image/png"
-        }
-      ]
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ]
 }
