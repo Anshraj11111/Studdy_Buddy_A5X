@@ -152,9 +152,11 @@ export default function Resources() {
         ) : (
           <Card className="text-center py-12">
             <p className="text-gray-600 dark:text-gray-400 mb-4">No resources found</p>
-            <Link to="/resources/upload">
-              <Button variant="primary">Upload the first resource</Button>
-            </Link>
+            {user?.role === 'mentor' && (
+              <Link to="/resources/upload">
+                <Button variant="primary">Upload the first resource</Button>
+              </Link>
+            )}
           </Card>
         )}
 
