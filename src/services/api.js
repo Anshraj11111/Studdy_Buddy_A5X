@@ -1,8 +1,18 @@
 import axios from "axios";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://studdy-buddy-backend-a5x.onrender.com/api";
+// Ensure API URL always has /api suffix
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    return envUrl;
+  }
+  // Fallback for production if env var is not set
+  return "https://studdy-buddy-backend-a5x.onrender.com/api";
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+console.log('API Base URL:', API_BASE_URL); // Debug log
 
 const api = axios.create({
 baseURL: API_BASE_URL,
