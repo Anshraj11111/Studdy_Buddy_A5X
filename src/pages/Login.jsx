@@ -6,17 +6,29 @@ import Button from '../components/Button'
 import Input from '../components/Input'
 
 export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    role: 'student',
+    mentorCode: '',
+  })
   const [errors, setErrors] = useState({})
   const { login, loading } = useAuthStore()
   const navigate = useNavigate()
 
   const validate = () => {
     const newErrors = {}
-    if (!email) newErrors.email = 'Email is required'
-    if (!password) newErrors.password = 'Password is required'
+    if (!formData.email) newErrors.email = 'Email is required'
+    if (!formData.password) newErrors.password = 'Password is required'
+    if (formData.role === 'mentor' && !formData.mentorCode) {
+      newErrors.mentorCode = 'Mentor code is required'
+    }
     return newErrors
+  }
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
   const handleSubmit = async (e) => {
@@ -30,7 +42,7 @@ export default function Login() {
     }
 
     try {
-      const { user } = await login(email, password)
+      const { user } = await login(formData.email, formData.password, formData.role, formData.mentorCode)
       // Navigate based on role
       if (user.role === 'mentor') {
         navigate('/mentor-dashboard', { replace: true })
@@ -62,20 +74,50 @@ export default function Login() {
             <Input
               label="Email"
               type="email"
+              name="email"
               placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={handleChange}
               error={errors.email}
             />
 
             <Input
               label="Password"
               type="password"
+              name="password"
               placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleChange}
               error={errors.password}
             />
+
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                I am a
+              </label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="student">Student</option>
+                <option value="mentor">Mentor</option>
+              </select>
+            </div>
+
+            {/* Mentor Code Field - Only show if role is mentor */}
+            {formData.role === 'mentor' && (
+              <Input
+                label="Mentor Code"
+                type="text"
+                name="mentorCode"
+                placeholder="Enter your mentor code"
+                value={formData.mentorCode}
+                onChange={handleChange}
+                error={errors.mentorCode}
+              />
+            )}
 
             {errors.submit && (
               <div className="p-3 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-lg text-sm">
