@@ -8,11 +8,11 @@ export const useAuthStore = create((set) => ({
   error: null,
   isInitialized: false,
 
-  register: async (email, password, name, role, mentorCode) => {
+  register: async (email, password, name, role, mentorCode, skills = []) => {
     set({ loading: true, error: null })
     try {
-      const response = await authAPI.register({ email, password, name, role, mentorCode })
-      const { token, user } = response.data.data // Backend returns { success, data: { user, token } }
+      const response = await authAPI.register({ email, password, name, role, mentorCode, skills })
+      const { token, user } = response.data.data
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
       set({ user, token, loading: false, error: null })

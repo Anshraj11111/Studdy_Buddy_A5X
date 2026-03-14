@@ -4,6 +4,9 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import Button from '../components/Button'
 import Input from '../components/Input'
+import { Check } from 'lucide-react'
+
+const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -13,6 +16,7 @@ export default function Signup() {
     confirmPassword: '',
     role: 'student',
     mentorCode: '',
+    skills: [],
   })
   const [errors, setErrors] = useState({})
   const { register, loading } = useAuthStore()
@@ -38,10 +42,19 @@ export default function Signup() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const toggleSkill = (skill) => {
+    setFormData((prev) => ({
+      ...prev,
+      skills: prev.skills.includes(skill)
+        ? prev.skills.filter(s => s !== skill)
+        : [...prev.skills, skill],
+    }))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrors({})
-    
+
     const newErrors = validate()
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
@@ -49,8 +62,7 @@ export default function Signup() {
     }
 
     try {
-      await register(formData.email, formData.password, formData.name, formData.role, formData.mentorCode)
-      // Navigate based on role
+      await register(formData.email, formData.password, formData.name, formData.role, formData.mentorCode, formData.skills)
       if (formData.role === 'mentor') {
         navigate('/mentor-dashboard', { replace: true })
       } else {
@@ -62,7 +74,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -133,17 +145,49 @@ export default function Signup() {
               </select>
             </div>
 
-            {/* Mentor Code Field - Only show if role is mentor */}
+            {/* Mentor-only fields */}
             {formData.role === 'mentor' && (
-              <Input
-                label="Mentor Code"
-                type="text"
-                name="mentorCode"
-                placeholder="Enter your mentor code"
-                value={formData.mentorCode}
-                onChange={handleChange}
-                error={errors.mentorCode}
-              />
+              <>
+                <Input
+                  label="Mentor Code"
+                  type="text"
+                  name="mentorCode"
+                  placeholder="Enter your mentor code"
+                  value={formData.mentorCode}
+                  onChange={handleChange}
+                  error={errors.mentorCode}
+                />
+
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                    Your Expertise / Streams
+                    <span className="text-gray-400 font-normal ml-1">(select all that apply)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {SKILLS.map(skill => {
+                      const selected = formData.skills.includes(skill)
+                      return (
+                        <button
+                          key={skill}
+                          type="button"
+                          onClick={() => toggleSkill(skill)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+                            selected
+                              ? 'bg-primary-500 text-white border-primary-500'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-primary-400'
+                          }`}
+                        >
+                          {selected && <Check size={12} />}
+                          {skill}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {formData.skills.length === 0 && (
+                    <p className="text-xs text-gray-400 mt-1">Select at least one area of expertise</p>
+                  )}
+                </div>
+              </>
             )}
 
             {errors.submit && (
