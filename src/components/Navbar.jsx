@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Menu, X, Moon, Sun, LogOut } from 'lucide-react'
+import { Menu, X, Moon, Sun, LogOut, Settings } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 
@@ -104,13 +104,24 @@ export default function Navbar() {
             {user ? (
               <>
                 <Link
-                  to="/profile"
+                  to="/settings"
                   className="hidden sm:flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-600 dark:text-blue-400 rounded-xl hover:shadow-md transition-all font-medium"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                    {user.name?.charAt(0).toUpperCase()}
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {user.profileImage ? (
+                      <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      user.name?.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <span>{user.name}</span>
+                </Link>
+                <Link
+                  to="/settings"
+                  className="hidden sm:flex items-center p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all"
+                  title="Settings"
+                >
+                  <Settings size={20} className="text-gray-600 dark:text-gray-400" />
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -153,15 +164,20 @@ export default function Navbar() {
             {user && (
               <>
                 <Link
-                  to="/profile"
+                  to="/settings"
                   className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl mb-2"
+                  onClick={() => setIsOpen(false)}
                 >
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-                    {user.name?.charAt(0).toUpperCase()}
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                    {user.profileImage ? (
+                      <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      user.name?.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div>
                     <div className="font-medium text-gray-900 dark:text-white">{user.name}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">View Profile</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Settings</div>
                   </div>
                 </Link>
                 {user.role === 'student' ? (
@@ -226,6 +242,14 @@ export default function Navbar() {
                   onClick={() => setIsOpen(false)}
                 >
                   Communities
+                </Link>
+                <Link
+                  to="/settings"
+                  className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Settings size={16} />
+                  Settings
                 </Link>
                 <button
                   onClick={handleLogout}

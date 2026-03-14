@@ -1,39 +1,34 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MessageCircle, Users, Bot } from 'lucide-react'
+import { X, CheckCircle, HelpCircle, Users, Bot, ArrowRight, PhoneOff } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export default function CallEndFeedbackModal({ isOpen, onClose, roomId, otherUser }) {
-  const [step, setStep] = useState(1) // 1: doubt cleared?, 2: options
+  const [step, setStep] = useState(1)
   const navigate = useNavigate()
 
-  const handleDoubtCleared = () => {
-    // Doubt clear ho gaya
+  const handleResolved = () => {
     onClose()
     navigate('/doubts')
   }
 
-  const handleDoubtNotCleared = () => {
-    // Show options
+  const handleNotResolved = () => {
     setStep(2)
   }
 
-  const handleConnectToMentor = () => {
-    // Auto-match with available mentor
-    onClose()
-    navigate('/mentors?autoMatch=true')
-  }
-
   const handleFindMentor = () => {
-    // Browse mentor list
     onClose()
     navigate('/mentors')
   }
 
   const handleTalkToAI = () => {
-    // Open AI bot chat
     onClose()
     navigate('/ai-bot')
+  }
+
+  const handleDismiss = () => {
+    onClose()
+    navigate(`/chat/${roomId}`)
   }
 
   if (!isOpen) return null
@@ -44,112 +39,112 @@ export default function CallEndFeedbackModal({ isOpen, onClose, roomId, otherUse
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-        onClick={onClose}
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4"
+        onClick={handleDismiss}
       >
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 relative"
-          onClick={(e) => e.stopPropagation()}
+          initial={{ y: 60, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 60, opacity: 0 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="bg-white dark:bg-gray-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden"
+          onClick={e => e.stopPropagation()}
         >
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-          >
-            <X size={20} className="text-gray-600 dark:text-gray-400" />
-          </button>
+          {/* Top bar handle (mobile) */}
+          <div className="flex justify-center pt-3 pb-1 sm:hidden">
+            <div className="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full" />
+          </div>
 
           {step === 1 ? (
-            // Step 1: Doubt cleared?
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageCircle size={32} className="text-white" />
+            <div className="px-6 pb-8 pt-4 sm:pt-6">
+              {/* Icon */}
+              <div className="flex justify-center mb-4">
+                <div className="w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                  <PhoneOff size={26} className="text-red-500" />
+                </div>
               </div>
-              
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white text-center mb-1">
                 Call Ended
               </h2>
-              
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                Kya aapka doubt clear ho gaya?
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={handleDoubtCleared}
-                  className="flex-1 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition"
-                >
-                  ✓ Haan, Clear Ho Gaya
-                </button>
-                <button
-                  onClick={handleDoubtNotCleared}
-                  className="flex-1 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition"
-                >
-                  ✗ Nahi, Abhi Bhi Doubt Hai
-                </button>
-              </div>
-            </div>
-          ) : (
-            // Step 2: Options
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 text-center">
-                Koi Baat Nahi!
-              </h2>
-              
-              <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
-                Aap in options se apna doubt clear kar sakte ho:
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+                Was your doubt resolved during this session?
               </p>
 
               <div className="space-y-3">
-                {/* Connect to Mentor - Auto Match */}
                 <button
-                  onClick={handleConnectToMentor}
-                  className="w-full p-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-xl transition flex items-center gap-3 group"
+                  onClick={handleResolved}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition shadow-sm"
                 >
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
-                    <Users size={24} />
-                  </div>
-                  <div className="text-left flex-1">
-                    <div className="font-bold text-lg">Connect to Mentor</div>
-                    <div className="text-sm opacity-90">Auto-match with available mentor</div>
-                  </div>
+                  <CheckCircle size={20} />
+                  <span className="flex-1 text-left">Yes, my doubt is resolved</span>
+                  <ArrowRight size={16} className="opacity-70" />
                 </button>
-
-                {/* Find Mentor - Browse */}
                 <button
-                  onClick={handleFindMentor}
-                  className="w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-xl transition flex items-center gap-3 group"
+                  onClick={handleNotResolved}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition shadow-sm"
                 >
-                  <div className="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
-                    <Users size={24} className="text-blue-500" />
-                  </div>
-                  <div className="text-left flex-1">
-                    <div className="font-bold text-lg">Find Mentor</div>
-                    <div className="text-sm opacity-75">Browse mentor list</div>
-                  </div>
-                </button>
-
-                {/* AI Bot */}
-                <button
-                  onClick={handleTalkToAI}
-                  className="w-full p-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-xl transition flex items-center gap-3 group"
-                >
-                  <div className="w-12 h-12 bg-purple-500 bg-opacity-20 rounded-lg flex items-center justify-center group-hover:scale-110 transition">
-                    <Bot size={24} className="text-purple-500" />
-                  </div>
-                  <div className="text-left flex-1">
-                    <div className="font-bold text-lg">Talk to AI Bot</div>
-                    <div className="text-sm opacity-75">Get instant AI assistance</div>
-                  </div>
+                  <HelpCircle size={20} />
+                  <span className="flex-1 text-left">No, I still need help</span>
+                  <ArrowRight size={16} className="opacity-70" />
                 </button>
               </div>
 
               <button
-                onClick={onClose}
-                className="w-full mt-4 px-6 py-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+                onClick={handleDismiss}
+                className="w-full mt-3 py-2.5 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+              >
+                Dismiss
+              </button>
+            </div>
+          ) : (
+            <div className="px-6 pb-8 pt-4 sm:pt-6">
+              <div className="flex justify-center mb-4">
+                <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                  <HelpCircle size={26} className="text-blue-500" />
+                </div>
+              </div>
+
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white text-center mb-1">
+                Need More Help?
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
+                Here are a few ways to continue getting support.
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={handleFindMentor}
+                  className="w-full flex items-center gap-4 px-4 py-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-xl transition shadow-sm group"
+                >
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition">
+                    <Users size={20} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold text-sm sm:text-base">Find a Mentor</div>
+                    <div className="text-xs opacity-80">Browse and connect with available mentors</div>
+                  </div>
+                  <ArrowRight size={16} className="opacity-70 flex-shrink-0" />
+                </button>
+
+                <button
+                  onClick={handleTalkToAI}
+                  className="w-full flex items-center gap-4 px-4 py-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white rounded-xl transition group"
+                >
+                  <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition">
+                    <Bot size={20} className="text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="text-left flex-1">
+                    <div className="font-semibold text-sm sm:text-base">Ask the AI Assistant</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Get instant answers from our AI bot</div>
+                  </div>
+                  <ArrowRight size={16} className="text-gray-400 flex-shrink-0" />
+                </button>
+              </div>
+
+              <button
+                onClick={handleDismiss}
+                className="w-full mt-3 py-2.5 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
               >
                 Maybe Later
               </button>

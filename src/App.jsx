@@ -20,6 +20,7 @@ import Chat from './pages/Chat'
 import VideoCall from './pages/VideoCall'
 import Mentors from './pages/Mentors'
 import AIBot from './pages/AIBot'
+import Settings from './pages/Settings'
 
 // Scroll to top on route change
 function ScrollToTop() {
@@ -197,6 +198,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />
