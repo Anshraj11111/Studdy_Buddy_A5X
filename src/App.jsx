@@ -139,25 +139,25 @@ export default function App() {
           <Route
             path="/chats"
             element={
-              <StudentRoute>
+              <ProtectedRoute>
                 <Chats />
-              </StudentRoute>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/chat/:roomId"
             element={
-              <StudentRoute>
+              <ProtectedRoute>
                 <Chat />
-              </StudentRoute>
+              </ProtectedRoute>
             }
           />
           <Route
             path="/video-call/:roomId"
             element={
-              <StudentRoute>
+              <ProtectedRoute>
                 <VideoCall />
-              </StudentRoute>
+              </ProtectedRoute>
             }
           />
           <Route

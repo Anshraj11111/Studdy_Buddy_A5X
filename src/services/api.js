@@ -141,6 +141,8 @@ export const communityAPI = {
 /* ---------------- MENTOR ---------------- */
 
 export const mentorAPI = {
+  getAll: () => api.get("/mentor/all"),
+
   request: (data) =>
     api.post("/mentor/request", data),
 
@@ -167,6 +169,9 @@ export const roomAPI = {
 
   getById: (id) =>
     api.get(`/rooms/${id}`),
+
+  createDirect: (otherUserId) =>
+    api.post("/rooms/direct", { otherUserId }),
 };
 
 export default api;

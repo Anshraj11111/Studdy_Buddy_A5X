@@ -1,28 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Users, Star, Clock, MessageCircle, Loader } from 'lucide-react'
-import { mentorAPI } from '../services/api'
-import { useAuthStore } from '../store/authStore'
+import { Users, Star, MessageCircle, Video, Loader, BookOpen } from 'lucide-react'
+import { mentorAPI, roomAPI } from '../services/api'
+
+const TOPICS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
 
 export default function Mentors() {
-  const [searchParams] = useSearchParams()
-  const autoMatch = searchParams.get('autoMatch') === 'true'
-  const { user } = useAuthStore()
-  
+  const navigate = useNavigate()
   const [mentors, setMentors] = useState([])
   const [loading, setLoading] = useState(true)
-  const [autoMatching, setAutoMatching] = useState(false)
-  const [selectedSubject, setSelectedSubject] = useState('all')
+  const [connecting, setConnecting] = useState(null)
+  const [selectedTopic, setSelectedTopic] = useState('all')
 
   useEffect(() => {
     fetchMentors()
-    
-    // Auto-match if coming from call end
-    if (autoMatch && user?.subjects?.length > 0) {
-      handleAutoMatch()
-    }
-  }, [autoMatch])
+  }, [])
 
   const fetchMentors = async () => {
     try {
@@ -36,47 +29,42 @@ export default function Mentors() {
     }
   }
 
-  const handleAutoMatch = async () => {
+  const handleMessage = async (mentor) => {
     try {
-      setAutoMatching(true)
-      
-      // Find mentor with matching expertise
-      const userSubject = user.subjects[0]
-      const matchedMentor = mentors.find(m => 
-        m.expertise.includes(userSubject)
-      )
-
-      
-      if (matchedMentor) {
-        // Create chat room with mentor
-        alert(`Matched with ${matchedMentor.userId.name}!`)
-        // Navigate to chat (you'll need to implement mentor chat)
-      } else {
-        alert('No mentor available right now. Please browse the list.')
-      }
+      setConnecting(mentor._id + '_msg')
+      const res = await roomAPI.createDirect(mentor._id)
+      const roomId = res.data.data.room._id
+      navigate(`/chat/${roomId}`)
     } catch (error) {
-      console.error('Auto-match failed:', error)
+      console.error('Failed to create chat:', error)
+      alert('Failed to connect. Please try again.')
     } finally {
-      setAutoMatching(false)
+      setConnecting(null)
     }
   }
 
-  const handleConnectMentor = (mentor) => {
-    // Create chat with mentor
-    alert(`Connecting with ${mentor.userId.name}...`)
-    // Implement mentor chat functionality
+  const handleVideoCall = async (mentor) => {
+    try {
+      setConnecting(mentor._id + '_video')
+      const res = await roomAPI.createDirect(mentor._id)
+      const roomId = res.data.data.room._id
+      navigate(`/video-call/${roomId}`)
+    } catch (error) {
+      console.error('Failed to start video call:', error)
+      alert('Failed to connect. Please try again.')
+    } finally {
+      setConnecting(null)
+    }
   }
 
-  const filteredMentors = selectedSubject === 'all' 
-    ? mentors 
-    : mentors.filter(m => m.expertise.includes(selectedSubject))
+  const filteredMentors = selectedTopic === 'all'
+    ? mentors
+    : mentors.filter(m => m.skills?.includes(selectedTopic))
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="flex items-center justify-center h-screen">
-          <Loader className="animate-spin text-primary-500" size={48} />
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader className="animate-spin text-primary-500" size={48} />
       </div>
     )
   }
@@ -86,130 +74,122 @@ export default function Mentors() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Find a Mentor
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Find a Mentor</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Connect with experienced mentors to clear your doubts
+            Connect with experienced mentors via chat or video call
           </p>
         </div>
 
-        {/* Auto-matching indicator */}
-        {autoMatching && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg"
-          >
-            <div className="flex items-center gap-3">
-              <Loader className="animate-spin text-blue-500" size={20} />
-              <span className="text-blue-700 dark:text-blue-300">
-                Finding the best mentor for you...
-              </span>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Subject Filter */}
+        {/* Topic Filter */}
         <div className="mb-6 flex gap-2 flex-wrap">
           <button
-            onClick={() => setSelectedSubject('all')}
-            className={`px-4 py-2 rounded-lg transition ${
-              selectedSubject === 'all'
+            onClick={() => setSelectedTopic('all')}
+            className={`px-4 py-2 rounded-lg transition font-medium ${
+              selectedTopic === 'all'
                 ? 'bg-primary-500 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             All Topics
           </button>
-          {['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems'].map(subject => (
+          {TOPICS.map(topic => (
             <button
-              key={subject}
-              onClick={() => setSelectedSubject(subject)}
-              className={`px-4 py-2 rounded-lg transition ${
-                selectedSubject === subject
+              key={topic}
+              onClick={() => setSelectedTopic(topic)}
+              className={`px-4 py-2 rounded-lg transition font-medium ${
+                selectedTopic === topic
                   ? 'bg-primary-500 text-white'
-                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              {subject}
+              {topic}
             </button>
           ))}
         </div>
 
         {/* Mentors Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMentors.map((mentor) => (
-            <motion.div
-              key={mentor._id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition"
-            >
-              {/* Mentor Avatar */}
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xl">
-                  {mentor.userId?.name?.charAt(0).toUpperCase() || 'M'}
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">
-                    {mentor.userId?.name || 'Mentor'}
-                  </h3>
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    <Star size={16} fill="currentColor" />
-                    <span className="text-sm font-medium">{mentor.rating || 4.5}</span>
+        {filteredMentors.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMentors.map((mentor, index) => (
+              <motion.div
+                key={mentor._id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 hover:shadow-xl transition"
+              >
+                {/* Avatar + Name */}
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0">
+                    {mentor.name?.charAt(0).toUpperCase() || 'M'}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-gray-900 dark:text-white">{mentor.name}</h3>
+                    <div className="flex items-center gap-1 text-yellow-500">
+                      <Star size={14} fill="currentColor" />
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Mentor</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Expertise */}
-              <div className="mb-4">
-                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Expertise:</div>
-                <div className="flex flex-wrap gap-2">
-                  {mentor.expertise?.map((subject, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm"
-                    >
-                      {subject}
-                    </span>
-                  ))}
+                {/* Skills */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    <BookOpen size={14} />
+                    <span className="font-medium">Expertise:</span>
+                  </div>
+                  {mentor.skills && mentor.skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {mentor.skills.map((skill, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-medium"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Robotics & Programming</span>
+                  )}
                 </div>
-              </div>
 
-              {/* Experience & Availability */}
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <Users size={16} />
-                  <span>{mentor.experience || '5+ years'} experience</span>
+                {/* Action Buttons */}
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => handleMessage(mentor)}
+                    disabled={connecting === mentor._id + '_msg'}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:opacity-60 text-white rounded-lg font-medium transition text-sm"
+                  >
+                    {connecting === mentor._id + '_msg' ? (
+                      <Loader size={16} className="animate-spin" />
+                    ) : (
+                      <MessageCircle size={16} />
+                    )}
+                    Message
+                  </button>
+                  <button
+                    onClick={() => handleVideoCall(mentor)}
+                    disabled={connecting === mentor._id + '_video'}
+                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:opacity-60 text-white rounded-lg font-medium transition text-sm"
+                  >
+                    {connecting === mentor._id + '_video' ? (
+                      <Loader size={16} className="animate-spin" />
+                    ) : (
+                      <Video size={16} />
+                    )}
+                    Video Call
+                  </button>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <Clock size={16} />
-                  <span>{mentor.availability || 'Available now'}</span>
-                </div>
-              </div>
-
-              {/* Connect Button */}
-              <button
-                onClick={() => handleConnectMentor(mentor)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg font-medium transition"
-              >
-                <MessageCircle size={20} />
-                Connect
-              </button>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {filteredMentors.length === 0 && (
-          <div className="text-center py-12">
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16">
             <Users size={64} className="mx-auto text-gray-400 mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              No mentors found
-            </h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No mentors found</h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Try selecting a different subject
+              {selectedTopic === 'all' ? 'No mentors registered yet.' : `No mentors for ${selectedTopic} yet.`}
             </p>
           </div>
         )}
