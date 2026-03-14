@@ -1,24 +1,23 @@
 import axios from "axios";
 
-// Ensure API URL always has /api suffix
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) {
-    return envUrl;
-  }
-  // Fallback for production if env var is not set
-  return "https://studdy-buddy-backend-a5x.onrender.com/api";
-};
+// Always use the correct backend URL with /api
+const BASE = "https://studdy-buddy-backend-a5x.onrender.com";
+const envUrl = import.meta.env.VITE_API_URL;
 
-const API_BASE_URL = getApiBaseUrl();
-
-console.log('API Base URL:', API_BASE_URL); // Debug log
+// Ensure URL always ends with /api
+const API_BASE_URL = (() => {
+  const url = envUrl || `${BASE}/api`;
+  // If env var was set without /api, add it
+  if (url.endsWith('/api')) return url;
+  if (url.endsWith('/')) return url + 'api';
+  return url + '/api';
+})();
 
 const api = axios.create({
-baseURL: API_BASE_URL,
-headers: {
-"Content-Type": "application/json",
-},
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 // Attach JWT token
