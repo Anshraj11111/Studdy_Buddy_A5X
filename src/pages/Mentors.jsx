@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Users, Star, MessageCircle, Video, Loader, BookOpen } from 'lucide-react'
+import { Users, Star, MessageCircle, Video, Loader, BookOpen, AlertCircle } from 'lucide-react'
 import { mentorAPI, roomAPI } from '../services/api'
 
 const TOPICS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
@@ -10,6 +10,7 @@ export default function Mentors() {
   const navigate = useNavigate()
   const [mentors, setMentors] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [connecting, setConnecting] = useState(null)
   const [selectedTopic, setSelectedTopic] = useState('all')
 
@@ -20,10 +21,13 @@ export default function Mentors() {
   const fetchMentors = async () => {
     try {
       setLoading(true)
+      setError(null)
       const res = await mentorAPI.getAll()
+      console.log('Mentors API response:', res.data)
       setMentors(res.data.data.mentors || [])
-    } catch (error) {
-      console.error('Failed to fetch mentors:', error)
+    } catch (err) {
+      console.error('Failed to fetch mentors:', err)
+      setError('Failed to load mentors. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -35,8 +39,8 @@ export default function Mentors() {
       const res = await roomAPI.createDirect(mentor._id)
       const roomId = res.data.data.room._id
       navigate(`/chat/${roomId}`)
-    } catch (error) {
-      console.error('Failed to create chat:', error)
+    } catch (err) {
+      console.error('Failed to create chat:', err)
       alert('Failed to connect. Please try again.')
     } finally {
       setConnecting(null)
@@ -49,8 +53,8 @@ export default function Mentors() {
       const res = await roomAPI.createDirect(mentor._id)
       const roomId = res.data.data.room._id
       navigate(`/video-call/${roomId}`)
-    } catch (error) {
-      console.error('Failed to start video call:', error)
+    } catch (err) {
+      console.error('Failed to start video call:', err)
       alert('Failed to connect. Please try again.')
     } finally {
       setConnecting(null)
@@ -106,6 +110,17 @@ export default function Mentors() {
             </button>
           ))}
         </div>
+
+        {/* Error State */}
+        {error && (
+          <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl mb-6">
+            <AlertCircle className="text-red-500 flex-shrink-0" size={20} />
+            <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>
+            <button onClick={fetchMentors} className="ml-auto px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600 transition">
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Mentors Grid */}
         {filteredMentors.length > 0 ? (
@@ -184,7 +199,7 @@ export default function Mentors() {
               </motion.div>
             ))}
           </div>
-        ) : (
+        ) : !error && (
           <div className="text-center py-16">
             <Users size={64} className="mx-auto text-gray-400 mb-4" />
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No mentors found</h3>

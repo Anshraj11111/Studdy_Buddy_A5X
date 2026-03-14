@@ -47,6 +47,12 @@ export default function Navbar() {
                       My Doubts
                     </Link>
                     <Link 
+                      to="/mentors" 
+                      className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
+                    >
+                      Mentors
+                    </Link>
+                    <Link 
                       to="/chats" 
                       className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
                     >
@@ -60,6 +66,12 @@ export default function Navbar() {
                       className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
                     >
                       Dashboard
+                    </Link>
+                    <Link 
+                      to="/chats" 
+                      className="px-4 py-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all font-medium"
+                    >
+                      Chats
                     </Link>
                   </>
                 )}
@@ -169,6 +181,13 @@ export default function Navbar() {
                       My Doubts
                     </Link>
                     <Link
+                      to="/mentors"
+                      className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Mentors
+                    </Link>
+                    <Link
                       to="/chats"
                       className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
                       onClick={() => setIsOpen(false)}
@@ -184,6 +203,13 @@ export default function Navbar() {
                       onClick={() => setIsOpen(false)}
                     >
                       Dashboard
+                    </Link>
+                    <Link
+                      to="/chats"
+                      className="block px-4 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl text-gray-700 dark:text-gray-200 font-medium"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      Chats
                     </Link>
                   </>
                 )}
