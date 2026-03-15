@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { feedAPI, connectionAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
+import { uploadToCloudinary } from '../utils/cloudinary'
 import {
   Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
   UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
@@ -70,6 +71,7 @@ function PostComposer({ user, onPost }) {
   const [category, setCategory] = useState('All')
   const [media, setMedia] = useState(null)
   const [posting, setPosting] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const fileRef = useRef()
   const textRef = useRef()
 
@@ -81,30 +83,21 @@ function PostComposer({ user, onPost }) {
     fileRef.current.click()
   }
 
-  const onFileChange = (e) => {
+  const onFileChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (fileRef.current._type === 'image') {
-      const img = new window.Image()
-      const objectUrl = URL.createObjectURL(file)
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl)
-        const MAX = 1024
-        let { width, height } = img
-        if (width > MAX || height > MAX) {
-          if (width > height) { height = Math.round(height * MAX / width); width = MAX }
-          else { width = Math.round(width * MAX / height); height = MAX }
-        }
-        const canvas = document.createElement('canvas')
-        canvas.width = width; canvas.height = height
-        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
-        setMedia({ dataUrl: canvas.toDataURL('image/jpeg', 0.75), type: 'image', name: file.name })
-      }
-      img.src = objectUrl
-    } else {
-      const reader = new FileReader()
-      reader.onload = ev => setMedia({ dataUrl: ev.target.result, type: 'video', name: file.name })
-      reader.readAsDataURL(file)
+    const type = fileRef.current._type
+    // Show local preview immediately
+    const localUrl = URL.createObjectURL(file)
+    setMedia({ dataUrl: localUrl, type, name: file.name, uploading: true })
+    setUploading(true)
+    try {
+      const { url } = await uploadToCloudinary(file, 'studdy-buddy/posts')
+      setMedia({ dataUrl: url, type, name: file.name, uploading: false })
+    } catch {
+      setMedia(null)
+    } finally {
+      setUploading(false)
     }
     e.target.value = ''
   }
@@ -209,10 +202,10 @@ function PostComposer({ user, onPost }) {
                     <Video size={18} />
                   </button>
                 </div>
-                <button onClick={submit} disabled={posting || (!content.trim() && !media)}
+                <button onClick={submit} disabled={posting || uploading || (!content.trim() && !media)}
                   className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold rounded-full transition-colors shadow-md">
-                  {posting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                  {posting ? 'Posting...' : 'Post'}
+                  {posting ? <Loader2 size={14} className="animate-spin" /> : uploading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  {posting ? 'Posting...' : uploading ? 'Uploading...' : 'Post'}
                 </button>
               </div>
             </motion.div>

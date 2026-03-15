@@ -102,7 +102,7 @@ export const resourceAPI = {
   getById: (id) => api.get(`/resources/${id}`),
 
   search: (query) =>
-    api.get(`/resources/search?q=${query}`),
+    api.get(`/resources/search?keyword=${encodeURIComponent(query)}`),
 
   getByTopic: (topic, page = 1) =>
     api.get(`/resources/topic/${topic}?page=${page}`),

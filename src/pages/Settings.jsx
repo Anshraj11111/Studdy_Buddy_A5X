@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, Save, User, Check, X, ZoomIn } from 'lucide-react'
+import { Camera, Save, User, Check, X, ZoomIn, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Button from '../components/Button'
 import Input from '../components/Input'
+import { uploadToCloudinary } from '../utils/cloudinary'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
 
@@ -20,20 +21,31 @@ export default function Settings() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [zoomed, setZoomed] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Image must be under 2MB')
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be under 10MB')
       return
     }
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setPreview(reader.result)
-      setFormData(prev => ({ ...prev, profileImage: reader.result }))
+    setError('')
+    setUploading(true)
+    try {
+      // Show local preview immediately
+      const localUrl = URL.createObjectURL(file)
+      setPreview(localUrl)
+      // Upload to Cloudinary
+      const { url } = await uploadToCloudinary(file, 'studdy-buddy/profiles')
+      setPreview(url)
+      setFormData(prev => ({ ...prev, profileImage: url }))
+    } catch {
+      setError('Failed to upload image. Please try again.')
+      setPreview(user?.profileImage || '')
+    } finally {
+      setUploading(false)
     }
-    reader.readAsDataURL(file)
   }
 
   const toggleSkill = (skill) => {
@@ -93,15 +105,16 @@ export default function Settings() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => !uploading && fileInputRef.current?.click()}
                     className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg transition"
+                    disabled={uploading}
                   >
-                    <Camera size={13} />
+                    {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
                   </button>
                 </div>
                 <div className="text-center sm:text-left">
                   <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-2">
-                    Upload a profile photo (max 2MB)
+                    {uploading ? 'Uploading to Cloudinary...' : 'Upload a profile photo (max 10MB)'}
                   </p>
                   <div className="flex gap-2 justify-center sm:justify-start flex-wrap">
                     <button
