@@ -718,13 +718,13 @@ function ConnectionsTab({ user }) {
 function ProfileSidebar({ user }) {
   return (
     <div className="space-y-3">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-        <div className="h-16 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-600 relative">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="h-16 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-600 rounded-t-2xl relative overflow-hidden">
           <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
         </div>
         {/* Avatar sits half-over the banner */}
         <div className="px-4 pb-4">
-          <div className="-mt-7 mb-2 w-14 h-14 rounded-full overflow-hidden ring-4 ring-white dark:ring-gray-800 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+          <div className="-mt-7 mb-2 w-14 h-14 rounded-full overflow-hidden ring-4 ring-white dark:ring-gray-800 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 relative z-10">
             {user?.profileImage
               ? <img src={user.profileImage} alt={user?.name} className="w-full h-full object-cover" />
               : user?.name?.[0]?.toUpperCase() || '?'
