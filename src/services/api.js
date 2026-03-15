@@ -18,6 +18,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 60000, // 60s — handles Render cold start (~30-50s)
 });
 
 // Attach JWT token
@@ -138,7 +139,31 @@ export const communityAPI = {
     api.get(`/communities/${id}/posts?page=${page}`),
 };
 
-/* ---------------- MENTOR ---------------- */
+/* ---------------- FEED (Community Posts) ---------------- */
+
+export const feedAPI = {
+  getPosts: (category = 'All', page = 1, search = '') =>
+    api.get(`/feed?category=${category}&page=${page}&limit=20&search=${encodeURIComponent(search)}`),
+  createPost: (data) => api.post('/feed', data),
+  deletePost: (id) => api.delete(`/feed/${id}`),
+  likePost: (id) => api.post(`/feed/${id}/like`),
+  addComment: (id, data) => api.post(`/feed/${id}/comment`, data),
+};
+
+/* ---------------- CONNECTIONS ---------------- */
+
+export const connectionAPI = {
+  getUsers: (search = '', page = 1) =>
+    api.get(`/connections/users?search=${encodeURIComponent(search)}&page=${page}&limit=20`),
+  sendRequest: (userId) => api.post(`/connections/request/${userId}`),
+  accept: (id) => api.put(`/connections/${id}/accept`),
+  reject: (id) => api.put(`/connections/${id}/reject`),
+  remove: (id) => api.delete(`/connections/${id}`),
+  getPending: () => api.get('/connections/pending'),
+  getMyConnections: () => api.get('/connections/my'),
+};
+
+
 
 export const mentorAPI = {
   getAll: () => api.get("/mentor/all"),

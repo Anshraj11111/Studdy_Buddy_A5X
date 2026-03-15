@@ -48,16 +48,24 @@ export const useAuthStore = create((set) => ({
   // Initialize auth state from localStorage
   initAuth: async () => {
     const token = localStorage.getItem('token')
+    const cachedUser = localStorage.getItem('user')
+
     if (token) {
-      set({ token })
-      // Try to fetch profile to validate token
+      // Immediately unblock the UI using cached user data
+      const parsedUser = cachedUser ? JSON.parse(cachedUser) : null
+      set({ token, user: parsedUser, isInitialized: true })
+
+      // Silently validate token + refresh user data in background
       try {
         const { data } = await authAPI.getProfile()
-        set({ user: data.data.user, isInitialized: true }) // Backend returns { success, data: { user } }
-      } catch (error) {
-        // Token is invalid, clear it
+        const freshUser = data.data.user
+        localStorage.setItem('user', JSON.stringify(freshUser))
+        set({ user: freshUser })
+      } catch {
+        // Token expired or invalid — log out silently
         localStorage.removeItem('token')
-        set({ token: null, user: null, isInitialized: true })
+        localStorage.removeItem('user')
+        set({ token: null, user: null })
       }
     } else {
       set({ isInitialized: true })
