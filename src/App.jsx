@@ -2,7 +2,8 @@ import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
-import { initSocket, disconnectSocket } from './services/socket'
+import { useNotificationStore } from './store/notificationStore'
+import { initSocket, disconnectSocket, onNotification, offNotification } from './services/socket'
 import Navbar from './components/Navbar'
 import IncomingCallModal from './components/IncomingCallModal'
 
@@ -65,6 +66,7 @@ function StudentRoute({ children }) {
 export default function App() {
   const { token, user, initAuth, isInitialized } = useAuthStore()
   const { initTheme } = useThemeStore()
+  const { fetch: fetchNotifications, addNew } = useNotificationStore()
 
   useEffect(() => {
     initTheme()
@@ -74,9 +76,13 @@ export default function App() {
   useEffect(() => {
     if (token && user) {
       initSocket(token, user._id)
+      fetchNotifications()
+      onNotification((notif) => addNew(notif))
     } else {
+      offNotification()
       disconnectSocket()
     }
+    return () => offNotification()
   }, [token, user])
 
   if (!isInitialized) {

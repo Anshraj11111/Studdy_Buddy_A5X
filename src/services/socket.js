@@ -106,3 +106,12 @@ export const endCall = (roomId) => {
 export const onCallEnded = (callback) => {
   socket?.on('callEnded', callback)
 }
+
+// Notification events
+export const onNotification = (callback) => {
+  socket?.on('notification', callback)
+}
+
+export const offNotification = () => {
+  socket?.off('notification')
+}
