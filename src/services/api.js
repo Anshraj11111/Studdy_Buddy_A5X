@@ -4,6 +4,11 @@ import axios from "axios";
 const BASE = "https://studdy-buddy-backend-a5x.onrender.com";
 const envUrl = import.meta.env.VITE_API_URL;
 
+// Keep-alive ping every 14 minutes to prevent Render cold starts
+const pingBackend = () => fetch(`${BASE}/health`).catch(() => {});
+pingBackend(); // ping immediately on app load
+setInterval(pingBackend, 14 * 60 * 1000);
+
 // Ensure URL always ends with /api
 const API_BASE_URL = (() => {
   const url = envUrl || `${BASE}/api`;
