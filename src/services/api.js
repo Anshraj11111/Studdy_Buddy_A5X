@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 
 // Always use the correct backend URL with /api
 const BASE = "https://studdy-buddy-backend-a5x.onrender.com";
@@ -35,7 +35,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 60000, // 60s — handles Render cold start (~30-50s)
+  timeout: 60000, // 60s â€” handles Render cold start (~30-50s)
 });
 
 // Attach JWT token
@@ -241,7 +241,6 @@ const adminHeaders = () => ({ 'x-admin-secret': ADMIN_SECRET });
 export const adminAPI = {
   getStats: () => api.get('/admin/stats', { headers: adminHeaders() }),
   getUsers: (params = {}) => api.get('/admin/users', { params, headers: adminHeaders() }),
-  toggleUser: (id) => api.put(`/admin/users/${id}/toggle`, {}, { headers: adminHeaders() }),
-  deleteUser: (id) => api.delete(`/admin/users/${id}`, { headers: adminHeaders() }),
+  toggleUser: (id) => api.put(/admin/users//toggle, {}, { headers: adminHeaders() }),
+  deleteUser: (id) => api.delete(/admin/users/, { headers: adminHeaders() }),
 };
-
