@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminAPI } from '../services/api'
 
-const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'StuddyAdmin@2025'
+const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'H5'
 
 export default function AdminPanel() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('admin_auth') === 'true')
@@ -281,3 +281,4 @@ export default function AdminPanel() {
     </div>
   )
 }
+
