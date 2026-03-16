@@ -42,13 +42,20 @@ function UploadModal({ onClose, onUploaded }) {
     try {
       const { url } = await uploadToCloudinary(file, 'studdy-buddy/resources')
       const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
+      // Map MIME type to backend enum: ['pdf', 'doc', 'image', 'video', 'link', 'other']
+      const mime = file.type || ''
+      const fileType = mime.startsWith('image') ? 'image'
+        : mime.startsWith('video') ? 'video'
+        : mime === 'application/pdf' ? 'pdf'
+        : mime.includes('word') || mime.includes('doc') ? 'doc'
+        : 'other'
       const payload = {
         title: form.title.trim(),
         description: form.description.trim(),
         topic: form.topic,
         tags,
         fileUrl: url,
-        fileType: file.type || 'application/octet-stream',
+        fileType,
         isPublic: true,
       }
       const res = await resourceAPI.create(payload)
