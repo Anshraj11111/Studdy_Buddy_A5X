@@ -28,13 +28,16 @@ export const useAuthStore = create((set) => ({
     set({ loading: true, error: null })
     try {
       const response = await authAPI.login({ email, password, role, mentorCode })
-      const { token, user } = response.data.data // Backend returns { success, data: { user, token } }
+      const data = response.data?.data || response.data
+      const token = data?.token
+      const user = data?.user
+      if (!token || !user) throw new Error('Invalid response from server')
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
       set({ user, token, loading: false, error: null })
-      return response.data.data
+      return data
     } catch (error) {
-      const errorMessage = error.response?.data?.error?.message || 'Login failed'
+      const errorMessage = error.response?.data?.error?.message || error.message || 'Login failed'
       set({ error: errorMessage, loading: false })
       throw new Error(errorMessage)
     }

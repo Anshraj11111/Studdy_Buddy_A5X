@@ -9,6 +9,18 @@ const pingBackend = () => fetch(`${BASE}/health`).catch(() => {});
 pingBackend(); // ping immediately on app load
 setInterval(pingBackend, 14 * 60 * 1000);
 
+// Simple in-memory cache for GET requests (30s TTL)
+const cache = new Map();
+const CACHE_TTL = 30 * 1000;
+const getCached = (key) => {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
+  cache.delete(key);
+  return null;
+};
+const setCache = (key, data) => cache.set(key, { data, ts: Date.now() });
+export const clearCache = () => cache.clear();
+
 // Ensure URL always ends with /api
 const API_BASE_URL = (() => {
   const url = envUrl || `${BASE}/api`;
@@ -34,12 +46,28 @@ if (token) {
 config.headers.Authorization = `Bearer ${token}`;
 }
 
+// Check cache for GET requests
+if (config.method === 'get') {
+  const cacheKey = config.url + JSON.stringify(config.params || {});
+  const cached = getCached(cacheKey);
+  if (cached) {
+    config.adapter = () => Promise.resolve({ data: cached, status: 200, statusText: 'OK', headers: {}, config });
+  }
+}
+
 return config;
 });
 
 // Global error handler
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Cache successful GET responses
+    if (response.config.method === 'get' && response.status === 200) {
+      const cacheKey = response.config.url + JSON.stringify(response.config.params || {});
+      setCache(cacheKey, response.data);
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
