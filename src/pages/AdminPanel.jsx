@@ -45,7 +45,14 @@ export default function AdminPanel() {
       setUsers(usersRes.data.data.users)
       setTotal(usersRes.data.data.total)
     } catch (err) {
-      showToast('Failed to load data', 'error')
+      const status = err?.response?.status
+      const msg = err?.response?.data?.error?.message || err.message
+      if (status === 401) {
+        showToast('Backend rejected admin secret — check ADMIN_SECRET env var on Render', 'error')
+      } else {
+        showToast(`Failed to load data: ${msg}`, 'error')
+      }
+      console.error('Admin fetch error:', err?.response?.data || err.message)
     } finally {
       setLoading(false)
     }

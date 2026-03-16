@@ -72,7 +72,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
       
-      if (currentPath !== "/login" && currentPath !== "/signup") {
+      if (currentPath !== "/login" && currentPath !== "/signup" && currentPath !== "/admin") {
         localStorage.removeItem("token");
         window.location.href = "/login";
       }
