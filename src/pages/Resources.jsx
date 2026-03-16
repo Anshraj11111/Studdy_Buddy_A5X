@@ -42,18 +42,22 @@ function UploadModal({ onClose, onUploaded }) {
     try {
       const { url } = await uploadToCloudinary(file, 'studdy-buddy/resources')
       const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
-      await resourceAPI.create({
-        title: form.title,
-        description: form.description,
+      const payload = {
+        title: form.title.trim(),
+        description: form.description.trim(),
         topic: form.topic,
         tags,
         fileUrl: url,
-        fileType: file.type || 'other',
-      })
+        fileType: file.type || 'application/octet-stream',
+        isPublic: true,
+      }
+      const res = await resourceAPI.create(payload)
+      if (!res.data?.success) throw new Error(res.data?.error?.message || 'Upload failed')
       onUploaded()
       onClose()
     } catch (err) {
-      setError(err.message || 'Upload failed')
+      const msg = err.response?.data?.error?.message || err.message || 'Upload failed'
+      setError(msg)
     } finally {
       setUploading(false)
     }
