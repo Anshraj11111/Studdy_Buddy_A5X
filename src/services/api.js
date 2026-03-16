@@ -233,3 +233,14 @@ export const roomAPI = {
 };
 
 export default api;
+
+/* ---------------- ADMIN ---------------- */
+const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'StuddyAdmin@2025';
+const adminHeaders = () => ({ 'x-admin-secret': ADMIN_SECRET });
+
+export const adminAPI = {
+  getStats: () => api.get('/admin/stats', { headers: adminHeaders() }),
+  getUsers: (params = {}) => api.get('/admin/users', { params, headers: adminHeaders() }),
+  toggleUser: (id) => api.put(`/admin/users/${id}/toggle`, {}, { headers: adminHeaders() }),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`, { headers: adminHeaders() }),
+};

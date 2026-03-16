@@ -26,6 +26,7 @@ const VideoCall = lazy(() => import('./pages/VideoCall'))
 const Mentors = lazy(() => import('./pages/Mentors'))
 const AIBot = lazy(() => import('./pages/AIBot'))
 const Settings = lazy(() => import('./pages/Settings'))
+const AdminPanel = lazy(() => import('./pages/AdminPanel'))
 
 // Minimal page-level skeleton shown while a lazy chunk loads
 function PageLoader() {
@@ -42,6 +43,90 @@ function ScrollToTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [pathname])
   return null
+}
+
+function AppShell() {
+  const { token, user, initAuth, isInitialized } = useAuthStore()
+  const { initTheme } = useThemeStore()
+  const { fetch: fetchNotifications, addNew } = useNotificationStore()
+  const { pathname } = useLocation()
+  const isAdminRoute = pathname === '/admin'
+
+  useEffect(() => {
+    initTheme()
+    initAuth()
+  }, [initAuth, initTheme])
+
+  useEffect(() => {
+    if (token && user) {
+      initSocket(token, user._id)
+      fetchNotifications()
+      onNotification((notif) => addNew(notif))
+    } else {
+      offNotification()
+      disconnectSocket()
+    }
+    return () => offNotification()
+  }, [token, user])
+
+  if (!isInitialized && !isAdminRoute) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-14 h-14 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-gray-900">
+      {token && !isAdminRoute && <Navbar />}
+      {token && !isAdminRoute && <IncomingCallModal />}
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Public */}
+          <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <Login />} />
+          <Route path="/signup" element={token ? <Navigate to="/dashboard" replace /> : <Signup />} />
+
+          {/* Student */}
+          <Route path="/dashboard" element={<StudentRoute><Dashboard /></StudentRoute>} />
+          <Route path="/doubts" element={<StudentRoute><Doubts /></StudentRoute>} />
+          <Route path="/doubts/new" element={<StudentRoute><PostDoubt /></StudentRoute>} />
+          <Route path="/doubts/:id/edit" element={<StudentRoute><EditDoubt /></StudentRoute>} />
+          <Route path="/mentors" element={<StudentRoute><Mentors /></StudentRoute>} />
+          <Route path="/ai-bot" element={<StudentRoute><AIBot /></StudentRoute>} />
+
+          {/* Mentor */}
+          <Route path="/mentor-dashboard" element={<MentorRoute><MentorDashboard /></MentorRoute>} />
+
+          {/* Shared */}
+          <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
+          <Route path="/chat/:roomId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+          <Route path="/video-call/:roomId" element={<ProtectedRoute><VideoCall /></ProtectedRoute>} />
+          <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
+          <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
+          {/* Admin — standalone, no navbar */}
+          <Route path="/admin" element={<AdminPanel />} />
+
+          {/* Default */}
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to={token ? (user?.role === 'mentor' ? '/mentor-dashboard' : '/dashboard') : '/login'}
+                replace
+              />
+            }
+          />
+        </Routes>
+      </Suspense>
+    </div>
+  )
 }
 
 function ProtectedRoute({ children }) {
@@ -64,83 +149,10 @@ function StudentRoute({ children }) {
 }
 
 export default function App() {
-  const { token, user, initAuth, isInitialized } = useAuthStore()
-  const { initTheme } = useThemeStore()
-  const { fetch: fetchNotifications, addNew } = useNotificationStore()
-
-  useEffect(() => {
-    initTheme()
-    initAuth()
-  }, [initAuth, initTheme])
-
-  useEffect(() => {
-    if (token && user) {
-      initSocket(token, user._id)
-      fetchNotifications()
-      onNotification((notif) => addNew(notif))
-    } else {
-      offNotification()
-      disconnectSocket()
-    }
-    return () => offNotification()
-  }, [token, user])
-
-  if (!isInitialized) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-14 h-14 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <Router>
       <ScrollToTop />
-      <div className="min-h-screen bg-white dark:bg-gray-900">
-        {token && <Navbar />}
-        {token && <IncomingCallModal />}
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            {/* Public */}
-            <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <Login />} />
-            <Route path="/signup" element={token ? <Navigate to="/dashboard" replace /> : <Signup />} />
-
-            {/* Student */}
-            <Route path="/dashboard" element={<StudentRoute><Dashboard /></StudentRoute>} />
-            <Route path="/doubts" element={<StudentRoute><Doubts /></StudentRoute>} />
-            <Route path="/doubts/new" element={<StudentRoute><PostDoubt /></StudentRoute>} />
-            <Route path="/doubts/:id/edit" element={<StudentRoute><EditDoubt /></StudentRoute>} />
-            <Route path="/mentors" element={<StudentRoute><Mentors /></StudentRoute>} />
-            <Route path="/ai-bot" element={<StudentRoute><AIBot /></StudentRoute>} />
-
-            {/* Mentor */}
-            <Route path="/mentor-dashboard" element={<MentorRoute><MentorDashboard /></MentorRoute>} />
-
-            {/* Shared */}
-            <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
-            <Route path="/chat/:roomId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-            <Route path="/video-call/:roomId" element={<ProtectedRoute><VideoCall /></ProtectedRoute>} />
-            <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
-            <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-
-            {/* Default */}
-            <Route
-              path="/"
-              element={
-                <Navigate
-                  to={token ? (user?.role === 'mentor' ? '/mentor-dashboard' : '/dashboard') : '/login'}
-                  replace
-                />
-              }
-            />
-          </Routes>
-        </Suspense>
-      </div>
+      <AppShell />
     </Router>
   )
 }
