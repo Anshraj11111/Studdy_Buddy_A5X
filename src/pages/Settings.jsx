@@ -16,6 +16,8 @@ export default function Settings() {
     name: user?.name || '',
     skills: user?.skills || [],
     profileImage: user?.profileImage || '',
+    bio: user?.bio || '',
+    address: user?.address || '',
   })
   const [preview, setPreview] = useState(user?.profileImage || '')
   const [saved, setSaved] = useState(false)
@@ -65,6 +67,8 @@ export default function Settings() {
         name: formData.name,
         skills: formData.skills,
         profileImage: formData.profileImage,
+        bio: formData.bio,
+        address: formData.address,
       })
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -165,6 +169,29 @@ export default function Settings() {
                 <p className="px-3 sm:px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400 text-xs sm:text-sm capitalize">
                   {user?.role}
                 </p>
+              </div>
+              <div className="mt-3">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bio</label>
+                <textarea
+                  value={formData.bio}
+                  onChange={e => setFormData(p => ({ ...p, bio: e.target.value }))}
+                  maxLength={300}
+                  rows={3}
+                  placeholder="Tell others about yourself..."
+                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+                <p className="text-xs text-gray-400 mt-1 text-right">{formData.bio.length}/300</p>
+              </div>
+              <div className="mt-3">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address / Location</label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={e => setFormData(p => ({ ...p, address: e.target.value }))}
+                  maxLength={200}
+                  placeholder="e.g., Mumbai, India"
+                  className="w-full px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
 
