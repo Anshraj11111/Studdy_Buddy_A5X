@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Menu, X, Moon, Sun, LogOut, Settings, Bell, Heart, MessageCircle, UserPlus } from 'lucide-react'
+import { Menu, X, LogOut, Settings, Bell, Heart, MessageCircle, UserPlus } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
-import { useThemeStore } from '../store/themeStore'
 import { useNotificationStore } from '../store/notificationStore'
 
 function NotifIcon({ type }) {
@@ -25,7 +24,6 @@ export default function Navbar({ onMenuClick }) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const { user, logout } = useAuthStore()
-  const { isDark, toggleTheme } = useThemeStore()
   const { notifications, unreadCount, markAllRead } = useNotificationStore()
   const navigate = useNavigate()
   const notifRef = useRef()
@@ -98,10 +96,6 @@ export default function Navbar({ onMenuClick }) {
           </div>
 
           <div className="flex items-center gap-1">
-            <button onClick={toggleTheme} className="p-2 hover:bg-white/50 dark:hover:bg-slate-800/50 backdrop-blur-sm rounded-xl transition-all" aria-label="Toggle theme">
-              {isDark ? <Sun size={18} className="text-yellow-500" /> : <Moon size={18} className="text-primary-600" />}
-            </button>
-
             {user ? (
               <>
                 <div className="relative" ref={notifRef}>
