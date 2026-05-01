@@ -5,14 +5,18 @@ import Card from '../components/Card'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Input from '../components/Input'
+import Sidebar from '../components/Sidebar'
+import GlowingQuestionMark from '../components/GlowingQuestionMark'
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, Trash2, Edit, Users, X, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 export default function Doubts() {
   const [doubts, setDoubts] = useState([])
+  const [allDoubts, setAllDoubts] = useState([]) // Store all doubts for filtering
   const [search, setSearch] = useState('')
   const [topic, setTopic] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all') // New: status filter
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
@@ -31,28 +35,28 @@ export default function Doubts() {
         if (search) {
           res = await doubtAPI.search(search)
           // Filter to show only user's doubts
-          const allDoubts = res.data.data?.doubts || []
-          const userDoubts = allDoubts.filter(d => 
+          const allDoubtsData = res.data.data?.doubts || []
+          const userDoubts = allDoubtsData.filter(d => 
             user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id))
           )
-          setDoubts(userDoubts)
+          setAllDoubts(userDoubts)
           setTotal(userDoubts.length)
         } else if (topic) {
           res = await doubtAPI.getByTopic(topic, page)
-          const allDoubts = res.data.data?.doubts || []
-          const userDoubts = allDoubts.filter(d => 
+          const allDoubtsData = res.data.data?.doubts || []
+          const userDoubts = allDoubtsData.filter(d => 
             user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id))
           )
-          setDoubts(userDoubts)
+          setAllDoubts(userDoubts)
           setTotal(res.data.data?.pagination?.total || 0)
         } else {
           // Fetch all doubts but filter to show only user's doubts
           res = await doubtAPI.list(page, 100) // Get more to filter
-          const allDoubts = res.data.data?.doubts || []
-          const userDoubts = allDoubts.filter(d => 
+          const allDoubtsData = res.data.data?.doubts || []
+          const userDoubts = allDoubtsData.filter(d => 
             user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id))
           )
-          setDoubts(userDoubts)
+          setAllDoubts(userDoubts)
           setTotal(userDoubts.length)
         }
       } catch (error) {
@@ -66,6 +70,27 @@ export default function Doubts() {
       fetchDoubts()
     }
   }, [page, search, topic, user])
+
+  // Filter doubts based on status filter
+  useEffect(() => {
+    if (statusFilter === 'all') {
+      setDoubts(allDoubts)
+    } else if (statusFilter === 'unsolved') {
+      setDoubts(allDoubts.filter(d => d.status === 'open'))
+    } else if (statusFilter === 'solved') {
+      setDoubts(allDoubts.filter(d => d.status === 'resolved'))
+    } else if (statusFilter === 'matched') {
+      setDoubts(allDoubts.filter(d => d.status === 'matched'))
+    } else if (statusFilter === 'trending') {
+      // Sort by reply count or recent activity
+      const sorted = [...allDoubts].sort((a, b) => {
+        const aReplies = a.replies?.length || 0
+        const bReplies = b.replies?.length || 0
+        return bReplies - aReplies
+      })
+      setDoubts(sorted)
+    }
+  }, [statusFilter, allDoubts])
 
   const handleDelete = async (doubtId, e) => {
     e.preventDefault()
@@ -158,18 +183,69 @@ export default function Doubts() {
   const topics = ['Robotics', 'Programming', 'Electronics', 'Mechanics', 'AI/ML']
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="flex min-h-screen bg-background-light dark:bg-background-dark">
+      {/* Sidebar */}
+      <Sidebar />
+      
+      {/* Main content */}
+      <div className="flex-1 ml-[240px] mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-4xl font-bold">My Doubts</h1>
+          {/* Header with Glowing Icon */}
+          <div className="flex justify-between items-start mb-6">
+            <div className="flex items-center gap-4">
+              {/* Glowing Question Mark Icon */}
+              <div className="flex-shrink-0">
+                <GlowingQuestionMark size={60} />
+              </div>
+              
+              {/* Title and Description */}
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-1">
+                  My Doubts
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  Track, manage and resolve your questions efficiently.
+                </p>
+              </div>
+            </div>
+            
             <Link to="/doubts/new">
               <Button variant="primary">Post Doubt</Button>
             </Link>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+            {[
+              { id: 'all', label: 'All', icon: '📋' },
+              { id: 'unsolved', label: 'Unsolved', icon: '🔴' },
+              { id: 'solved', label: 'Solved', icon: '✅' },
+              { id: 'matched', label: 'Matched', icon: '🤝' },
+              { id: 'trending', label: 'Trending', icon: '🔥' },
+            ].map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => setStatusFilter(filter.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${
+                  statusFilter === filter.id
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/50'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                <span>{filter.icon}</span>
+                <span>{filter.label}</span>
+                {filter.id === 'unsolved' && statusFilter === filter.id && (
+                  <span className="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">
+                    {allDoubts.filter(d => d.status === 'open').length}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
 
           {/* Search and Filters */}
@@ -452,6 +528,7 @@ export default function Doubts() {
           )}
         </AnimatePresence>
       </div>
+    </div>
     </div>
   )
 }

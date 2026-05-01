@@ -4,6 +4,7 @@ import { Camera, Save, User, Check, X, ZoomIn, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Button from '../components/Button'
 import Input from '../components/Input'
+import Sidebar from '../components/Sidebar'
 import { uploadToCloudinary } from '../utils/cloudinary'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
@@ -78,8 +79,13 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Sidebar */}
+      <Sidebar />
+      
+      {/* Main content */}
+      <div className="flex-1 ml-[240px] mt-16">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">Settings</h1>
 
@@ -272,6 +278,7 @@ export default function Settings() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   )
 }

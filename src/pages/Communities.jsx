@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { feedAPI, connectionAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
+import Sidebar from '../components/Sidebar'
 import {
   Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
   UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
@@ -797,8 +798,13 @@ export default function Communities() {
   const [tab, setTab] = useState('feed')
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-5 pb-20">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Sidebar */}
+      <Sidebar />
+      
+      {/* Main content */}
+      <div className="flex-1 ml-[240px] mt-16">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-5 pb-20">
 
         {/* Header */}
         <div className="mb-5">
@@ -849,6 +855,7 @@ export default function Communities() {
           </motion.div>
         </AnimatePresence>
       </div>
+    </div>
     </div>
   )
 }

@@ -1,7 +1,7 @@
-export default function Card({ children, className = '', ...props }) {
+export default function Card({ children, className = '', hover = true, glow = false, ...props }) {
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow ${className}`}
+      className={`glass-card p-6 ${hover ? 'hover:scale-[1.02] hover:-translate-y-1' : ''} ${glow ? 'pulse-glow' : ''} ${className}`}
       {...props}
     >
       {children}

@@ -1,15 +1,16 @@
-export default function Badge({ children, variant = 'primary', className = '' }) {
+export default function Badge({ children, variant = 'primary', className = '', icon }) {
   const variants = {
-    primary: 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300',
-    secondary: 'bg-secondary-100 dark:bg-secondary-900 text-secondary-700 dark:text-secondary-300',
-    accent: 'bg-accent-100 dark:bg-accent-900 text-accent-700 dark:text-accent-300',
-    success: 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300',
-    warning: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300',
-    danger: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300',
+    primary: 'bg-primary-500/20 text-primary-300 border-primary-500/30',
+    secondary: 'bg-secondary-500/20 text-secondary-300 border-secondary-500/30',
+    accent: 'bg-accent-500/20 text-accent-300 border-accent-500/30',
+    success: 'bg-green-500/20 text-green-300 border-green-500/30',
+    warning: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    danger: 'bg-red-500/20 text-red-300 border-red-500/30',
   }
 
   return (
-    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${variants[variant]} ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold backdrop-blur-xl border shadow-lg ${variants[variant]} ${className}`}>
+      {icon && icon}
       {children}
     </span>
   )

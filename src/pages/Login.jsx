@@ -55,18 +55,18 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8">
+        <div className="glass-card p-8">
           <div className="text-center mb-8">
-            <div className="w-12 h-12 bg-primary-500 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg glow-effect float-animation">
               <span className="text-white font-bold text-xl">SB</span>
             </div>
-            <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
+            <h1 className="text-3xl font-bold mb-2 gradient-text">Welcome Back</h1>
             <p className="text-gray-600 dark:text-gray-400">Sign in to your Studdy Buddy account</p>
           </div>
 
@@ -120,7 +120,7 @@ export default function Login() {
             )}
 
             {errors.submit && (
-              <div className="p-3 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-lg text-sm">
+              <div className="p-3 bg-red-50/80 dark:bg-red-900/50 backdrop-blur-sm text-red-600 dark:text-red-300 rounded-xl text-sm border border-red-200/50 dark:border-red-800/50">
                 {errors.submit}
               </div>
             )}

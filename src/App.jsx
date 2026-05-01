@@ -5,6 +5,7 @@ import { useThemeStore } from './store/themeStore'
 import { useNotificationStore } from './store/notificationStore'
 import { initSocket, disconnectSocket, onNotification, offNotification } from './services/socket'
 import Navbar from './components/Navbar'
+import bgImage from './assets/image.png'
 import IncomingCallModal from './components/IncomingCallModal'
 
 // Eagerly load auth pages (always needed on first visit)
@@ -81,7 +82,7 @@ function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen" style={{ backgroundImage: "url(${bgImage})", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed', backgroundColor: '#05030f' }}>
       {token && !isAdminRoute && <Navbar />}
       {token && !isAdminRoute && <IncomingCallModal />}
       <Suspense fallback={<PageLoader />}>

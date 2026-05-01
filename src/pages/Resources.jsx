@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { resourceAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
+import Sidebar from '../components/Sidebar'
 import {
   Download, Search, Upload, X, FileText, Film, Image,
   Loader2, ExternalLink, Trash2, Plus
@@ -208,8 +209,13 @@ export default function Resources() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-20">
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Sidebar */}
+      <Sidebar />
+      
+      {/* Main content */}
+      <div className="flex-1 ml-[240px] mt-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-20">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -330,10 +336,11 @@ export default function Resources() {
         )}
       </div>
 
-      {/* Upload Modal */}
-      <AnimatePresence>
-        {showUpload && <UploadModal onClose={() => setShowUpload(false)} onUploaded={fetchResources} />}
-      </AnimatePresence>
+        {/* Upload Modal */}
+        <AnimatePresence>
+          {showUpload && <UploadModal onClose={() => setShowUpload(false)} onUploaded={fetchResources} />}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }
