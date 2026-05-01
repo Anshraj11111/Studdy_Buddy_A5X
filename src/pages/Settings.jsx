@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import Sidebar from '../components/Sidebar'
+import Navbar from '../components/Navbar'
 import { uploadToCloudinary } from '../utils/cloudinary'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
@@ -25,6 +26,7 @@ export default function Settings() {
   const [error, setError] = useState('')
   const [zoomed, setZoomed] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleImageChange = async (e) => {
     const file = e.target.files[0]
@@ -80,12 +82,17 @@ export default function Settings() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Navbar */}
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      
       {/* Sidebar */}
-      <Sidebar />
+      <div style={{ position: "relative", zIndex: 60 }}>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </div>
       
       {/* Main content */}
-      <div className="flex-1 ml-[240px] mt-16">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="flex-1 lg:ml-[240px] mt-16" style={{ position: "relative", zIndex: 5 }}>
+        <div className="max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">Settings</h1>
 

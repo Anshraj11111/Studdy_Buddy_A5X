@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react'
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen = false, onClose }) {
   const location = useLocation()
   
   const navItems = [
@@ -30,6 +30,9 @@ export default function Sidebar({ isOpen, onClose }) {
     if (onClose) onClose()
   }
 
+  // Desktop: always visible, Mobile: controlled by isOpen
+  const isVisible = typeof window !== 'undefined' && window.innerWidth >= 1024 ? true : isOpen
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -40,33 +43,33 @@ export default function Sidebar({ isOpen, onClose }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+            className="fixed inset-0 bg-black/60 z-[55] lg:hidden"
+            style={{ top: '64px' }}
           />
         )}
       </AnimatePresence>
 
       {/* Sidebar */}
-      <motion.aside
-        initial={{ x: -80, opacity: 0 }}
-        animate={{ 
-          x: isOpen !== undefined ? (isOpen ? 0 : -240) : 0, 
-          opacity: 1 
-        }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="fixed left-0 top-16 bottom-0 w-[240px] z-50 flex flex-col lg:translate-x-0"
+      <aside
         style={{
           background: 'rgba(5,3,20,0.95)',
           borderRight: '1px solid rgba(99,102,241,0.15)',
-          backdropFilter: 'blur(20px)'
+          backdropFilter: 'blur(20px)',
+          zIndex: 60,
         }}
+        className={`fixed left-0 top-16 bottom-0 w-[240px] flex flex-col transition-transform duration-300 ease-out lg:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
       >
         {/* Mobile Close Button */}
-        <button
-          onClick={onClose}
-          className="lg:hidden absolute top-4 right-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition"
-        >
-          <X size={20} className="text-gray-400" />
-        </button>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden absolute top-4 right-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition z-10"
+          >
+            <X size={20} className="text-gray-400" />
+          </button>
+        )}
 
         {/* Navigation Section */}
         <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
@@ -76,12 +79,7 @@ export default function Sidebar({ isOpen, onClose }) {
                           (item.path === '/dashboard' && location.pathname === '/dashboard')
             
             return (
-              <motion.div
-                key={item.label}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.05 * i }}
-              >
+              <div key={item.label}>
                 <Link
                   to={item.path}
                   onClick={handleLinkClick}
@@ -102,21 +100,18 @@ export default function Sidebar({ isOpen, onClose }) {
                   />
                   <span className="text-sm">{item.label}</span>
                 </Link>
-              </motion.div>
+              </div>
             )
           })}
         </nav>
 
         {/* Upgrade Card */}
-        <motion.div
+        <div
           className="mx-3 mb-4 p-5 rounded-2xl text-center hidden lg:block"
           style={{
             background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.2))',
             border: '1px solid rgba(99,102,241,0.3)'
           }}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
         >
           <div
             className="w-12 h-12 mx-auto mb-2 rounded-xl flex items-center justify-center"
@@ -140,8 +135,8 @@ export default function Sidebar({ isOpen, onClose }) {
           >
             Upgrade Now
           </button>
-        </motion.div>
-      </motion.aside>
+        </div>
+      </aside>
     </>
   )
 }

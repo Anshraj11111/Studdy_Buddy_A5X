@@ -6,6 +6,7 @@ import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import Sidebar from '../components/Sidebar'
+import Navbar from '../components/Navbar'
 import GlowingQuestionMark from '../components/GlowingQuestionMark'
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, Trash2, Edit, Users, X, MessageCircle } from 'lucide-react'
@@ -23,6 +24,7 @@ export default function Doubts() {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [matchedRoom, setMatchedRoom] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user } = useAuthStore()
   const navigate = useNavigate()
 
@@ -67,7 +69,10 @@ export default function Doubts() {
     }
 
     if (user) {
-      fetchDoubts()
+      const timer = setTimeout(() => {
+        fetchDoubts()
+      }, 200)
+      return () => clearTimeout(timer)
     }
   }, [page, search, topic, user])
 
@@ -184,12 +189,17 @@ export default function Doubts() {
 
   return (
     <div className="flex min-h-screen bg-background-light dark:bg-background-dark">
+      {/* Navbar */}
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      
       {/* Sidebar */}
-      <Sidebar />
+      <div style={{ position: "relative", zIndex: 60 }}>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </div>
       
       {/* Main content */}
-      <div className="flex-1 ml-[240px] mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex-1 lg:ml-[240px] mt-16" style={{ zIndex: 5 }}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

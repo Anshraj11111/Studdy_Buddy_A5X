@@ -4,6 +4,7 @@ import { resourceAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import Sidebar from '../components/Sidebar'
+import Navbar from '../components/Navbar'
 import {
   Download, Search, Upload, X, FileText, Film, Image,
   Loader2, ExternalLink, Trash2, Plus
@@ -167,6 +168,7 @@ export default function Resources() {
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
   const [showUpload, setShowUpload] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const fetchResources = async () => {
     try {
@@ -189,7 +191,12 @@ export default function Resources() {
     }
   }
 
-  useEffect(() => { fetchResources() }, [page, search, topic])
+  useEffect(() => { 
+    const timer = setTimeout(() => {
+      fetchResources()
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [page, search, topic])
 
   const handleDownload = async (resource) => {
     try {
@@ -210,12 +217,17 @@ export default function Resources() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Navbar */}
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      
       {/* Sidebar */}
-      <Sidebar />
+      <div style={{ position: "relative", zIndex: 60 }}>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </div>
       
       {/* Main content */}
-      <div className="flex-1 ml-[240px] mt-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-20">
+      <div className="flex-1 lg:ml-[240px] mt-16" style={{ position: "relative", zIndex: 5 }}>
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-6 pb-20">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -260,7 +272,7 @@ export default function Resources() {
             <p className="text-sm text-gray-400">Loading resources...</p>
           </div>
         ) : resources.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center shadow-sm">
             <FileText size={36} className="mx-auto text-gray-300 mb-3" />
             <p className="font-semibold text-gray-600 dark:text-gray-300 mb-1">No resources found</p>
             <p className="text-sm text-gray-400">
@@ -274,7 +286,7 @@ export default function Resources() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {resources.map((r, i) => (
               <motion.div key={r._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.04, 0.3) }}
@@ -322,14 +334,14 @@ export default function Resources() {
 
         {/* Pagination */}
         {total > 12 && (
-          <div className="flex justify-center gap-2 mt-8">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mt-8">
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-              className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
               Previous
             </button>
             <span className="px-4 py-2 text-sm text-gray-500">Page {page} of {Math.ceil(total / 12)}</span>
             <button disabled={page >= Math.ceil(total / 12)} onClick={() => setPage(p => p + 1)}
-              className="px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
               Next
             </button>
           </div>

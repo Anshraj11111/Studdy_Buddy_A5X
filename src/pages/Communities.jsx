@@ -4,6 +4,7 @@ import { feedAPI, connectionAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import Sidebar from '../components/Sidebar'
+import Navbar from '../components/Navbar'
 import {
   Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
   UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
@@ -375,7 +376,12 @@ function FeedTab({ user }) {
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => { fetchPosts('All', '') }, [fetchPosts])
+  useEffect(() => { 
+    const timer = setTimeout(() => {
+      fetchPosts('All', '')
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [fetchPosts])
 
   const handleSearch = () => {
     setActiveSearch(search)
@@ -796,14 +802,20 @@ function TrendingSidebar() {
 export default function Communities() {
   const { user } = useAuthStore()
   const [tab, setTab] = useState('feed')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Navbar */}
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      
       {/* Sidebar */}
-      <Sidebar />
+      <div style={{ position: "relative", zIndex: 60 }}>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </div>
       
       {/* Main content */}
-      <div className="flex-1 ml-[240px] mt-16">
+      <div className="flex-1 lg:ml-[240px] mt-16" style={{ position: "relative", zIndex: 5 }}>
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-5 pb-20">
 
         {/* Header */}
@@ -818,15 +830,15 @@ export default function Communities() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-2xl mb-5 shadow-sm w-fit">
+        <div className="flex gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-2xl mb-5 shadow-sm overflow-x-auto">
           <button onClick={() => setTab('feed')}
-            className={`flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl transition-all ${
+            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2 text-sm font-semibold rounded-xl transition-all whitespace-nowrap ${
               tab === 'feed' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
             }`}>
             <MessageCircle size={15} /> Feed
           </button>
           <button onClick={() => setTab('connections')}
-            className={`flex items-center justify-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl transition-all ${
+            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2 text-sm font-semibold rounded-xl transition-all whitespace-nowrap ${
               tab === 'connections' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
             }`}>
             <Users size={15} /> Network

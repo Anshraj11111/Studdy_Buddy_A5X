@@ -186,7 +186,16 @@ export default function Navbar({ onMenuClick }) {
         </div>
 
         {isOpen && (
-          <div className="md:hidden pb-4 space-y-1 border-t border-gray-100/50 dark:border-slate-700/50 pt-3">
+          <div className="md:hidden pb-4 space-y-1 border-t border-gray-100/50 dark:border-slate-700/50 pt-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl"
+            style={{ 
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              zIndex: 40,
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+            }}
+          >
             {user && (
               <>
                 <Link to="/settings" className="flex items-center gap-3 px-3 py-3 bg-gradient-to-r from-primary-50/80 to-secondary-50/80 dark:from-primary-900/20 dark:to-secondary-900/20 backdrop-blur-md rounded-xl mb-2 border border-primary-200/30 dark:border-primary-800/30" onClick={() => setIsOpen(false)}>

@@ -28,7 +28,10 @@ export default function Mentors() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    fetchMentors()
+    const timer = setTimeout(() => {
+      fetchMentors()
+    }, 200)
+    return () => clearTimeout(timer)
   }, [])
 
   const fetchMentors = async () => {
@@ -116,12 +119,12 @@ export default function Mentors() {
       <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(5,3,20,0.75)" }} />
       
       {/* Sidebar */}
-      <div style={{ position: "relative", zIndex: 10 }}>
+      <div style={{ position: "relative", zIndex: 60 }}>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
       
       {/* Main content */}
-      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-5 py-3 sm:py-5 space-y-3 sm:space-y-4 overflow-x-hidden" style={{ zIndex: 10 }}>
+      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-5 py-3 sm:py-5 space-y-3 sm:space-y-4 overflow-x-hidden" style={{ zIndex: 5 }}>
 
         {/* Header with Icon */}
         <div className="flex items-start justify-between mb-6">
