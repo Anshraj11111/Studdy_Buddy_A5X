@@ -5,6 +5,7 @@ import { doubtAPI, communityAPI, roomAPI } from '../services/api'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Sidebar from '../components/Sidebar'
+import Navbar from '../components/Navbar'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   MessageSquare, Users, BookOpen, Zap, TrendingUp, X, MessageCircle,
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [matchedRoom, setMatchedRoom] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -101,6 +103,9 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen" style={{ position: "relative" }}>
+      {/* Navbar */}
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      
       {/* Full page background image */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0,
@@ -114,11 +119,11 @@ export default function Dashboard() {
 
       {/* Sidebar */}
       <div style={{ position: "relative", zIndex: 10 }}>
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
 
       {/* Main content */}
-      <div className="relative flex-1 ml-[240px] mt-16 px-5 py-5 space-y-4 overflow-x-hidden" style={{ zIndex: 10 }}>
+      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-5 py-3 sm:py-5 space-y-3 sm:space-y-4 overflow-x-hidden" style={{ zIndex: 10 }}>
 
         {/* HERO */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

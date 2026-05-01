@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Star, MessageCircle, Video, Loader, AlertCircle, Search, Filter, UserCircle2, Clock, Award, MoreVertical } from 'lucide-react'
 import { mentorAPI, roomAPI } from '../services/api'
 import Sidebar from '../components/Sidebar'
+import Navbar from '../components/Navbar'
 
 const TOPICS = [
   { id: 'all', label: 'All Topics' },
@@ -24,6 +25,7 @@ export default function Mentors() {
   const [selectedTopic, setSelectedTopic] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('relevant')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     fetchMentors()
@@ -99,6 +101,9 @@ export default function Mentors() {
 
   return (
     <div className="flex min-h-screen" style={{ position: "relative" }}>
+      {/* Navbar */}
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      
       {/* Full page background image */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0,
@@ -112,11 +117,11 @@ export default function Mentors() {
       
       {/* Sidebar */}
       <div style={{ position: "relative", zIndex: 10 }}>
-        <Sidebar />
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
       
       {/* Main content */}
-      <div className="relative flex-1 ml-[240px] mt-16 px-5 py-5 space-y-4 overflow-x-hidden" style={{ zIndex: 10 }}>
+      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-5 py-3 sm:py-5 space-y-3 sm:space-y-4 overflow-x-hidden" style={{ zIndex: 10 }}>
 
         {/* Header with Icon */}
         <div className="flex items-start justify-between mb-6">
@@ -238,7 +243,7 @@ export default function Mentors() {
 
         {/* Mentors Grid */}
         {filteredMentors.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
             {filteredMentors.map((mentor, index) => (
               <motion.div
                 key={mentor._id}

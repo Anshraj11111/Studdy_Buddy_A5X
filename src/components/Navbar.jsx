@@ -21,7 +21,7 @@ function timeAgo(date) {
   return `${Math.floor(h / 24)}d ago`
 }
 
-export default function Navbar() {
+export default function Navbar({ onMenuClick }) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const { user, logout } = useAuthStore()
@@ -52,14 +52,28 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
 
-          <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-lg glow-effect">
-              <span className="text-white font-bold text-base">SB</span>
-            </div>
-            <span className="font-bold text-lg gradient-text hidden sm:inline">
-              Studdy Buddy
-            </span>
-          </Link>
+          {/* Left side - Logo and Menu Button */}
+          <div className="flex items-center gap-3">
+            {/* Hamburger Menu Button for Sidebar (only on pages with sidebar) */}
+            {user && onMenuClick && (
+              <button 
+                onClick={onMenuClick}
+                className="lg:hidden p-2 hover:bg-white/50 dark:hover:bg-slate-800/50 backdrop-blur-sm rounded-xl transition-all"
+                aria-label="Toggle sidebar"
+              >
+                <Menu size={22} className="text-gray-600 dark:text-gray-300" />
+              </button>
+            )}
+
+            <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
+              <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-lg glow-effect">
+                <span className="text-white font-bold text-base">SB</span>
+              </div>
+              <span className="font-bold text-lg gradient-text hidden sm:inline">
+                Studdy Buddy
+              </span>
+            </Link>
+          </div>
 
           <div className="hidden md:flex items-center gap-0.5">
             {user && (
