@@ -1,22 +1,11 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { roomAPI } from '../services/api'
-import {
-  joinRoom,
-  sendMessage,
-  onMessage,
-  onTyping,
-  sendTyping,
-  leaveRoom,
-  getSocket,
-} from '../services/socket'
+import { joinRoom, sendMessage, onMessage, onTyping, sendTyping, leaveRoom, getSocket } from '../services/socket'
 import { showMessageNotification, playNotificationSound, requestNotificationPermission } from '../utils/notifications'
-import Card from '../components/Card'
-import Button from '../components/Button'
-import Input from '../components/Input'
-import { Send, Video, ArrowLeft } from 'lucide-react'
+import { Send, Video, ArrowLeft, Loader2 } from 'lucide-react'
 
 export default function Chat() {
   const { roomId } = useParams()
@@ -38,73 +27,44 @@ export default function Chat() {
         const res = await roomAPI.getById(roomId)
         const roomData = res.data.data?.room
         const messagesData = res.data.data?.messages || []
-        
         setRoom(roomData)
         setMessages(messagesData)
-        
-        // Determine the other user
-        const userId = user._id
-        const student1Id = roomData.student1?._id || roomData.student1
-        const student2Id = roomData.student2?._id || roomData.student2
-        
-        if (String(userId) === String(student1Id)) {
-          setOtherUser(roomData.student2)
-        } else {
-          setOtherUser(roomData.student1)
-        }
-        
-        // Request notification permission
+        const uid = user._id
+        const s1 = roomData.student1?._id || roomData.student1
+        const s2 = roomData.student2?._id || roomData.student2
+        setOtherUser(String(uid) === String(s1) ? roomData.student2 : roomData.student1)
         requestNotificationPermission()
-      } catch (error) {
-        console.error('Failed to fetch room data:', error)
-      } finally {
-        setLoading(false)
-      }
+      } catch (err) {
+        console.error('Failed to fetch room data:', err)
+      } finally { setLoading(false) }
     }
-
-    if (user) {
-      fetchRoomData()
-    }
+    if (user) fetchRoomData()
   }, [roomId, user])
 
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
-
     joinRoom(roomId, user._id)
 
     const handleMessage = (data) => {
-      console.log('Message received:', data)
-      setMessages((prev) => [...prev, data])
-      
-      // Show notification if message is from other user and window is not focused
-      const isOwnMessage = String(data.senderId) === String(user._id) || String(data.senderId?._id) === String(user._id)
-      if (!isOwnMessage && !document.hasFocus()) {
+      setMessages(prev => [...prev, data])
+      const isOwn = String(data.senderId) === String(user._id) || String(data.senderId?._id) === String(user._id)
+      if (!isOwn && !document.hasFocus()) {
         showMessageNotification(otherUser?.name || 'Someone', data.content)
         playNotificationSound()
       }
     }
 
     const handleTyping = (data) => {
-      console.log('User typing:', data)
       if (data.userId !== user._id) {
-        setTypingUsers((prev) => [...new Set([...prev, data.userId])])
-        // Clear typing indicator after 3 seconds
-        setTimeout(() => {
-          setTypingUsers((prev) => prev.filter(id => id !== data.userId))
-        }, 3000)
+        setTypingUsers(prev => [...new Set([...prev, data.userId])])
+        setTimeout(() => setTypingUsers(prev => prev.filter(id => id !== data.userId)), 3000)
       }
     }
 
-    // Listen to the correct event names from backend
     socket.on('messageReceived', handleMessage)
     socket.on('userTyping', handleTyping)
-    socket.on('roomJoined', (data) => {
-      console.log('Room joined:', data)
-      if (data.messages && data.messages.length > 0) {
-        setMessages(data.messages)
-      }
-    })
+    socket.on('roomJoined', (data) => { if (data.messages?.length > 0) setMessages(data.messages) })
 
     return () => {
       socket.off('messageReceived', handleMessage)
@@ -121,176 +81,200 @@ export default function Chat() {
   const handleSendMessage = (e) => {
     e.preventDefault()
     if (!content.trim()) return
-
-    // Send message with userId
     const socket = getSocket()
     if (socket) {
-      socket.emit('sendMessage', {
-        roomId,
-        userId: user._id,
-        content: content.trim()
-      })
-      console.log('Message sent:', { roomId, userId: user._id, content: content.trim() })
-    } else {
-      console.error('Socket not connected')
+      socket.emit('sendMessage', { roomId, userId: user._id, content: content.trim() })
     }
-    
     setContent('')
     setTyping(false)
-    
-    // Scroll to bottom after sending
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }
 
   const handleTypingChange = (e) => {
     setContent(e.target.value)
-
-    if (!typing) {
-      setTyping(true)
-      sendTyping(roomId, user._id)
-    }
-
+    if (!typing) { setTyping(true); sendTyping(roomId, user._id) }
     clearTimeout(typingTimeoutRef.current)
-    typingTimeoutRef.current = setTimeout(() => {
-      setTyping(false)
-    }, 3000)
+    typingTimeoutRef.current = setTimeout(() => setTyping(false), 3000)
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background-light dark:bg-background-dark flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p>Loading chat...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ position: 'relative' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/src/assets/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.85)' }} />
+        <div className="text-center" style={{ position: 'relative', zIndex: 2 }}>
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+            <Loader2 size={36} style={{ color: '#818cf8' }} />
+          </motion.div>
+          <p className="mt-3 text-sm" style={{ color: 'rgba(148,163,184,0.6)', fontFamily: 'monospace' }}>Loading chat...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col">
-      {/* Chat Header - Mobile Optimized */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 py-3 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+    <div className="flex flex-col" style={{ height: '100vh', position: 'relative' }}>
+      {/* Background */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/src/assets/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.88)' }} />
+
+      {/* Chat Header */}
+      <div className="relative flex-shrink-0" style={{ zIndex: 10, background: 'rgba(10,8,30,0.9)', borderBottom: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
+        <div className="h-0.5" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             <Link to="/chats">
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition flex-shrink-0 active:scale-95">
-                <ArrowLeft size={20} />
-              </button>
+              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                className="p-2 rounded-xl transition flex-shrink-0"
+                style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>
+                <ArrowLeft size={18} />
+              </motion.button>
             </Link>
-            
-            {/* Other User Info */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
+
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="relative flex-shrink-0">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 14px rgba(99,102,241,0.4)' }}>
+                  {otherUser?.profileImage
+                    ? <img src={otherUser.profileImage} alt={otherUser.name} className="w-full h-full object-cover rounded-full" />
+                    : otherUser?.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
+                  style={{ background: '#34d399', borderColor: 'rgba(10,8,30,0.9)' }} />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-sm sm:text-lg truncate">{otherUser?.name || 'Unknown User'}</h2>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 truncate">{room?.topic}</p>
+                <h2 className="font-bold text-white text-sm truncate">{otherUser?.name || 'Unknown User'}</h2>
+                <p className="text-xs truncate" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace' }}>
+                  {room?.topic ? `# ${room.topic}` : 'Online'}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Video Call Button - Mobile Optimized */}
           <Link to={`/video-call/${roomId}`} className="flex-shrink-0">
-            <button className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg transition shadow-md active:scale-95 min-h-[40px]">
-              <Video size={16} className="sm:w-[18px] sm:h-[18px]" />
-              <span className="text-xs sm:text-sm font-medium hidden xs:inline">Video</span>
-            </button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 px-3 py-2 text-white text-xs font-semibold rounded-xl transition"
+              style={{ background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 2px 10px rgba(5,150,105,0.4)' }}>
+              <Video size={15} />
+              <span className="hidden sm:inline">Video Call</span>
+            </motion.button>
           </Link>
         </div>
       </div>
 
-      {/* Messages Area - Mobile Optimized */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 max-w-7xl mx-auto w-full bg-gray-50 dark:bg-gray-900">
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-2" style={{ position: 'relative', zIndex: 5 }}>
         {messages.length === 0 ? (
-          <div className="text-center py-12 text-gray-600 dark:text-gray-400">
-            <p className="text-sm sm:text-base">No messages yet. Start the conversation!</p>
-          </div>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center h-full py-16 gap-3">
+            <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+              <Send size={24} style={{ color: 'rgba(99,102,241,0.6)' }} />
+            </motion.div>
+            <p className="text-sm" style={{ color: 'rgba(148,163,184,0.6)' }}>No messages yet. Start the conversation!</p>
+          </motion.div>
         ) : (
           messages.map((msg, index) => {
-            const isOwnMessage = String(msg.senderId) === String(user._id) || String(msg.senderId?._id) === String(user._id)
+            const isOwn = String(msg.senderId) === String(user._id) || String(msg.senderId?._id) === String(user._id)
             const showAvatar = index === 0 || messages[index - 1]?.senderId !== msg.senderId
-            
+            const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
             return (
-              <motion.div
-                key={msg._id || index}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex items-end gap-1 sm:gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-              >
-                {/* Other user avatar on left */}
-                {!isOwnMessage && showAvatar && (
-                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
-                    {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
+              <motion.div key={msg._id || index}
+                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className={`flex items-end gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                {/* Other user avatar */}
+                {!isOwn && (
+                  <div className="flex-shrink-0 w-7 h-7">
+                    {showAvatar ? (
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                        style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                        {otherUser?.profileImage
+                          ? <img src={otherUser.profileImage} alt="" className="w-full h-full object-cover rounded-full" />
+                          : otherUser?.name?.charAt(0).toUpperCase() || 'U'}
+                      </div>
+                    ) : <div />}
                   </div>
                 )}
-                {!isOwnMessage && !showAvatar && <div className="w-6 sm:w-8" />}
-                
-                {/* Message bubble */}
-                <div
-                  className={`max-w-[75%] sm:max-w-xs md:max-w-md px-3 sm:px-4 py-2 rounded-2xl shadow-sm ${
-                    isOwnMessage
-                      ? 'bg-green-500 text-white rounded-br-none'
-                      : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-none'
-                  }`}
-                >
-                  {!isOwnMessage && showAvatar && (
-                    <p className="text-xs font-semibold mb-1 text-blue-600 dark:text-blue-400">
+
+                {/* Bubble */}
+                <div className={`max-w-[72%] sm:max-w-sm`}>
+                  {!isOwn && showAvatar && (
+                    <p className="text-xs font-semibold mb-1 ml-1" style={{ color: '#a5b4fc' }}>
                       {otherUser?.name || 'Unknown'}
                     </p>
                   )}
-                  <p className="text-sm break-words">{msg.content}</p>
-                  <p className={`text-xs mt-1 ${isOwnMessage ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'}`}>
-                    {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  <div className="px-4 py-2.5 rounded-2xl"
+                    style={isOwn ? {
+                      background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                      borderRadius: '18px 18px 4px 18px',
+                      boxShadow: '0 2px 12px rgba(99,102,241,0.35)',
+                    } : {
+                      background: 'rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      backdropFilter: 'blur(12px)',
+                      borderRadius: '18px 18px 18px 4px',
+                    }}>
+                    <p className="text-sm text-white break-words leading-relaxed">{msg.content}</p>
+                    <p className="text-xs mt-1" style={{ color: isOwn ? 'rgba(255,255,255,0.6)' : 'rgba(148,163,184,0.5)' }}>
+                      {time}
+                    </p>
+                  </div>
                 </div>
               </motion.div>
             )
           })
         )}
 
-        {typingUsers.length > 0 && (
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm">
-              {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            <div className="bg-white dark:bg-gray-800 px-3 sm:px-4 py-2 rounded-2xl rounded-bl-none shadow-sm">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+        {/* Typing indicator */}
+        <AnimatePresence>
+          {typingUsers.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+              className="flex items-end gap-2">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
-            </div>
-          </div>
-        )}
+              <div className="px-4 py-3 rounded-2xl" style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px 18px 18px 4px' }}>
+                <div className="flex space-x-1 items-center">
+                  {[0, 0.15, 0.3].map((delay, i) => (
+                    <motion.div key={i} className="w-2 h-2 rounded-full"
+                      style={{ background: '#818cf8' }}
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay }} />
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input - Mobile Optimized */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-3 sm:p-4 bg-white dark:bg-gray-800 sticky bottom-0">
-        <div className="max-w-7xl mx-auto">
-          <form onSubmit={handleSendMessage} className="flex gap-2 items-end">
-            <input
-              type="text"
-              placeholder="Type a message..."
-              value={content}
-              onChange={handleTypingChange}
-              className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 min-h-[44px]"
-              autoComplete="off"
-            />
-            <button
-              type="submit"
-              disabled={!content.trim()}
-              className="px-3 sm:px-4 py-2 sm:py-3 bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition flex items-center justify-center min-w-[44px] min-h-[44px] active:scale-95"
-            >
-              <Send size={20} className="sm:w-5 sm:h-5" />
-            </button>
-          </form>
-        </div>
+      {/* Input Area */}
+      <div className="relative flex-shrink-0" style={{ zIndex: 10, background: 'rgba(10,8,30,0.9)', borderTop: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
+        <form onSubmit={handleSendMessage} className="flex gap-3 items-center px-4 py-3">
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={content}
+            onChange={handleTypingChange}
+            className="flex-1 px-4 py-3 text-sm text-white placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(12px)' }}
+            autoComplete="off"
+          />
+          <motion.button type="submit" disabled={!content.trim()}
+            whileHover={{ scale: content.trim() ? 1.08 : 1 }}
+            whileTap={{ scale: content.trim() ? 0.92 : 1 }}
+            className="w-11 h-11 flex items-center justify-center rounded-xl text-white transition flex-shrink-0 disabled:opacity-40"
+            style={{ background: content.trim() ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.2)', boxShadow: content.trim() ? '0 2px 12px rgba(99,102,241,0.4)' : 'none' }}>
+            <Send size={18} />
+          </motion.button>
+        </form>
       </div>
     </div>
   )

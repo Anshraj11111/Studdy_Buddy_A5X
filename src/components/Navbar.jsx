@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Menu, X, LogOut, Settings, Bell, Heart, MessageCircle, UserPlus } from 'lucide-react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Menu, X, LogOut, Settings, Bell, Heart, MessageCircle, UserPlus, Zap } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
 
 function NotifIcon({ type }) {
-  if (type === 'like') return <Heart size={12} className="text-red-500" fill="currentColor" />
-  if (type === 'comment') return <MessageCircle size={12} className="text-blue-500" />
-  if (type === 'connection') return <UserPlus size={12} className="text-green-500" />
-  return <Bell size={12} className="text-gray-400" />
+  if (type === 'like') return <Heart size={11} className="text-red-400" fill="currentColor" />
+  if (type === 'comment') return <MessageCircle size={11} className="text-blue-400" />
+  if (type === 'connection') return <UserPlus size={11} className="text-green-400" />
+  return <Bell size={11} className="text-gray-400" />
 }
 
 function timeAgo(date) {
@@ -26,6 +27,7 @@ export default function Navbar({ onMenuClick }) {
   const { user, logout } = useAuthStore()
   const { notifications, unreadCount, markAllRead } = useNotificationStore()
   const navigate = useNavigate()
+  const location = useLocation()
   const notifRef = useRef()
 
   useEffect(() => {
@@ -43,197 +45,278 @@ export default function Navbar({ onMenuClick }) {
     if (!notifOpen && unreadCount > 0) markAllRead()
   }
 
-  const nl = "px-3 py-2 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-all font-medium text-sm backdrop-blur-sm"
+  const navLinks = user?.role === 'student'
+    ? [
+        { to: '/dashboard', label: 'Dashboard' },
+        { to: '/doubts', label: 'My Doubts' },
+        { to: '/mentors', label: 'Mentors' },
+        { to: '/chats', label: 'Chats' },
+        { to: '/resources', label: 'Resources' },
+        { to: '/communities', label: 'Communities' },
+      ]
+    : [
+        { to: '/mentor-dashboard', label: 'Dashboard' },
+        { to: '/chats', label: 'Chats' },
+        { to: '/resources', label: 'Resources' },
+        { to: '/communities', label: 'Communities' },
+      ]
+
+  const isActive = (path) => location.pathname === path
 
   return (
-    <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-lg border-b border-white/20 dark:border-slate-700/50 fixed top-0 left-0 right-0 z-50">
+    <nav className="fixed top-0 left-0 right-0 z-50"
+      style={{ background: 'rgba(5,3,20,0.92)', borderBottom: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(24px)' }}>
+      {/* Top gradient line */}
+      <div className="h-px w-full" style={{ background: 'linear-gradient(90deg,transparent,#6366f1 30%,#8b5cf6 50%,#6366f1 70%,transparent)' }} />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
 
-          {/* Left side - Logo and Menu Button */}
+          {/* Left: Hamburger + Logo */}
           <div className="flex items-center gap-3">
-            {/* Hamburger Menu Button for Sidebar (only on pages with sidebar) */}
             {user && onMenuClick && (
-              <button 
+              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                 onClick={onMenuClick}
-                className="lg:hidden p-2 hover:bg-white/50 dark:hover:bg-slate-800/50 backdrop-blur-sm rounded-xl transition-all"
-                aria-label="Toggle sidebar"
-              >
-                <Menu size={22} className="text-gray-600 dark:text-gray-300" />
-              </button>
+                className="lg:hidden p-2 rounded-xl transition"
+                style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                <Menu size={20} style={{ color: '#a5b4fc' }} />
+              </motion.button>
             )}
 
             <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
-              <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-lg glow-effect">
-                <span className="text-white font-bold text-base">SB</span>
-              </div>
-              <span className="font-bold text-lg gradient-text hidden sm:inline">
+              <motion.div whileHover={{ scale: 1.05 }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center relative overflow-hidden"
+                style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 16px rgba(99,102,241,0.5)' }}>
+                <span className="text-white font-bold text-sm relative z-10">SB</span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: 'linear-gradient(135deg,#818cf8,#a78bfa)' }} />
+              </motion.div>
+              <span className="font-bold text-lg hidden sm:inline"
+                style={{ background: 'linear-gradient(135deg,#a5b4fc,#c4b5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Studdy Buddy
               </span>
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center gap-0.5">
-            {user && (
-              <>
-                {user.role === 'student' ? (
-                  <>
-                    <Link to="/dashboard" className={nl}>Dashboard</Link>
-                    <Link to="/doubts" className={nl}>My Doubts</Link>
-                    <Link to="/mentors" className={nl}>Mentors</Link>
-                    <Link to="/chats" className={nl}>Chats</Link>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/mentor-dashboard" className={nl}>Dashboard</Link>
-                    <Link to="/chats" className={nl}>Chats</Link>
-                  </>
-                )}
-                <Link to="/resources" className="px-3 py-2 rounded-xl hover:bg-secondary-50 dark:hover:bg-secondary-900/20 text-gray-700 dark:text-gray-200 hover:text-secondary-600 transition-all font-medium text-sm backdrop-blur-sm">Resources</Link>
-                <Link to="/communities" className="px-3 py-2 rounded-xl hover:bg-accent-50 dark:hover:bg-accent-900/20 text-gray-700 dark:text-gray-200 hover:text-accent-600 transition-all font-medium text-sm backdrop-blur-sm">Communities</Link>
-              </>
-            )}
+          {/* Center: Nav Links */}
+          <div className="hidden md:flex items-center gap-1">
+            {user && navLinks.map(({ to, label }) => (
+              <Link key={to} to={to}>
+                <motion.div whileHover={{ y: -1 }} className="relative px-3 py-2 rounded-xl transition-all text-sm font-medium"
+                  style={{ color: isActive(to) ? '#a5b4fc' : 'rgba(148,163,184,0.75)' }}>
+                  {isActive(to) && (
+                    <motion.div layoutId="nav-active"
+                      className="absolute inset-0 rounded-xl"
+                      style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)' }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }} />
+                  )}
+                  <span className="relative z-10">{label}</span>
+                  {isActive(to) && (
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                      style={{ background: '#818cf8' }} />
+                  )}
+                </motion.div>
+              </Link>
+            ))}
           </div>
 
-          <div className="flex items-center gap-1">
+          {/* Right: Actions */}
+          <div className="flex items-center gap-1.5">
             {user ? (
               <>
+                {/* Notifications */}
                 <div className="relative" ref={notifRef}>
-                  <button onClick={openNotif} className="relative p-2 hover:bg-white/50 dark:hover:bg-slate-800/50 backdrop-blur-sm rounded-xl transition-all" aria-label="Notifications">
-                    <Bell size={18} className="text-gray-600 dark:text-gray-300" />
+                  <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                    onClick={openNotif}
+                    className="relative p-2 rounded-xl transition"
+                    style={{ background: notifOpen ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                    <Bell size={17} style={{ color: '#a5b4fc' }} />
                     {unreadCount > 0 && (
-                      <span className="absolute top-0.5 right-0.5 min-w-[16px] h-4 bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 shadow-lg">
+                      <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                        className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5"
+                        style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 0 8px rgba(239,68,68,0.5)' }}>
                         {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
+                      </motion.span>
                     )}
-                  </button>
+                  </motion.button>
 
-                  {notifOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-80 glass-card overflow-hidden z-50">
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100/50 dark:border-slate-700/50">
-                        <span className="font-bold text-sm text-gray-900 dark:text-white">Notifications</span>
-                        {notifications.length > 0 && (
-                          <button onClick={markAllRead} className="text-xs text-primary-500 hover:text-primary-700 font-medium">Mark all read</button>
-                        )}
-                      </div>
-                      <div className="max-h-80 overflow-y-auto divide-y divide-gray-50/50 dark:divide-slate-700/50">
-                        {notifications.length === 0 ? (
-                          <div className="flex flex-col items-center py-10 gap-2 text-gray-400">
-                            <Bell size={28} className="opacity-30" />
-                            <p className="text-sm">No notifications yet</p>
-                          </div>
-                        ) : notifications.map(n => (
-                          <div key={n._id} className={`flex items-start gap-3 px-4 py-3 hover:bg-white/50 dark:hover:bg-slate-700/40 transition-colors ${!n.read ? 'bg-primary-50/60 dark:bg-primary-900/10' : ''}`}>
-                            <div className="relative flex-shrink-0">
-                              <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold text-sm shadow-md">
-                                {n.sender?.profileImage
-                                  ? <img src={n.sender.profileImage} alt={n.sender.name} className="w-full h-full object-cover" />
-                                  : n.sender?.name?.[0]?.toUpperCase()
-                                }
-                              </div>
-                              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-sm">
-                                <NotifIcon type={n.type} />
-                              </div>
+                  <AnimatePresence>
+                    {notifOpen && (
+                      <motion.div initial={{ opacity: 0, y: -8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.95 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                        className="absolute right-0 top-full mt-2 w-80 rounded-2xl overflow-hidden z-50"
+                        style={{ background: 'rgba(10,8,30,0.97)', border: '1px solid rgba(99,102,241,0.25)', backdropFilter: 'blur(24px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+                        <div className="h-px" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+                        <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
+                          <span className="font-bold text-sm text-white flex items-center gap-2">
+                            <Bell size={14} style={{ color: '#818cf8' }} /> Notifications
+                          </span>
+                          {notifications.length > 0 && (
+                            <button onClick={markAllRead} className="text-xs font-medium transition hover:opacity-80"
+                              style={{ color: '#818cf8' }}>Mark all read</button>
+                          )}
+                        </div>
+                        <div className="max-h-80 overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="flex flex-col items-center py-10 gap-2">
+                              <Bell size={28} style={{ color: 'rgba(99,102,241,0.3)' }} />
+                              <p className="text-sm" style={{ color: 'rgba(148,163,184,0.5)' }}>No notifications yet</p>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-gray-700 dark:text-gray-200 leading-snug">{n.message}</p>
-                              <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(n.createdAt)}</p>
+                          ) : notifications.map(n => (
+                            <div key={n._id}
+                              className="flex items-start gap-3 px-4 py-3 transition hover:bg-white/5"
+                              style={{ borderBottom: '1px solid rgba(99,102,241,0.08)', background: !n.read ? 'rgba(99,102,241,0.06)' : 'transparent' }}>
+                              <div className="relative flex-shrink-0">
+                                <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-sm"
+                                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                                  {n.sender?.profileImage
+                                    ? <img src={n.sender.profileImage} alt={n.sender.name} className="w-full h-full object-cover" />
+                                    : n.sender?.name?.[0]?.toUpperCase()}
+                                </div>
+                                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
+                                  style={{ background: 'rgba(10,8,30,0.9)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                                  <NotifIcon type={n.type} />
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs leading-snug" style={{ color: 'rgba(226,232,240,0.9)' }}>{n.message}</p>
+                                <p className="text-[11px] mt-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>{timeAgo(n.createdAt)}</p>
+                              </div>
+                              {!n.read && <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: '#818cf8' }} />}
                             </div>
-                            {!n.read && <div className="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0 mt-1.5" />}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                <Link to="/settings" className="hidden sm:flex p-2 hover:bg-white/50 dark:hover:bg-slate-800/50 backdrop-blur-sm rounded-xl transition-all" title="Settings">
-                  <Settings size={18} className="text-gray-600 dark:text-gray-400" />
+                {/* Settings icon */}
+                <Link to="/settings" className="hidden sm:flex">
+                  <motion.div whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                    className="p-2 rounded-xl transition"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                    <Settings size={17} style={{ color: 'rgba(148,163,184,0.7)' }} />
+                  </motion.div>
                 </Link>
 
-                <Link to="/settings" className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 bg-gradient-to-r from-primary-50/80 to-secondary-50/80 dark:from-primary-900/20 dark:to-secondary-900/20 backdrop-blur-md text-primary-600 dark:text-primary-400 rounded-xl hover:shadow-lg transition-all font-medium text-sm border border-primary-200/30 dark:border-primary-800/30">
-                  <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-md">
-                    {user.profileImage
-                      ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
-                      : user.name?.charAt(0).toUpperCase()
-                    }
-                  </div>
-                  <span className="max-w-[72px] truncate">{user.name}</span>
+                {/* User profile chip */}
+                <Link to="/settings" className="hidden sm:flex">
+                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition"
+                    style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                    <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                      style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 8px rgba(99,102,241,0.4)' }}>
+                      {user.profileImage
+                        ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                        : user.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="max-w-[72px] truncate text-sm font-medium" style={{ color: '#a5b4fc' }}>{user.name}</span>
+                  </motion.div>
                 </Link>
 
-                <button onClick={handleLogout} className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 hover:shadow-xl transition-all font-medium text-sm shadow-lg hover:scale-105">
-                  <LogOut size={15} />
+                {/* Logout */}
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                  onClick={handleLogout}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-white text-sm font-semibold rounded-xl transition"
+                  style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 2px 10px rgba(239,68,68,0.35)' }}>
+                  <LogOut size={14} />
                   <span>Logout</span>
-                </button>
+                </motion.button>
               </>
             ) : (
               <>
-                <Link to="/login" className="px-4 py-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 backdrop-blur-sm rounded-xl transition-all font-medium text-sm">Login</Link>
-                <Link to="/signup" className="px-4 py-2 bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-xl hover:shadow-xl transition-all font-medium text-sm shadow-lg hover:scale-105">Sign Up</Link>
+                <Link to="/login">
+                  <motion.div whileHover={{ scale: 1.05 }} className="px-4 py-2 text-sm font-medium rounded-xl transition"
+                    style={{ color: 'rgba(148,163,184,0.8)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                    Login
+                  </motion.div>
+                </Link>
+                <Link to="/signup">
+                  <motion.div whileHover={{ scale: 1.05 }} className="px-4 py-2 text-sm font-semibold text-white rounded-xl transition"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 2px 12px rgba(99,102,241,0.4)' }}>
+                    Sign Up
+                  </motion.div>
+                </Link>
               </>
             )}
 
-            <button onClick={() => setIsOpen(!isOpen)} className="md:hidden p-2 hover:bg-white/50 dark:hover:bg-slate-800/50 backdrop-blur-sm rounded-xl transition-all">
-              {isOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
+            {/* Mobile menu toggle */}
+            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+              onClick={() => setIsOpen(!isOpen)}
+              className="md:hidden p-2 rounded-xl transition"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
+              {isOpen
+                ? <X size={20} style={{ color: '#a5b4fc' }} />
+                : <Menu size={20} style={{ color: '#a5b4fc' }} />}
+            </motion.button>
           </div>
         </div>
-
-        {isOpen && (
-          <div className="md:hidden pb-4 space-y-1 border-t border-gray-100/50 dark:border-slate-700/50 pt-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl"
-            style={{ 
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              zIndex: 40,
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
-            }}
-          >
-            {user && (
-              <>
-                <Link to="/settings" className="flex items-center gap-3 px-3 py-3 bg-gradient-to-r from-primary-50/80 to-secondary-50/80 dark:from-primary-900/20 dark:to-secondary-900/20 backdrop-blur-md rounded-xl mb-2 border border-primary-200/30 dark:border-primary-800/30" onClick={() => setIsOpen(false)}>
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold flex-shrink-0 shadow-md">
-                    {user.profileImage
-                      ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
-                      : user.name?.charAt(0).toUpperCase()
-                    }
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm text-gray-900 dark:text-white">{user.name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">{user.role}</div>
-                  </div>
-                  {unreadCount > 0 && (
-                    <span className="ml-auto bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md">{unreadCount}</span>
-                  )}
-                </Link>
-
-                {user.role === 'student' ? (
-                  <>
-                    <Link to="/dashboard" className="block px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 backdrop-blur-sm rounded-xl text-gray-700 dark:text-gray-200 font-medium text-sm" onClick={() => setIsOpen(false)}>Dashboard</Link>
-                    <Link to="/doubts" className="block px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 backdrop-blur-sm rounded-xl text-gray-700 dark:text-gray-200 font-medium text-sm" onClick={() => setIsOpen(false)}>My Doubts</Link>
-                    <Link to="/mentors" className="block px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 backdrop-blur-sm rounded-xl text-gray-700 dark:text-gray-200 font-medium text-sm" onClick={() => setIsOpen(false)}>Mentors</Link>
-                    <Link to="/chats" className="block px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 backdrop-blur-sm rounded-xl text-gray-700 dark:text-gray-200 font-medium text-sm" onClick={() => setIsOpen(false)}>Chats</Link>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/mentor-dashboard" className="block px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 backdrop-blur-sm rounded-xl text-gray-700 dark:text-gray-200 font-medium text-sm" onClick={() => setIsOpen(false)}>Dashboard</Link>
-                    <Link to="/chats" className="block px-3 py-2.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 backdrop-blur-sm rounded-xl text-gray-700 dark:text-gray-200 font-medium text-sm" onClick={() => setIsOpen(false)}>Chats</Link>
-                  </>
-                )}
-                <Link to="/resources" className="block px-3 py-2.5 hover:bg-secondary-50 dark:hover:bg-secondary-900/20 backdrop-blur-sm rounded-xl text-gray-700 dark:text-gray-200 font-medium text-sm" onClick={() => setIsOpen(false)}>Resources</Link>
-                <Link to="/communities" className="block px-3 py-2.5 hover:bg-accent-50 dark:hover:bg-accent-900/20 backdrop-blur-sm rounded-xl text-gray-700 dark:text-gray-200 font-medium text-sm" onClick={() => setIsOpen(false)}>Communities</Link>
-                <Link to="/settings" className="flex items-center gap-2 px-3 py-2.5 hover:bg-white/50 dark:hover:bg-slate-800/50 backdrop-blur-sm rounded-xl text-gray-700 dark:text-gray-200 font-medium text-sm" onClick={() => setIsOpen(false)}>
-                  <Settings size={15} /> Settings
-                </Link>
-                <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2.5 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium text-sm mt-1 shadow-lg hover:shadow-xl hover:scale-105 transition-all">
-                  <LogOut size={15} /> Logout
-                </button>
-              </>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* Mobile dropdown */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }}
+            className="md:hidden overflow-hidden"
+            style={{ background: 'rgba(5,3,20,0.97)', borderTop: '1px solid rgba(99,102,241,0.15)' }}>
+            <div className="px-4 py-4 space-y-1">
+              {user && (
+                <>
+                  {/* User info */}
+                  <Link to="/settings" onClick={() => setIsOpen(false)}>
+                    <div className="flex items-center gap-3 p-3 rounded-xl mb-3"
+                      style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                      <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-bold flex-shrink-0"
+                        style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 12px rgba(99,102,241,0.4)' }}>
+                        {user.profileImage
+                          ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                          : user.name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm text-white">{user.name}</div>
+                        <div className="text-xs capitalize" style={{ color: 'rgba(148,163,184,0.6)' }}>{user.role}</div>
+                      </div>
+                      {unreadCount > 0 && (
+                        <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                          style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)' }}>{unreadCount}</span>
+                      )}
+                    </div>
+                  </Link>
+
+                  {/* Nav links */}
+                  {navLinks.map(({ to, label }) => (
+                    <Link key={to} to={to} onClick={() => setIsOpen(false)}>
+                      <div className="flex items-center px-3 py-2.5 rounded-xl transition text-sm font-medium"
+                        style={{
+                          background: isActive(to) ? 'rgba(99,102,241,0.2)' : 'transparent',
+                          color: isActive(to) ? '#a5b4fc' : 'rgba(148,163,184,0.8)',
+                          borderLeft: isActive(to) ? '2px solid #6366f1' : '2px solid transparent',
+                        }}>
+                        {label}
+                      </div>
+                    </Link>
+                  ))}
+
+                  <Link to="/settings" onClick={() => setIsOpen(false)}>
+                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl transition text-sm font-medium"
+                      style={{ color: 'rgba(148,163,184,0.8)' }}>
+                      <Settings size={15} /> Settings
+                    </div>
+                  </Link>
+
+                  <motion.button whileTap={{ scale: 0.97 }} onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-white text-sm font-semibold rounded-xl mt-2"
+                    style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 2px 10px rgba(239,68,68,0.3)' }}>
+                    <LogOut size={15} /> Logout
+                  </motion.button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   )
 }

@@ -76,12 +76,12 @@ export default function Signup() {
       {/* Background image with overlay */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0,
-        backgroundImage: "url(/src/assets/image.png)",
+        backgroundImage: "url(/src/assets/login-signup.png)",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundAttachment: "fixed",
       }} />
-      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(5,3,20,0.85)" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(5,3,20,0.55)" }} />
 
       {/* Animated particles */}
       <div className="absolute inset-0 overflow-hidden" style={{ zIndex: 2 }}>

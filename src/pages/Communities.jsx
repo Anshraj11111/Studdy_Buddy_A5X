@@ -119,26 +119,30 @@ function PostComposer({ user, onPost }) {
 
       {/* Collapsed bar */}
       {!open && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+        <div className="rounded-2xl p-4" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
           <div className="flex items-center gap-3">
             <Avatar src={user?.profileImage} name={user?.name} size={10} />
             <button onClick={openFull}
-              className="flex-1 text-left px-4 py-2.5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              className="flex-1 text-left px-4 py-2.5 rounded-full text-sm transition"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)', color: 'rgba(148,163,184,0.5)' }}>
               Share something with the community...
             </button>
           </div>
-          <div className="flex items-center gap-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-1 mt-3 pt-3" style={{ borderTop: '1px solid rgba(99,102,241,0.15)' }}>
             <button onClick={() => { openFull(); setTimeout(() => pickFile('image/*', 'image'), 200) }}
-              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors">
-              <Image size={16} className="text-blue-500" /> Photo
+              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-xl transition hover:bg-white/5"
+              style={{ color: '#60a5fa' }}>
+              <Image size={15} /> Photo
             </button>
             <button onClick={() => { openFull(); setTimeout(() => pickFile('video/*', 'video'), 200) }}
-              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition-colors">
-              <Video size={16} className="text-green-500" /> Video
+              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-xl transition hover:bg-white/5"
+              style={{ color: '#34d399' }}>
+              <Video size={15} /> Video
             </button>
             <button onClick={openFull}
-              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-colors">
-              <BookOpen size={16} className="text-amber-500" /> Article
+              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-xl transition hover:bg-white/5"
+              style={{ color: '#fbbf24' }}>
+              <BookOpen size={15} /> Article
             </button>
           </div>
         </div>
@@ -156,21 +160,24 @@ function PostComposer({ user, onPost }) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed inset-x-4 top-20 z-50 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl max-w-lg mx-auto overflow-hidden max-h-[80vh] flex flex-col"
+              className="fixed inset-x-4 top-20 z-50 rounded-3xl shadow-2xl max-w-lg mx-auto overflow-hidden max-h-[80vh] flex flex-col"
+              style={{ background: 'rgba(10,8,30,0.95)', border: '1px solid rgba(99,102,241,0.3)', backdropFilter: 'blur(24px)' }}
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+              <div className="h-0.5" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+              <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
                 <div className="flex items-center gap-3">
                   <Avatar src={user?.profileImage} name={user?.name} size={10} />
                   <div>
-                    <p className="font-bold text-sm text-gray-900 dark:text-white">{user?.name}</p>
+                    <p className="font-bold text-sm text-white">{user?.name}</p>
                     <select value={category} onChange={e => setCategory(e.target.value)}
-                      className="text-xs text-indigo-600 dark:text-indigo-400 bg-transparent focus:outline-none font-semibold cursor-pointer mt-0.5">
-                      {CATEGORIES.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
+                      className="text-xs font-semibold cursor-pointer mt-0.5 focus:outline-none"
+                      style={{ background: 'transparent', color: '#a5b4fc' }}>
+                      {CATEGORIES.map(c => <option key={c.label} value={c.label} style={{ background: '#0a0820' }}>{c.label}</option>)}
                     </select>
                   </div>
                 </div>
-                <button onClick={() => setOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
-                  <X size={18} className="text-gray-500" />
+                <button onClick={() => setOpen(false)} className="p-2 rounded-full transition hover:bg-white/10">
+                  <X size={18} style={{ color: 'rgba(148,163,184,0.7)' }} />
                 </button>
               </div>
 
@@ -178,37 +185,39 @@ function PostComposer({ user, onPost }) {
                 <textarea ref={textRef} value={content} onChange={e => setContent(e.target.value)}
                   placeholder="What do you want to talk about?"
                   rows={5}
-                  className="w-full bg-transparent text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 resize-none focus:outline-none leading-relaxed" />
+                  className="w-full bg-transparent text-sm text-white placeholder-gray-500 resize-none focus:outline-none leading-relaxed" />
                 {media && (
-                  <div className="relative mt-2 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                  <div className="relative mt-2 rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(99,102,241,0.25)' }}>
                     {media.type === 'image'
                       ? <img src={media.dataUrl} alt="preview" className="w-full max-h-64 object-cover" />
                       : <video src={media.dataUrl} controls className="w-full max-h-64" />
                     }
                     <button onClick={() => setMedia(null)}
-                      className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition-colors">
+                      className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black/80 transition">
                       <X size={14} />
                     </button>
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: '1px solid rgba(99,102,241,0.15)', background: 'rgba(5,3,20,0.5)' }}>
                 <div className="flex items-center gap-1">
                   <button onClick={() => pickFile('image/*', 'image')}
-                    className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors" title="Add photo">
+                    className="p-2 rounded-xl transition hover:bg-white/10" style={{ color: '#60a5fa' }} title="Add photo">
                     <Image size={18} />
                   </button>
                   <button onClick={() => pickFile('video/*', 'video')}
-                    className="p-2 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-xl transition-colors" title="Add video">
+                    className="p-2 rounded-xl transition hover:bg-white/10" style={{ color: '#34d399' }} title="Add video">
                     <Video size={18} />
                   </button>
                 </div>
-                <button onClick={submit} disabled={posting || uploading || (!content.trim() && !media)}
-                  className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold rounded-full transition-colors shadow-md">
-                  {posting ? <Loader2 size={14} className="animate-spin" /> : uploading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                  onClick={submit} disabled={posting || uploading || (!content.trim() && !media)}
+                  className="flex items-center gap-2 px-5 py-2 text-white text-sm font-semibold rounded-full transition disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 2px 12px rgba(99,102,241,0.4)' }}>
+                  {posting || uploading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                   {posting ? 'Posting...' : uploading ? 'Uploading...' : 'Post'}
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           </>
@@ -237,8 +246,8 @@ function PostCard({ post, user, onLike, onDelete, onComment }) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-      <div className={`h-1 bg-gradient-to-r ${grad}`} />
+    <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
+      <div className={`h-0.5 bg-gradient-to-r ${grad}`} />
       <div className="p-4 sm:p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-3">
@@ -246,11 +255,11 @@ function PostCard({ post, user, onLike, onDelete, onComment }) {
             <Avatar src={post.userId?.profileImage} name={post.userId?.name} size={10} />
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-sm text-gray-900 dark:text-white">{post.userId?.name}</span>
+                <span className="font-bold text-sm text-white">{post.userId?.name}</span>
                 <RoleBadge role={post.userId?.role} />
               </div>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                <span className="text-xs text-gray-400">
+                <span className="text-xs" style={{ color: 'rgba(148,163,184,0.5)' }}>
                   {new Date(post.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </span>
                 {post.category && post.category !== 'All' && (
@@ -261,28 +270,28 @@ function PostCard({ post, user, onLike, onDelete, onComment }) {
           </div>
           {isOwner && (
             <button onClick={() => onDelete(post._id)}
-              className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0">
+              className="p-1.5 rounded-lg transition flex-shrink-0 hover:bg-red-500/20"
+              style={{ color: 'rgba(148,163,184,0.4)' }}>
               <Trash2 size={14} />
             </button>
           )}
         </div>
 
         {post.content && (
-          <p className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-relaxed mb-3">{post.content}</p>
+          <p className="text-sm text-white whitespace-pre-wrap leading-relaxed mb-3" style={{ color: 'rgba(226,232,240,0.9)' }}>{post.content}</p>
         )}
 
         {post.mediaUrl && (
-          <div className="rounded-xl overflow-hidden mb-3 border border-gray-100 dark:border-gray-700">
+          <div className="rounded-xl overflow-hidden mb-3" style={{ border: '1px solid rgba(99,102,241,0.2)' }}>
             {post.mediaType === 'image'
               ? <img src={post.mediaUrl} alt="post media" className="w-full max-h-96 object-cover" />
-              : <video src={post.mediaUrl} controls className="w-full max-h-96" />
-            }
+              : <video src={post.mediaUrl} controls className="w-full max-h-96" />}
           </div>
         )}
 
         {/* Stats */}
         {((post.likes?.length > 0) || (post.comments?.length > 0)) && (
-          <div className="flex items-center justify-between text-xs text-gray-400 pb-2 mb-2 border-b border-gray-100 dark:border-gray-700">
+          <div className="flex items-center justify-between text-xs pb-2 mb-2" style={{ borderBottom: '1px solid rgba(99,102,241,0.15)', color: 'rgba(148,163,184,0.5)' }}>
             {post.likes?.length > 0 && (
               <span className="flex items-center gap-1">
                 <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
@@ -292,7 +301,7 @@ function PostCard({ post, user, onLike, onDelete, onComment }) {
               </span>
             )}
             {post.comments?.length > 0 && (
-              <button onClick={() => setShowComments(v => !v)} className="hover:underline ml-auto">
+              <button onClick={() => setShowComments(v => !v)} className="hover:underline ml-auto" style={{ color: 'rgba(148,163,184,0.6)' }}>
                 {post.comments.length} comment{post.comments.length !== 1 ? 's' : ''}
               </button>
             )}
@@ -302,16 +311,14 @@ function PostCard({ post, user, onLike, onDelete, onComment }) {
         {/* Actions */}
         <div className="flex items-center gap-1">
           <button onClick={() => onLike(post._id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition-colors ${
-              isLiked ? 'text-red-500 bg-red-50 dark:bg-red-900/20' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}>
-            <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
-            Like
+            className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition"
+            style={{ background: isLiked ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.04)', color: isLiked ? '#f87171' : 'rgba(148,163,184,0.7)', border: `1px solid ${isLiked ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.08)'}` }}>
+            <Heart size={15} fill={isLiked ? 'currentColor' : 'none'} /> Like
           </button>
           <button onClick={() => setShowComments(v => !v)}
-            className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">
-            <MessageCircle size={16} />
-            Comment
+            className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-xl transition"
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(148,163,184,0.7)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <MessageCircle size={15} /> Comment
           </button>
         </div>
 
@@ -323,21 +330,21 @@ function PostCard({ post, user, onLike, onDelete, onComment }) {
               {(post.comments || []).map(c => (
                 <div key={c._id} className="flex gap-2.5 items-start">
                   <Avatar src={c.userId?.profileImage} name={c.userId?.name} size={8} />
-                  <div className="bg-gray-50 dark:bg-gray-700/60 rounded-2xl px-3 py-2 flex-1">
-                    <p className="text-xs font-bold text-gray-800 dark:text-gray-100">{c.userId?.name}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{c.content}</p>
+                  <div className="rounded-2xl px-3 py-2 flex-1" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                    <p className="text-xs font-bold text-white">{c.userId?.name}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.8)' }}>{c.content}</p>
                   </div>
                 </div>
               ))}
               <div className="flex gap-2 items-center">
                 <Avatar src={user?.profileImage} name={user?.name} size={8} />
-                <div className="flex-1 flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-full px-3 py-2">
+                <div className="flex-1 flex items-center gap-2 rounded-full px-3 py-2" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
                   <input value={commentText} onChange={e => setCommentText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && submitComment()}
                     placeholder="Add a comment..."
-                    className="flex-1 bg-transparent text-xs focus:outline-none text-gray-700 dark:text-gray-200 placeholder-gray-400" />
+                    className="flex-1 bg-transparent text-xs focus:outline-none text-white placeholder-gray-500" />
                   <button onClick={submitComment} disabled={submitting || !commentText.trim()}
-                    className="text-indigo-500 hover:text-indigo-700 disabled:opacity-40 transition-colors">
+                    style={{ color: '#818cf8' }} className="disabled:opacity-40 transition">
                     {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                   </button>
                 </div>
@@ -434,16 +441,17 @@ function FeedTab({ user }) {
   return (
     <div className="space-y-4">
       {/* Search + Category bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-3 shadow-sm">
+      <div className="rounded-2xl p-3 mb-4" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
         <div className="flex gap-2">
           {/* Category dropdown */}
           <div className="relative" ref={catRef}>
             <button onClick={() => setCatOpen(v => !v)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-xl border transition-colors whitespace-nowrap ${
-                filterCat !== 'All'
-                  ? 'bg-indigo-50 border-indigo-300 text-indigo-600 dark:bg-indigo-900/30 dark:border-indigo-600 dark:text-indigo-400'
-                  : 'border-gray-200 dark:border-gray-600 text-gray-500 hover:border-indigo-300 dark:hover:border-indigo-600'
-              }`}>
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-xl border transition-colors whitespace-nowrap"
+              style={{
+                background: filterCat !== 'All' ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
+                border: `1px solid ${filterCat !== 'All' ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                color: filterCat !== 'All' ? '#a5b4fc' : 'rgba(148,163,184,0.7)',
+              }}>
               {activeCat && <activeCat.icon size={14} />}
               <span className="hidden sm:inline">{filterCat}</span>
               <ChevronDown size={13} className={`transition-transform ${catOpen ? 'rotate-180' : ''}`} />
@@ -451,14 +459,12 @@ function FeedTab({ user }) {
             <AnimatePresence>
               {catOpen && (
                 <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  className="absolute left-0 top-full mt-1 z-30 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden min-w-[160px]">
+                  className="absolute left-0 top-full mt-1 z-30 rounded-2xl shadow-xl overflow-hidden min-w-[160px]"
+                  style={{ background: 'rgba(10,8,30,0.95)', border: '1px solid rgba(99,102,241,0.25)', backdropFilter: 'blur(20px)' }}>
                   {CATEGORIES.map(({ label, icon: Icon }) => (
                     <button key={label} onClick={() => handleCatFilter(label)}
-                      className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition-colors ${
-                        filterCat === label
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}>
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition"
+                      style={{ background: filterCat === label ? 'rgba(99,102,241,0.2)' : 'transparent', color: filterCat === label ? '#a5b4fc' : 'rgba(148,163,184,0.8)' }}>
                       <Icon size={14} /> {label}
                     </button>
                   ))}
@@ -469,14 +475,16 @@ function FeedTab({ user }) {
 
           {/* Search input */}
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'rgba(148,163,184,0.5)' }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
               placeholder="Search posts..."
-              className="w-full pl-9 pr-3 py-2.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              className="w-full pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)' }} />
           </div>
           <button onClick={handleSearch}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors">
+            className="px-4 py-2.5 text-white text-sm font-semibold rounded-xl transition"
+            style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 2px 10px rgba(99,102,241,0.35)' }}>
             Search
           </button>
         </div>
@@ -484,8 +492,9 @@ function FeedTab({ user }) {
         {/* Active filter chip */}
         {(activeSearch || filterCat !== 'All') && (
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-gray-400">Showing:</span>
-            <span className={`text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1 ${CAT_COLOR[filterCat] || CAT_COLOR.All}`}>
+            <span className="text-xs" style={{ color: 'rgba(148,163,184,0.5)' }}>Showing:</span>
+            <span className="text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1"
+              style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc' }}>
               {activeSearch ? `"${activeSearch}"` : filterCat}
               <button onClick={clearFilter} className="ml-0.5 hover:opacity-70"><X size={11} /></button>
             </span>
@@ -499,23 +508,27 @@ function FeedTab({ user }) {
       {/* Posts */}
       {loading ? (
         <div className="flex flex-col items-center py-16 gap-3">
-          <Loader2 className="animate-spin text-indigo-500" size={30} />
-          <p className="text-sm text-gray-400">Loading posts...</p>
+          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
+            <Loader2 size={30} style={{ color: '#818cf8' }} />
+          </motion.div>
+          <p className="text-sm" style={{ color: 'rgba(148,163,184,0.6)', fontFamily: 'monospace' }}>Loading posts...</p>
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-10 text-center shadow-sm">
-          <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Sparkles size={28} className="text-indigo-400" />
+        <div className="rounded-2xl p-10 text-center" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+            <Sparkles size={28} style={{ color: 'rgba(99,102,241,0.6)' }} />
           </div>
-          <p className="font-bold text-gray-700 dark:text-gray-200 mb-1">
+          <p className="font-bold text-white mb-1">
             {activeSearch ? `No posts found for "${activeSearch}"` : filterCat !== 'All' ? `No posts in ${filterCat} yet` : 'No posts yet'}
           </p>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm" style={{ color: 'rgba(148,163,184,0.6)' }}>
             {activeSearch ? 'Try a different keyword or browse all posts' : 'Be the first to share something!'}
           </p>
           {(activeSearch || filterCat !== 'All') && (
             <button onClick={clearFilter}
-              className="mt-4 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors">
+              className="mt-4 px-4 py-2 text-white text-sm font-medium rounded-xl transition"
+              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 2px 10px rgba(99,102,241,0.35)' }}>
               Browse all posts
             </button>
           )}
@@ -584,18 +597,22 @@ function ConnectionsTab({ user }) {
 
   const UserCard = ({ u, actions }) => (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow">
+      className="rounded-2xl p-4 hover:border-indigo-500/30 transition-all"
+      style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
       <div className="flex items-center gap-3 mb-3">
         <Avatar src={u.profileImage || u.user?.profileImage} name={u.name || u.user?.name} size={12} />
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm text-gray-900 dark:text-white truncate">{u.name || u.user?.name}</p>
+          <p className="font-bold text-sm text-white truncate">{u.name || u.user?.name}</p>
           <RoleBadge role={u.role || u.user?.role} />
         </div>
       </div>
       {(u.skills || u.user?.skills)?.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
           {(u.skills || u.user?.skills).slice(0, 3).map(s => (
-            <span key={s} className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{s}</span>
+            <span key={s} className="text-xs px-2 py-0.5 rounded-full"
+              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>
+              {s}
+            </span>
           ))}
         </div>
       )}
@@ -605,16 +622,19 @@ function ConnectionsTab({ user }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl">
+      <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'rgba(10,8,30,0.6)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
         {[
           { key: 'discover', label: 'Discover', icon: Search },
           { key: 'pending', label: `Pending${pending.length ? ` (${pending.length})` : ''}`, icon: UserPlus },
           { key: 'connections', label: 'Connected', icon: Users },
         ].map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setSubTab(key)}
-            className={`flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold py-2.5 rounded-xl transition-all ${
-              subTab === key ? 'bg-white dark:bg-gray-700 text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-            }`}>
+            className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold py-2.5 rounded-xl transition-all"
+            style={{
+              background: subTab === key ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'transparent',
+              color: subTab === key ? 'white' : 'rgba(148,163,184,0.7)',
+              boxShadow: subTab === key ? '0 2px 10px rgba(99,102,241,0.35)' : 'none',
+            }}>
             <Icon size={14} /><span>{label}</span>
           </button>
         ))}
@@ -624,35 +644,38 @@ function ConnectionsTab({ user }) {
         <div className="space-y-3">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'rgba(148,163,184,0.5)' }} />
               <input value={search} onChange={e => setSearch(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && fetchDiscover(search)}
                 placeholder="Search by name, skill, or role..."
-                className="w-full pl-9 pr-3 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                className="w-full pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)' }} />
             </div>
             <button onClick={() => fetchDiscover(search)}
-              className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors">
+              className="px-4 py-2.5 text-white text-sm font-semibold rounded-xl transition"
+              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 2px 10px rgba(99,102,241,0.35)' }}>
               Search
             </button>
           </div>
           {loading
-            ? <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" size={26} /></div>
+            ? <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={26} style={{ color: '#818cf8' }} /></div>
             : discoverUsers.length === 0
-              ? <div className="text-center py-12 text-gray-400 text-sm">No users found</div>
+              ? <div className="text-center py-12 text-sm" style={{ color: 'rgba(148,163,184,0.5)' }}>No users found</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {discoverUsers.map(u => (
                     <UserCard key={u._id} u={u} actions={
                       !u.connectionStatus ? (
                         <button onClick={() => sendReq(u._id)} disabled={actionLoading[u._id]}
-                          className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-2 rounded-xl transition-colors">
+                          className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white py-2 rounded-xl transition disabled:opacity-50"
+                          style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 2px 8px rgba(99,102,241,0.35)' }}>
                           {actionLoading[u._id] ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />} Connect
                         </button>
                       ) : u.connectionStatus === 'pending' && u.iRequested ? (
-                        <div className="w-full text-center text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 py-2 rounded-xl">Request Sent</div>
+                        <div className="w-full text-center text-xs py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(148,163,184,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>Request Sent</div>
                       ) : u.connectionStatus === 'pending' ? (
-                        <div className="w-full text-center text-xs text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 py-2 rounded-xl font-medium">Incoming Request</div>
+                        <div className="w-full text-center text-xs py-2 rounded-xl font-medium" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}>Incoming Request</div>
                       ) : (
-                        <div className="w-full flex items-center justify-center gap-1.5 text-xs text-green-600 bg-green-50 dark:bg-green-900/20 py-2 rounded-xl font-semibold">
+                        <div className="w-full flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl font-semibold" style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }}>
                           <UserCheck size={12} /> Connected
                         </div>
                       )
@@ -666,18 +689,20 @@ function ConnectionsTab({ user }) {
       {subTab === 'pending' && (
         <div className="space-y-3">
           {loading
-            ? <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" size={26} /></div>
+            ? <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={26} style={{ color: '#818cf8' }} /></div>
             : pending.length === 0
-              ? <div className="flex flex-col items-center py-16 gap-3 text-gray-400"><UserPlus size={36} className="opacity-30" /><p className="text-sm">No pending requests</p></div>
+              ? <div className="flex flex-col items-center py-16 gap-3" style={{ color: 'rgba(148,163,184,0.5)' }}><UserPlus size={36} className="opacity-30" /><p className="text-sm">No pending requests</p></div>
               : pending.map(c => (
                   <UserCard key={c._id} u={c.requester} actions={
                     <div className="flex gap-2">
                       <button onClick={() => accept(c._id)} disabled={actionLoading[c._id]}
-                        className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white py-2 rounded-xl transition-colors">
+                        className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold text-white py-2 rounded-xl transition disabled:opacity-50"
+                        style={{ background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 2px 8px rgba(5,150,105,0.35)' }}>
                         {actionLoading[c._id] ? <Loader2 size={11} className="animate-spin" /> : <UserCheck size={11} />} Accept
                       </button>
                       <button onClick={() => reject(c._id)} disabled={actionLoading[c._id]}
-                        className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold bg-red-50 hover:bg-red-100 dark:bg-red-900/30 text-red-500 py-2 rounded-xl transition-colors">
+                        className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold py-2 rounded-xl transition disabled:opacity-50"
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
                         <UserX size={11} /> Decline
                       </button>
                     </div>
@@ -690,9 +715,9 @@ function ConnectionsTab({ user }) {
       {subTab === 'connections' && (
         <div className="space-y-3">
           {loading
-            ? <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" size={26} /></div>
+            ? <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={26} style={{ color: '#818cf8' }} /></div>
             : myConns.length === 0
-              ? <div className="flex flex-col items-center py-16 gap-3 text-gray-400">
+              ? <div className="flex flex-col items-center py-16 gap-3" style={{ color: 'rgba(148,163,184,0.5)' }}>
                   <Users size={36} className="opacity-30" />
                   <p className="text-sm font-medium">No connections yet</p>
                   <p className="text-xs">Start discovering people!</p>
@@ -701,7 +726,8 @@ function ConnectionsTab({ user }) {
                   {myConns.map(c => (
                     <UserCard key={c.connectionId} u={c.user} actions={
                       <button onClick={() => remove(c.connectionId)} disabled={actionLoading[c.connectionId]}
-                        className="w-full flex items-center justify-center gap-1.5 text-xs text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 py-2 rounded-xl transition-colors">
+                        className="w-full flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl transition disabled:opacity-50"
+                        style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>
                         {actionLoading[c.connectionId] ? <Loader2 size={12} className="animate-spin" /> : <UserX size={12} />} Remove
                       </button>
                     } />
@@ -718,39 +744,41 @@ function ConnectionsTab({ user }) {
 function ProfileSidebar({ user }) {
   return (
     <div className="space-y-3">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="h-16 bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-600 rounded-t-2xl relative overflow-hidden">
+      <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
+        <div className="h-16 relative overflow-hidden" style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.4),rgba(139,92,246,0.4))' }}>
           <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
         </div>
-        {/* Avatar sits half-over the banner */}
         <div className="px-4 pb-4">
-          <div className="-mt-7 mb-2 w-14 h-14 rounded-full overflow-hidden ring-4 ring-white dark:ring-gray-800 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 relative z-10">
+          <div className="-mt-7 mb-2 w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-lg flex-shrink-0 relative z-10"
+            style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 16px rgba(99,102,241,0.4)', border: '3px solid rgba(10,8,30,0.9)' }}>
             {user?.profileImage
               ? <img src={user.profileImage} alt={user?.name} className="w-full h-full object-cover" />
-              : user?.name?.[0]?.toUpperCase() || '?'
-            }
+              : user?.name?.[0]?.toUpperCase() || '?'}
           </div>
-          <p className="font-bold text-gray-900 dark:text-white">{user?.name}</p>
+          <p className="font-bold text-white text-sm">{user?.name}</p>
           <div className="mt-1"><RoleBadge role={user?.role} /></div>
           {user?.skills?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {user.skills.map(s => (
-                <span key={s} className="text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full">{s}</span>
+                <span key={s} className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>
+                  {s}
+                </span>
               ))}
             </div>
           )}
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
-        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Topics</p>
+      <div className="rounded-2xl p-4" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
+        <p className="text-xs font-bold mb-3" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Topics</p>
         <div className="space-y-0.5">
           {CATEGORIES.filter(c => c.label !== 'All').map(({ label, icon: Icon }) => (
-            <div key={label} className="flex items-center gap-2.5 py-2 px-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 cursor-default transition-colors">
+            <div key={label} className="flex items-center gap-2.5 py-2 px-2 rounded-xl transition-colors cursor-default hover:bg-white/5">
               <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${CAT_GRADIENT[label]} flex items-center justify-center flex-shrink-0`}>
                 <Icon size={13} className="text-white" />
               </div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{label}</span>
+              <span className="text-sm font-medium" style={{ color: 'rgba(148,163,184,0.8)' }}>{label}</span>
             </div>
           ))}
         </div>
@@ -770,29 +798,28 @@ function TrendingSidebar() {
   ]
   return (
     <div className="space-y-3">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+      <div className="rounded-2xl p-4" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#f97316,#ec4899)' }}>
             <TrendingUp size={14} className="text-white" />
           </div>
-          <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Trending Topics</p>
+          <p className="text-sm font-bold text-white">Trending Topics</p>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {tips.map((t, i) => (
-            <div key={i} className="flex items-start gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-default">
-              <span className="text-xl leading-none mt-0.5">{t.icon}</span>
+            <div key={i} className="flex items-start gap-3 p-2 rounded-xl transition-colors cursor-default hover:bg-white/5">
+              <span className="text-lg leading-none mt-0.5">{t.icon}</span>
               <div>
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t.title}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{t.desc}</p>
+                <p className="text-sm font-semibold text-white">{t.title}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.6)' }}>{t.desc}</p>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 shadow-sm text-white">
+      <div className="rounded-2xl p-4 text-white" style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.3),rgba(139,92,246,0.3))', border: '1px solid rgba(99,102,241,0.3)', backdropFilter: 'blur(20px)' }}>
         <p className="font-bold text-sm mb-1">🚀 Share your project!</p>
-        <p className="text-xs opacity-80 leading-relaxed">Post your robotics or IoT project and get feedback from the community.</p>
+        <p className="text-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>Post your robotics or IoT project and get feedback from the community.</p>
       </div>
     </div>
   )
@@ -805,69 +832,79 @@ export default function Communities() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Navbar */}
+    <div className="flex min-h-screen" style={{ position: 'relative' }}>
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      
-      {/* Sidebar */}
-      <div style={{ position: "relative", zIndex: 60 }}>
+
+      {/* Background */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/src/assets/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.80)' }} />
+
+      <div style={{ position: 'relative', zIndex: 60 }}>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
-      
-      {/* Main content */}
-      <div className="flex-1 lg:ml-[240px] mt-16" style={{ position: "relative", zIndex: 5 }}>
+
+      <div className="flex-1 lg:ml-[240px] mt-16" style={{ position: 'relative', zIndex: 5 }}>
         <div className="max-w-6xl mx-auto px-3 sm:px-4 py-5 pb-20">
 
-        {/* Header */}
-        <div className="mb-5">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Users size={18} className="text-white" />
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-5">
+            <motion.div animate={{ boxShadow: ['0 0 0px rgba(99,102,241,0)', '0 0 24px rgba(99,102,241,0.5)', '0 0 0px rgba(99,102,241,0)'] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.25))', border: '1px solid rgba(99,102,241,0.4)' }}>
+              <Users size={22} style={{ color: '#818cf8' }} />
+            </motion.div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold"
+                style={{ background: 'linear-gradient(135deg,#a5b4fc,#818cf8,#c4b5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                Community
+              </h1>
+              <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: '0.75rem', fontFamily: 'monospace' }}>Connect, share, and learn with fellow tech enthusiasts</p>
             </div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Community</h1>
-          </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 ml-12">Connect, share, and learn with fellow tech enthusiasts</p>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-2xl mb-5 shadow-sm overflow-x-auto">
-          <button onClick={() => setTab('feed')}
-            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2 text-sm font-semibold rounded-xl transition-all whitespace-nowrap ${
-              tab === 'feed' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}>
-            <MessageCircle size={15} /> Feed
-          </button>
-          <button onClick={() => setTab('connections')}
-            className={`flex items-center justify-center gap-2 px-4 sm:px-5 py-2 text-sm font-semibold rounded-xl transition-all whitespace-nowrap ${
-              tab === 'connections' ? 'bg-indigo-600 text-white shadow' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-            }`}>
-            <Users size={15} /> Network
-          </button>
-        </div>
-
-        {/* Content */}
-        <AnimatePresence mode="wait">
-          <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-            {tab === 'feed' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr_220px] gap-4">
-                <div className="hidden lg:block">
-                  <div className="sticky top-20"><ProfileSidebar user={user} /></div>
-                </div>
-                <div className="min-w-0"><FeedTab user={user} /></div>
-                <div className="hidden lg:block">
-                  <div className="sticky top-20"><TrendingSidebar /></div>
-                </div>
-              </div>
-            ) : (
-              <div className="max-w-2xl mx-auto">
-                <ConnectionsTab user={user} />
-              </div>
-            )}
           </motion.div>
-        </AnimatePresence>
+
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 rounded-2xl mb-5 overflow-x-auto"
+            style={{ background: 'rgba(10,8,30,0.6)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
+            {[
+              { key: 'feed', label: 'Feed', icon: MessageCircle },
+              { key: 'connections', label: 'Network', icon: Users },
+            ].map(({ key, label, icon: Icon }) => (
+              <button key={key} onClick={() => setTab(key)}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-all whitespace-nowrap flex-1"
+                style={{
+                  background: tab === key ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'transparent',
+                  color: tab === key ? 'white' : 'rgba(148,163,184,0.7)',
+                  boxShadow: tab === key ? '0 2px 12px rgba(99,102,241,0.35)' : 'none',
+                }}>
+                <Icon size={15} /> {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <AnimatePresence mode="wait">
+            <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              {tab === 'feed' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_200px] gap-4">
+                  <div className="hidden lg:block">
+                    <div className="sticky top-20"><ProfileSidebar user={user} /></div>
+                  </div>
+                  <div className="min-w-0"><FeedTab user={user} /></div>
+                  <div className="hidden lg:block">
+                    <div className="sticky top-20"><TrendingSidebar /></div>
+                  </div>
+                </div>
+              ) : (
+                <div className="max-w-2xl mx-auto">
+                  <ConnectionsTab user={user} />
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
-    </div>
     </div>
   )
 }
