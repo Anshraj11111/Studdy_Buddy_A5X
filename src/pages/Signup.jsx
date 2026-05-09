@@ -368,6 +368,15 @@ export default function Signup() {
                   </>
                 )}
               </motion.button>
+
+              {/* Server wake-up notice */}
+              {loading && (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3 }}
+                  className="text-center text-xs mt-2"
+                  style={{ color: 'rgba(148,163,184,0.6)' }}>
+                  ⚡ Server is waking up, please wait a moment...
+                </motion.p>
+              )}
             </form>
 
             {/* Sign In Link */}
