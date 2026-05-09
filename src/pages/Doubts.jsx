@@ -1,23 +1,49 @@
-import { useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { doubtAPI, roomAPI } from '../services/api'
-import Card from '../components/Card'
-import Badge from '../components/Badge'
-import Button from '../components/Button'
-import Input from '../components/Input'
-import Sidebar from '../components/Sidebar'
-import Navbar from '../components/Navbar'
-import GlowingQuestionMark from '../components/GlowingQuestionMark'
-import { Link, useNavigate } from 'react-router-dom'
-import { Search, Trash2, Edit, Users, X, MessageCircle } from 'lucide-react'
-import { useAuthStore } from '../store/authStore'
+﻿import { useEffect, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { doubtAPI, roomAPI } from "../services/api"
+import Sidebar from "../components/Sidebar"
+import Navbar from "../components/Navbar"
+import GlowingQuestionMark from "../components/GlowingQuestionMark"
+import { Link, useNavigate } from "react-router-dom"
+import { Search, Trash2, Edit, Users, X, MessageCircle, Loader2, Plus } from "lucide-react"
+import { useAuthStore } from "../store/authStore"
+
+const STATUS_FILTERS = [
+  { id: "all", label: "All", icon: "📋" },
+  { id: "unsolved", label: "Unsolved", icon: "🔴" },
+  { id: "solved", label: "Solved", icon: "✅" },
+  { id: "matched", label: "Matched", icon: "🤝" },
+  { id: "trending", label: "Trending", icon: "🔥" },
+]
+
+const TOPICS = ["Robotics", "Programming", "Electronics", "Mechanics", "AI/ML"]
+
+const TOPIC_COLORS = {
+  Robotics: "#60a5fa", Programming: "#34d399", Electronics: "#fbbf24",
+  Mechanics: "#f87171", "AI/ML": "#a78bfa",
+}
+
+function StatusBadge({ status }) {
+  const cfg = {
+    open:     { bg: "rgba(251,191,36,0.15)",  border: "rgba(251,191,36,0.35)",  color: "#fbbf24", label: "Open" },
+    resolved: { bg: "rgba(52,211,153,0.15)",  border: "rgba(52,211,153,0.35)",  color: "#34d399", label: "Resolved" },
+    matched:  { bg: "rgba(99,102,241,0.15)",  border: "rgba(99,102,241,0.35)",  color: "#a5b4fc", label: "Matched" },
+  }
+  const c = cfg[status] || cfg.open
+  return (
+    <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+      style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.color }}>
+      {c.label}
+    </span>
+  )
+}
 
 export default function Doubts() {
   const [doubts, setDoubts] = useState([])
-  const [allDoubts, setAllDoubts] = useState([]) // Store all doubts for filtering
-  const [search, setSearch] = useState('')
-  const [topic, setTopic] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all') // New: status filter
+  const [allDoubts, setAllDoubts] = useState([])
+  const [search, setSearch] = useState("")
+  const [topic, setTopic] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
@@ -33,512 +59,345 @@ export default function Doubts() {
       try {
         setLoading(true)
         let res
-        // Fetch only current user's doubts
         if (search) {
           res = await doubtAPI.search(search)
-          // Filter to show only user's doubts
-          const allDoubtsData = res.data.data?.doubts || []
-          const userDoubts = allDoubtsData.filter(d => 
-            user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id))
-          )
-          setAllDoubts(userDoubts)
-          setTotal(userDoubts.length)
+          const all = res.data.data?.doubts || []
+          const ud = all.filter(d => user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id)))
+          setAllDoubts(ud); setTotal(ud.length)
         } else if (topic) {
           res = await doubtAPI.getByTopic(topic, page)
-          const allDoubtsData = res.data.data?.doubts || []
-          const userDoubts = allDoubtsData.filter(d => 
-            user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id))
-          )
-          setAllDoubts(userDoubts)
-          setTotal(res.data.data?.pagination?.total || 0)
+          const all = res.data.data?.doubts || []
+          const ud = all.filter(d => user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id)))
+          setAllDoubts(ud); setTotal(res.data.data?.pagination?.total || 0)
         } else {
-          // Fetch all doubts but filter to show only user's doubts
-          res = await doubtAPI.list(page, 100) // Get more to filter
-          const allDoubtsData = res.data.data?.doubts || []
-          const userDoubts = allDoubtsData.filter(d => 
-            user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id))
-          )
-          setAllDoubts(userDoubts)
-          setTotal(userDoubts.length)
+          res = await doubtAPI.list(page, 100)
+          const all = res.data.data?.doubts || []
+          const ud = all.filter(d => user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id)))
+          setAllDoubts(ud); setTotal(ud.length)
         }
-      } catch (error) {
-        console.error('Failed to fetch doubts:', error)
-      } finally {
-        setLoading(false)
-      }
+      } catch (err) { console.error("Failed to fetch doubts:", err) }
+      finally { setLoading(false) }
     }
-
-    if (user) {
-      const timer = setTimeout(() => {
-        fetchDoubts()
-      }, 200)
-      return () => clearTimeout(timer)
-    }
+    if (user) { const t = setTimeout(fetchDoubts, 200); return () => clearTimeout(t) }
   }, [page, search, topic, user])
 
-  // Filter doubts based on status filter
   useEffect(() => {
-    if (statusFilter === 'all') {
-      setDoubts(allDoubts)
-    } else if (statusFilter === 'unsolved') {
-      setDoubts(allDoubts.filter(d => d.status === 'open'))
-    } else if (statusFilter === 'solved') {
-      setDoubts(allDoubts.filter(d => d.status === 'resolved'))
-    } else if (statusFilter === 'matched') {
-      setDoubts(allDoubts.filter(d => d.status === 'matched'))
-    } else if (statusFilter === 'trending') {
-      // Sort by reply count or recent activity
-      const sorted = [...allDoubts].sort((a, b) => {
-        const aReplies = a.replies?.length || 0
-        const bReplies = b.replies?.length || 0
-        return bReplies - aReplies
-      })
-      setDoubts(sorted)
-    }
+    if (statusFilter === "all") setDoubts(allDoubts)
+    else if (statusFilter === "unsolved") setDoubts(allDoubts.filter(d => d.status === "open"))
+    else if (statusFilter === "solved") setDoubts(allDoubts.filter(d => d.status === "resolved"))
+    else if (statusFilter === "matched") setDoubts(allDoubts.filter(d => d.status === "matched"))
+    else if (statusFilter === "trending") setDoubts([...allDoubts].sort((a, b) => (b.replies?.length || 0) - (a.replies?.length || 0)))
   }, [statusFilter, allDoubts])
 
-  const handleDelete = async (doubtId, e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    if (!window.confirm('Are you sure you want to delete this doubt?')) {
-      return
-    }
-
-    try {
-      await doubtAPI.delete(doubtId)
-      // Refresh the page to show updated list
-      window.location.reload()
-    } catch (error) {
-      console.error('Failed to delete doubt:', error)
-      const errorMsg = error.response?.data?.error?.message || 'Failed to delete doubt'
-      alert(errorMsg)
-    }
+  const handleDelete = async (id, e) => {
+    e.preventDefault(); e.stopPropagation()
+    if (!window.confirm("Delete this doubt?")) return
+    try { await doubtAPI.delete(id); window.location.reload() }
+    catch (err) { alert(err.response?.data?.error?.message || "Failed to delete") }
   }
 
-  const handleFindMatch = async (doubtId, e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
+  const handleFindMatch = async (id, e) => {
+    e.preventDefault(); e.stopPropagation()
     try {
-      // Call match API endpoint
-      const res = await doubtAPI.findMatch(doubtId)
+      const res = await doubtAPI.findMatch(id)
       const { matched, room } = res.data.data
-      
       if (matched && room) {
-        const goToChat = window.confirm(
-          `🎉 Match found!\n\nWe found another student with a similar doubt.\n\nClick OK to start chatting, or Cancel to stay here.`
-        )
-        
-        if (goToChat) {
-          window.location.href = `/chat/${room._id}`
-        } else {
-          window.location.reload()
-        }
-      } else {
-        alert('No matching doubts found at the moment. We\'ll notify you when someone posts a similar doubt!')
-      }
-    } catch (error) {
-      console.error('Failed to find match:', error)
-      const errorMsg = error.response?.data?.error?.message || 'Failed to find match'
-      alert(errorMsg)
-    }
+        if (window.confirm("Match found! Click OK to start chatting.")) window.location.href = `/chat/${room._id}`
+        else window.location.reload()
+      } else alert("No matching doubts found at the moment.")
+    } catch (err) { alert(err.response?.data?.error?.message || "Failed to find match") }
   }
 
   const handleViewMatch = async (doubt, e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    if (doubt.status !== 'matched') return
-    
+    e.preventDefault(); e.stopPropagation()
+    if (doubt.status !== "matched") return
     try {
-      // Fetch all rooms to find the one with this doubt
-      const roomsRes = await roomAPI.list()
-      console.log('Rooms API response:', roomsRes.data)
-      
-      // Handle different response structures
-      const rooms = roomsRes.data.data?.rooms || roomsRes.data.data || []
-      console.log('Rooms array:', rooms)
-      console.log('Looking for doubt ID:', doubt._id)
-      
-      // Find room that contains this doubt
+      const res = await roomAPI.list()
+      const rooms = res.data.data?.rooms || res.data.data || []
       const room = rooms.find(r => {
-        const doubt1Id = r.doubt1?._id || r.doubt1
-        const doubt2Id = r.doubt2?._id || r.doubt2
-        console.log('Checking room:', { doubt1Id, doubt2Id, targetId: doubt._id })
-        return String(doubt1Id) === String(doubt._id) || String(doubt2Id) === String(doubt._id)
+        const d1 = r.doubt1?._id || r.doubt1; const d2 = r.doubt2?._id || r.doubt2
+        return String(d1) === String(doubt._id) || String(d2) === String(doubt._id)
       })
-      
-      console.log('Found room:', room)
-      
-      if (room) {
-        setSelectedMatch(doubt)
-        setMatchedRoom(room)
-        setShowMatchModal(true)
-      } else {
-        alert('Match details not found. The room may not exist yet.')
-      }
-    } catch (error) {
-      console.error('Failed to fetch match details:', error)
-      console.error('Error details:', error.response?.data)
-      alert('Failed to load match details: ' + (error.response?.data?.error?.message || error.message))
-    }
+      if (room) { setSelectedMatch(doubt); setMatchedRoom(room); setShowMatchModal(true) }
+      else alert("Match details not found.")
+    } catch (err) { alert("Failed to load match details: " + (err.response?.data?.error?.message || err.message)) }
   }
 
-  const topics = ['Robotics', 'Programming', 'Electronics', 'Mechanics', 'AI/ML']
-
   return (
-    <div className="flex min-h-screen bg-background-light dark:bg-background-dark">
-      {/* Navbar */}
+    <div className="flex min-h-screen" style={{ position: "relative" }}>
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      
-      {/* Sidebar */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/src/assets/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(5,3,20,0.80)" }} />
       <div style={{ position: "relative", zIndex: 60 }}>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
-      
-      {/* Main content */}
-      <div className="flex-1 lg:ml-[240px] mt-16" style={{ zIndex: 5 }}>
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          {/* Header with Glowing Icon */}
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex items-center gap-4">
-              {/* Glowing Question Mark Icon */}
-              <div className="flex-shrink-0">
-                <GlowingQuestionMark size={60} />
-              </div>
-              
-              {/* Title and Description */}
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-1">
-                  My Doubts
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  Track, manage and resolve your questions efficiently.
-                </p>
-              </div>
+
+      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-5 py-5 overflow-x-hidden" style={{ zIndex: 5 }}>
+
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <GlowingQuestionMark size={50} />
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold" style={{ background: "linear-gradient(135deg,#a5b4fc,#818cf8,#c4b5fd)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                My Doubts
+              </h1>
+              <p className="text-xs hidden sm:block" style={{ color: "rgba(148,163,184,0.7)", fontFamily: "monospace" }}>Track, manage and resolve your questions</p>
             </div>
-            
-            <Link to="/doubts/new">
-              <Button variant="primary">Post Doubt</Button>
-            </Link>
           </div>
+          <Link to="/doubts/new">
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-white text-sm font-semibold rounded-xl"
+              style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 4px 12px rgba(99,102,241,0.4)" }}>
+              <Plus size={15} /><span className="hidden sm:inline">Post Doubt</span><span className="sm:hidden">Post</span>
+            </motion.button>
+          </Link>
+        </motion.div>
 
-          {/* Filter Tabs */}
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-            {[
-              { id: 'all', label: 'All', icon: '📋' },
-              { id: 'unsolved', label: 'Unsolved', icon: '🔴' },
-              { id: 'solved', label: 'Solved', icon: '✅' },
-              { id: 'matched', label: 'Matched', icon: '🤝' },
-              { id: 'trending', label: 'Trending', icon: '🔥' },
-            ].map((filter) => (
-              <button
-                key={filter.id}
-                onClick={() => setStatusFilter(filter.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${
-                  statusFilter === filter.id
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/50'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
-                }`}
-              >
-                <span>{filter.icon}</span>
-                <span>{filter.label}</span>
-                {filter.id === 'unsolved' && statusFilter === filter.id && (
-                  <span className="ml-1 px-2 py-0.5 bg-white/20 rounded-full text-xs">
-                    {allDoubts.filter(d => d.status === 'open').length}
-                  </span>
-                )}
-              </button>
-            ))}
+        {/* Status Filter Tabs */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="flex gap-2 mb-4 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+          {STATUS_FILTERS.map(f => (
+            <button key={f.id} onClick={() => setStatusFilter(f.id)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0"
+              style={{
+                background: statusFilter === f.id ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "rgba(10,8,30,0.7)",
+                border: `1px solid ${statusFilter === f.id ? "rgba(99,102,241,0.5)" : "rgba(99,102,241,0.15)"}`,
+                color: statusFilter === f.id ? "white" : "rgba(148,163,184,0.7)",
+                boxShadow: statusFilter === f.id ? "0 2px 10px rgba(99,102,241,0.35)" : "none",
+                backdropFilter: "blur(12px)",
+              }}>
+              <span>{f.icon}</span><span>{f.label}</span>
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Search + Topic Filters */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          className="rounded-2xl p-3 mb-4 space-y-3"
+          style={{ background: "rgba(10,8,30,0.7)", border: "1px solid rgba(99,102,241,0.15)", backdropFilter: "blur(20px)" }}>
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "rgba(148,163,184,0.5)" }} />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
+              placeholder="Search doubts..."
+              className="w-full pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(99,102,241,0.2)" }} />
           </div>
-
-          {/* Search and Filters */}
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-              <Input
-                type="text"
-                placeholder="Search doubts..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-                className="pl-10"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  setTopic('')
-                  setPage(1)
-                }}
-                className={`px-4 py-2 rounded-lg transition ${
-                  !topic
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                All
-              </button>
-              {topics.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => {
-                    setTopic(t)
-                    setPage(1)
-                  }}
-                  className={`px-4 py-2 rounded-lg transition ${
-                    topic === t
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300'
-                  }`}
-                >
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => { setTopic(""); setPage(1) }}
+              className="px-3 py-1.5 rounded-full text-xs font-semibold transition"
+              style={{ background: !topic ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.05)", border: `1px solid ${!topic ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.1)"}`, color: !topic ? "#a5b4fc" : "rgba(148,163,184,0.7)" }}>
+              All
+            </button>
+            {TOPICS.map(t => {
+              const c = TOPIC_COLORS[t] || "#818cf8"
+              return (
+                <button key={t} onClick={() => { setTopic(t); setPage(1) }}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold transition"
+                  style={{ background: topic === t ? `${c}25` : "rgba(255,255,255,0.05)", border: `1px solid ${topic === t ? c + "60" : "rgba(255,255,255,0.1)"}`, color: topic === t ? c : "rgba(148,163,184,0.7)" }}>
                   {t}
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
         </motion.div>
 
         {/* Doubts List */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p>Loading doubts...</p>
+          <div className="flex flex-col items-center py-24 gap-3">
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+              <Loader2 size={36} style={{ color: "#818cf8" }} />
+            </motion.div>
+            <p style={{ color: "rgba(148,163,184,0.6)", fontSize: "0.8rem", fontFamily: "monospace" }}>Loading doubts...</p>
           </div>
         ) : doubts.length > 0 ? (
-          <div className="space-y-4">
-            {doubts.map((doubt, index) => (
-              <motion.div
-                key={doubt._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card className="hover:shadow-lg transition-shadow">
-                  <div className="flex justify-between items-start gap-4">
-                    <Link to={`/doubts/${doubt._id}`} className="flex-1">
-                      <h3 className="font-bold text-lg mb-2 hover:text-primary-500 transition">
+          <div className="space-y-3">
+            {doubts.map((doubt, i) => (
+              <motion.div key={doubt._id}
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(i * 0.05, 0.3), type: "spring", stiffness: 200 }}
+                whileHover={{ x: 3, transition: { duration: 0.15 } }}
+                className="group relative rounded-2xl overflow-hidden"
+                style={{ background: "rgba(10,8,30,0.7)", border: "1px solid rgba(99,102,241,0.15)", backdropFilter: "blur(20px)" }}>
+                <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background: "linear-gradient(to bottom,#6366f1,#8b5cf6)" }} />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{ background: "radial-gradient(ellipse at left,rgba(99,102,241,0.08),transparent 70%)" }} />
+                <div className="p-4 pl-5 relative z-10">
+                  <div className="flex items-start justify-between gap-3">
+                    <Link to={`/doubts/${doubt._id}`} className="flex-1 min-w-0">
+                      <h3 className="font-bold text-white text-sm sm:text-base mb-1 line-clamp-2 hover:text-indigo-300 transition">
                         {doubt.title}
                       </h3>
-                      <p className="text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                      <p className="text-xs sm:text-sm line-clamp-2 mb-2" style={{ color: "rgba(148,163,184,0.7)" }}>
                         {doubt.description}
                       </p>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge>{doubt.topic}</Badge>
-                        {doubt.status === 'matched' ? (
-                          <button
-                            onClick={(e) => handleViewMatch(doubt, e)}
-                            className="inline-flex"
-                          >
-                            <Badge variant="success" className="cursor-pointer hover:opacity-80 transition">
-                              {doubt.status} - Click to view
-                            </Badge>
-                          </button>
-                        ) : (
-                          <Badge
-                            variant={doubt.status === 'resolved' ? 'success' : 'warning'}
-                          >
-                            {doubt.status}
-                          </Badge>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {doubt.topic && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                            style={{ background: `${TOPIC_COLORS[doubt.topic] || "#818cf8"}20`, border: `1px solid ${TOPIC_COLORS[doubt.topic] || "#818cf8"}40`, color: TOPIC_COLORS[doubt.topic] || "#a5b4fc" }}>
+                            {doubt.topic}
+                          </span>
                         )}
-                        {doubt.tags?.map((tag) => (
-                          <Badge key={tag} variant="secondary">
+                        {doubt.status === "matched" ? (
+                          <button onClick={e => handleViewMatch(doubt, e)}
+                            className="text-xs px-2 py-0.5 rounded-full font-semibold transition hover:opacity-80"
+                            style={{ background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.4)", color: "#a5b4fc" }}>
+                            matched · tap to view
+                          </button>
+                        ) : <StatusBadge status={doubt.status} />}
+                        {doubt.tags?.slice(0, 2).map(tag => (
+                          <span key={tag} className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(148,163,184,0.6)" }}>
                             {tag}
-                          </Badge>
+                          </span>
                         ))}
                       </div>
                     </Link>
-                    
-                    {/* Action buttons */}
-                    <div className="flex flex-col gap-2">
-                      {/* Find Match button - only for open doubts */}
-                      {doubt.status === 'open' && (
-                        <button
-                          onClick={(e) => handleFindMatch(doubt._id, e)}
-                          className="flex items-center gap-2 px-4 py-2 text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-lg transition shadow-md"
-                          title="Find a match"
-                        >
-                          <Users size={18} />
-                          <span className="text-sm font-medium">Find Match</span>
-                        </button>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2 flex-shrink-0">
+                      {doubt.status === "open" && (
+                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                          onClick={e => handleFindMatch(doubt._id, e)}
+                          className="flex items-center gap-1.5 px-2.5 py-2 text-white text-xs font-semibold rounded-xl"
+                          style={{ background: "linear-gradient(135deg,#059669,#047857)", boxShadow: "0 2px 8px rgba(5,150,105,0.35)" }}>
+                          <Users size={13} /><span className="hidden sm:inline">Find Match</span>
+                        </motion.button>
                       )}
-                      
-                      {/* Edit/Delete buttons */}
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5">
                         <Link to={`/doubts/${doubt._id}/edit`}>
-                          <button
-                            className="p-2 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition"
-                            title="Edit doubt"
-                          >
-                            <Edit size={20} />
-                          </button>
+                          <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                            className="p-2 rounded-xl transition"
+                            style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.25)", color: "#a5b4fc" }}>
+                            <Edit size={13} />
+                          </motion.button>
                         </Link>
-                        <button
-                          onClick={(e) => handleDelete(doubt._id, e)}
-                          className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition"
-                          title="Delete doubt"
-                        >
-                          <Trash2 size={20} />
-                        </button>
+                        <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                          onClick={e => handleDelete(doubt._id, e)}
+                          className="p-2 rounded-xl transition"
+                          style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#f87171" }}>
+                          <Trash2 size={13} />
+                        </motion.button>
                       </div>
                     </div>
                   </div>
-                </Card>
+                </div>
               </motion.div>
             ))}
           </div>
         ) : (
-          <Card className="text-center py-12">
-            <p className="text-gray-600 dark:text-gray-400 mb-4">No doubts found</p>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="text-center py-20 rounded-2xl"
+            style={{ background: "rgba(10,8,30,0.6)", border: "1px solid rgba(99,102,241,0.15)", backdropFilter: "blur(20px)" }}>
+            <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)" }}>
+              <Search size={28} style={{ color: "rgba(99,102,241,0.6)" }} />
+            </motion.div>
+            <p className="text-white font-semibold mb-1">No doubts found</p>
+            <p className="text-sm mb-5" style={{ color: "rgba(148,163,184,0.6)" }}>Post your first doubt to get started</p>
             <Link to="/doubts/new">
-              <Button variant="primary">Post the first doubt</Button>
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                className="px-5 py-2.5 text-white font-semibold rounded-xl text-sm"
+                style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 4px 12px rgba(99,102,241,0.4)" }}>
+                Post a Doubt
+              </motion.button>
             </Link>
-          </Card>
+          </motion.div>
         )}
 
         {/* Pagination */}
         {total > 10 && (
-          <div className="flex justify-center gap-2 mt-8">
-            <Button
-              variant="secondary"
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-            >
+          <div className="flex justify-center items-center gap-3 mt-6">
+            <motion.button whileHover={{ scale: 1.05 }} disabled={page === 1} onClick={() => setPage(p => p - 1)}
+              className="px-4 py-2 text-sm font-medium text-white rounded-xl disabled:opacity-40"
+              style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.25)" }}>
               Previous
-            </Button>
-            <span className="px-4 py-2">
-              Page {page} of {Math.ceil(total / 10)}
+            </motion.button>
+            <span className="text-sm" style={{ color: "rgba(148,163,184,0.6)", fontFamily: "monospace" }}>
+              {page} / {Math.ceil(total / 10)}
             </span>
-            <Button
-              variant="secondary"
-              disabled={page >= Math.ceil(total / 10)}
-              onClick={() => setPage(page + 1)}
-            >
+            <motion.button whileHover={{ scale: 1.05 }} disabled={page >= Math.ceil(total / 10)} onClick={() => setPage(p => p + 1)}
+              className="px-4 py-2 text-sm font-medium text-white rounded-xl disabled:opacity-40"
+              style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.25)" }}>
               Next
-            </Button>
+            </motion.button>
           </div>
         )}
 
-        {/* Match Details Modal */}
+        {/* Match Modal */}
         <AnimatePresence>
           {showMatchModal && selectedMatch && matchedRoom && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={() => setShowMatchModal(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Modal Header */}
-                <div className="sticky top-0 bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-t-2xl">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h2 className="text-2xl font-bold mb-2">🎉 Match Found!</h2>
-                      <p className="text-green-100">You've been matched with another student</p>
-                    </div>
-                    <button
-                      onClick={() => setShowMatchModal(false)}
-                      className="p-2 hover:bg-white/20 rounded-lg transition"
-                    >
-                      <X size={24} />
-                    </button>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}
+              onClick={() => setShowMatchModal(false)}>
+              <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                className="rounded-2xl max-w-lg w-full max-h-[88vh] overflow-y-auto"
+                style={{ background: "rgba(10,8,30,0.97)", border: "1px solid rgba(99,102,241,0.3)", backdropFilter: "blur(24px)" }}
+                onClick={e => e.stopPropagation()}>
+                <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
+                <div className="p-5 flex justify-between items-start" style={{ borderBottom: "1px solid rgba(99,102,241,0.2)" }}>
+                  <div>
+                    <h2 className="text-lg font-bold text-white mb-0.5">🎉 Match Found!</h2>
+                    <p style={{ color: "rgba(99,102,241,0.7)", fontSize: "0.75rem", fontFamily: "monospace" }}>You have been matched with another student</p>
                   </div>
+                  <button onClick={() => setShowMatchModal(false)} className="p-1.5 rounded-lg hover:bg-white/5 transition">
+                    <X size={18} style={{ color: "rgba(148,163,184,0.6)" }} />
+                  </button>
                 </div>
-
-                {/* Modal Content */}
-                <div className="p-6 space-y-6">
-                  {/* Your Doubt */}
+                <div className="p-5 space-y-4">
                   <div>
-                    <h3 className="text-lg font-bold mb-3 text-gray-900 dark:text-white">Your Doubt:</h3>
-                    <Card className="bg-blue-50 dark:bg-blue-900/20">
-                      <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-2">{selectedMatch.title}</h4>
-                      <p className="text-gray-700 dark:text-gray-300 text-sm mb-3">{selectedMatch.description}</p>
-                      <div className="flex gap-2">
-                        <Badge>{selectedMatch.topic}</Badge>
-                        {selectedMatch.tags?.map(tag => (
-                          <Badge key={tag} variant="secondary">{tag}</Badge>
-                        ))}
-                      </div>
-                    </Card>
+                    <p style={{ color: "rgba(99,102,241,0.6)", fontSize: "0.65rem", fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>// Your Doubt</p>
+                    <div className="rounded-xl p-4" style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                      <h4 className="font-semibold text-sm text-white mb-1">{selectedMatch.title}</h4>
+                      <p style={{ color: "rgba(148,163,184,0.6)", fontSize: "0.75rem", marginBottom: "8px" }}>{selectedMatch.description}</p>
+                      <StatusBadge status={selectedMatch.status} />
+                    </div>
                   </div>
-
-                  {/* Matched User's Doubt */}
-                  <div>
-                    <h3 className="text-lg font-bold mb-3 text-gray-900 dark:text-white">Matched Student's Doubt:</h3>
-                    {(() => {
-                      const matchedDoubt = matchedRoom.doubt1?._id === selectedMatch._id 
-                        ? matchedRoom.doubt2 
-                        : matchedRoom.doubt1
-                      const matchedUser = matchedRoom.student1?._id === user._id 
-                        ? matchedRoom.student2 
-                        : matchedRoom.student1
-                      
-                      return (
-                        <>
-                          <Card className="bg-green-50 dark:bg-green-900/20 mb-4">
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-bold">
-                                {matchedUser?.name?.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <p className="font-semibold text-gray-900 dark:text-white">{matchedUser?.name}</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">{matchedUser?.email}</p>
-                              </div>
+                  {(() => {
+                    const matchedDoubt = matchedRoom.doubt1?._id === selectedMatch._id ? matchedRoom.doubt2 : matchedRoom.doubt1
+                    const matchedUser = matchedRoom.student1?._id === user._id ? matchedRoom.student2 : matchedRoom.student1
+                    return (
+                      <div>
+                        <p style={{ color: "rgba(99,102,241,0.6)", fontSize: "0.65rem", fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>// Matched Student</p>
+                        <div className="rounded-xl p-4 mb-4" style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                          <div className="flex items-center gap-2.5 mb-3">
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                              style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                              {matchedUser?.name?.charAt(0).toUpperCase()}
                             </div>
-                            <h4 className="font-bold text-green-900 dark:text-green-100 mb-2">{matchedDoubt?.title}</h4>
-                            <p className="text-gray-700 dark:text-gray-300 text-sm mb-3">{matchedDoubt?.description}</p>
-                            <div className="flex gap-2">
-                              <Badge>{matchedDoubt?.topic}</Badge>
-                              {matchedDoubt?.tags?.map(tag => (
-                                <Badge key={tag} variant="secondary">{tag}</Badge>
-                              ))}
+                            <div>
+                              <p className="font-semibold text-sm text-white">{matchedUser?.name}</p>
+                              <p style={{ color: "rgba(148,163,184,0.5)", fontSize: "0.7rem" }}>{matchedUser?.email}</p>
                             </div>
-                          </Card>
-
-                          {/* Action Buttons */}
-                          <div className="flex gap-3">
-                            <Button
-                              variant="primary"
-                              className="flex-1 flex items-center justify-center gap-2"
-                              onClick={() => navigate(`/chat/${matchedRoom._id}`)}
-                            >
-                              <MessageCircle size={20} />
-                              Start Chat
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              onClick={() => setShowMatchModal(false)}
-                            >
-                              Close
-                            </Button>
                           </div>
-                        </>
-                      )
-                    })()}
-                  </div>
+                          <h4 className="font-semibold text-sm text-white mb-1">{matchedDoubt?.title}</h4>
+                          <p style={{ color: "rgba(148,163,184,0.6)", fontSize: "0.75rem", marginBottom: "8px" }}>{matchedDoubt?.description}</p>
+                        </div>
+                        <div className="flex gap-2.5">
+                          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 text-white text-sm font-semibold rounded-xl"
+                            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 4px 12px rgba(99,102,241,0.4)" }}
+                            onClick={() => navigate(`/chat/${matchedRoom._id}`)}>
+                            <MessageCircle size={16} /> Start Chat
+                          </motion.button>
+                          <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                            className="px-4 py-2.5 text-sm font-semibold rounded-xl"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(148,163,184,0.8)" }}
+                            onClick={() => setShowMatchModal(false)}>
+                            Close
+                          </motion.button>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-    </div>
     </div>
   )
 }
