@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LogIn, Mail, Lock, UserCircle, Loader2, AlertCircle, Sparkles } from 'lucide-react'
@@ -12,8 +12,40 @@ export default function Login() {
     mentorCode: '',
   })
   const [errors, setErrors] = useState({})
-  const { login, loading } = useAuthStore()
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const { login, googleLogin, loading } = useAuthStore()
   const navigate = useNavigate()
+  const googleBtnRef = useRef(null)
+
+  useEffect(() => {
+    // Initialize Google Sign-In button
+    if (window.google && googleBtnRef.current) {
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+      })
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'filled_black',
+        size: 'large',
+        width: '100%',
+        text: 'signin_with',
+        shape: 'rectangular',
+      })
+    }
+  }, [])
+
+  const handleGoogleResponse = async (response) => {
+    setGoogleLoading(true)
+    try {
+      const { user } = await googleLogin(response.credential, formData.role, formData.mentorCode)
+      if (user.role === 'mentor') navigate('/mentor-dashboard', { replace: true })
+      else navigate('/dashboard', { replace: true })
+    } catch (err) {
+      setErrors({ submit: err.message || 'Google login failed' })
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
 
   const validate = () => {
     const newErrors = {}
@@ -283,6 +315,21 @@ export default function Login() {
 
             {/* Sign Up Link */}
             <div className="mt-6 text-center">
+              {/* Google Sign-In Button */}
+              <div className="mb-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px" style={{ background: 'rgba(99,102,241,0.2)' }} />
+                  <span className="text-xs text-gray-500">or continue with</span>
+                  <div className="flex-1 h-px" style={{ background: 'rgba(99,102,241,0.2)' }} />
+                </div>
+                <div ref={googleBtnRef} className="flex justify-center" />
+                {googleLoading && (
+                  <div className="flex items-center justify-center gap-2 mt-2">
+                    <Loader2 size={14} className="animate-spin text-indigo-400" />
+                    <span className="text-xs text-gray-400">Signing in with Google...</span>
+                  </div>
+                )}
+              </div>
               <p className="text-gray-400 text-sm">
                 Don't have an account?{' '}
                 <Link 

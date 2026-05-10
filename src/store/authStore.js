@@ -43,6 +43,25 @@ export const useAuthStore = create((set) => ({
     }
   },
 
+  googleLogin: async (credential, role = 'student', mentorCode = '') => {
+    set({ loading: true, error: null })
+    try {
+      const response = await authAPI.googleLogin({ credential, role, mentorCode })
+      const data = response.data?.data || response.data
+      const token = data?.token
+      const user = data?.user
+      if (!token || !user) throw new Error('Invalid response from server')
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(user))
+      set({ user, token, loading: false, error: null })
+      return data
+    } catch (error) {
+      const errorMessage = error.response?.data?.error?.message || error.message || 'Google login failed'
+      set({ error: errorMessage, loading: false })
+      throw new Error(errorMessage)
+    }
+  },
+
   logout: () => {
     localStorage.removeItem('token')
     set({ user: null, token: null })
