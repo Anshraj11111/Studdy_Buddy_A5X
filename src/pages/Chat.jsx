@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import { roomAPI } from '../services/api'
 import { joinRoom, sendMessage, onMessage, onTyping, sendTyping, leaveRoom, getSocket } from '../services/socket'
 import { showMessageNotification, playNotificationSound, requestNotificationPermission } from '../utils/notifications'
-import { Send, Video, ArrowLeft, Loader2 } from 'lucide-react'
+import { Send, Video, ArrowLeft, Loader2, Phone } from 'lucide-react'
 
 export default function Chat() {
   const { roomId } = useParams()
@@ -151,15 +151,27 @@ export default function Chat() {
             </div>
           </div>
 
-          {/* Video Call Button - always visible */}
-          <Link to={`/video-call/${roomId}`} className="flex-shrink-0">
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl transition"
-              style={{ background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 2px 10px rgba(5,150,105,0.4)' }}>
-              <Video size={16} />
-              <span>Video Call</span>
-            </motion.button>
-          </Link>
+          {/* Call Buttons */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Audio Call */}
+            <Link to={`/video-call/${roomId}?audio=true`} className="flex-shrink-0">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-xl transition"
+                style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc' }}>
+                <Phone size={15} />
+                <span className="hidden sm:inline">Call</span>
+              </motion.button>
+            </Link>
+            {/* Video Call */}
+            <Link to={`/video-call/${roomId}`} className="flex-shrink-0">
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2 px-3 py-2 text-white text-sm font-semibold rounded-xl transition"
+                style={{ background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 2px 10px rgba(5,150,105,0.4)' }}>
+                <Video size={16} />
+                <span>Video</span>
+              </motion.button>
+            </Link>
+          </div>
         </div>
       </div>
 

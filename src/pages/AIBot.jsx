@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Bot, Send, Loader, Sparkles } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Bot, Send, Loader2, Sparkles, Zap } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import Navbar from '../components/Navbar'
+import Sidebar from '../components/Sidebar'
 
 export default function AIBot() {
   const { user } = useAuthStore()
@@ -13,37 +15,26 @@ export default function AIBot() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const messagesEndRef = useRef(null)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   useEffect(() => {
-    scrollToBottom()
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const handleSend = async () => {
     if (!input.trim() || loading) return
-
     const userMessage = input.trim()
     setInput('')
-    
-    // Add user message
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
-    
     setLoading(true)
-    
-    // Simulate AI response (replace with actual AI API call)
     setTimeout(() => {
-      const aiResponse = generateAIResponse(userMessage)
-      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }])
+      setMessages(prev => [...prev, { role: 'assistant', content: generateAIResponse(userMessage) }])
       setLoading(false)
     }, 1500)
   }
 
   const generateAIResponse = (question) => {
-    // This is a mock response. Replace with actual AI API
     const responses = [
       "That's a great question! Let me break it down for you...",
       "I understand your confusion. Here's a simpler way to think about it...",
@@ -51,100 +42,131 @@ export default function AIBot() {
       "Good thinking! The key concept here is...",
       "Let's solve this together. First, we need to understand..."
     ]
-    
-    const randomResponse = responses[Math.floor(Math.random() * responses.length)]
-    return `${randomResponse}\n\nFor "${question}", here's what you need to know:\n\n1. Start by understanding the basic concept\n2. Break down the problem into smaller parts\n3. Apply the formula or method step by step\n4. Verify your answer\n\nWould you like me to explain any specific part in more detail?`
+    const r = responses[Math.floor(Math.random() * responses.length)]
+    return `${r}\n\nFor "${question}", here's what you need to know:\n\n1. Start by understanding the basic concept\n2. Break down the problem into smaller parts\n3. Apply the formula or method step by step\n4. Verify your answer\n\nWould you like me to explain any specific part in more detail?`
   }
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSend()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-      <div className="flex-1 max-w-4xl mx-auto w-full flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <Bot size={28} />
-            </div>
+    <div className="flex flex-col" style={{ height: '100vh', position: 'relative' }}>
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+
+      {/* Background */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/src/assets/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.88)' }} />
+
+      <div style={{ position: 'relative', zIndex: 60 }}>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      </div>
+
+      {/* Main chat area */}
+      <div className="relative flex flex-col flex-1 lg:ml-[240px] mt-16 overflow-hidden" style={{ zIndex: 5 }}>
+
+        {/* AI Header */}
+        <div className="flex-shrink-0" style={{ background: 'rgba(10,8,30,0.9)', borderBottom: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
+          <div className="h-0.5" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+          <div className="flex items-center gap-3 px-4 py-3">
+            <motion.div
+              animate={{ boxShadow: ['0 0 0px rgba(139,92,246,0)', '0 0 20px rgba(139,92,246,0.6)', '0 0 0px rgba(139,92,246,0)'] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+              <Bot size={20} className="text-white" />
+            </motion.div>
             <div>
-              <h1 className="text-2xl font-bold">AI Study Assistant</h1>
-              <p className="text-sm opacity-90">Powered by AI • Always here to help</p>
+              <h1 className="font-bold text-white text-sm flex items-center gap-1.5">
+                AI Study Assistant
+                <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }}
+                  className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+              </h1>
+              <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: '0.7rem', fontFamily: 'monospace' }}>
+                Powered by AI • Always here to help
+              </p>
             </div>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((message, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.role === 'user'
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-md'
-                }`}
-              >
-                {message.role === 'assistant' && (
-                  <div className="flex items-center gap-2 mb-2 text-purple-500">
-                    <Sparkles size={16} />
-                    <span className="text-xs font-medium">AI Assistant</span>
-                  </div>
+        <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-4">
+          {messages.map((msg, i) => (
+            <motion.div key={i}
+              initial={{ opacity: 0, y: 12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.role === 'assistant' && (
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mr-2 mt-1"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 12px rgba(99,102,241,0.4)' }}>
+                  <Sparkles size={14} className="text-white" />
+                </div>
+              )}
+              <div className={`max-w-[78%] sm:max-w-lg`}>
+                {msg.role === 'assistant' && (
+                  <p className="text-xs mb-1 flex items-center gap-1" style={{ color: '#a5b4fc', fontFamily: 'monospace' }}>
+                    <Zap size={10} /> AI Assistant
+                  </p>
                 )}
-                <p className="whitespace-pre-wrap">{message.content}</p>
-              </div>
-            </motion.div>
-          ))}
-          
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex justify-start"
-            >
-              <div className="bg-white dark:bg-gray-800 rounded-2xl px-4 py-3 shadow-md">
-                <div className="flex items-center gap-2">
-                  <Loader className="animate-spin text-purple-500" size={20} />
-                  <span className="text-gray-600 dark:text-gray-400">AI is thinking...</span>
+                <div className="px-4 py-3 rounded-2xl"
+                  style={msg.role === 'user' ? {
+                    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                    borderRadius: '18px 18px 4px 18px',
+                    boxShadow: '0 2px 12px rgba(99,102,241,0.4)',
+                  } : {
+                    background: 'rgba(10,8,30,0.85)',
+                    border: '1px solid rgba(99,102,241,0.2)',
+                    backdropFilter: 'blur(20px)',
+                    borderRadius: '18px 18px 18px 4px',
+                  }}>
+                  <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                 </div>
               </div>
             </motion.div>
-          )}
-          
+          ))}
+
+          <AnimatePresence>
+            {loading && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                className="flex justify-start">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mr-2"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                  <Sparkles size={14} className="text-white" />
+                </div>
+                <div className="px-4 py-3 rounded-2xl" style={{ background: 'rgba(10,8,30,0.85)', border: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)', borderRadius: '18px 18px 18px 4px' }}>
+                  <div className="flex items-center gap-2">
+                    <Loader2 size={14} className="animate-spin" style={{ color: '#818cf8' }} />
+                    <span className="text-sm" style={{ color: 'rgba(148,163,184,0.7)' }}>AI is thinking...</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div ref={messagesEndRef} />
         </div>
 
         {/* Input */}
-        <div className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex gap-2">
+        <div className="flex-shrink-0 px-3 sm:px-5 py-3" style={{ background: 'rgba(10,8,30,0.9)', borderTop: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
+          <div className="flex gap-2 items-end">
             <textarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={e => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything about your doubts..."
-              className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
               rows={1}
-              style={{ minHeight: '48px', maxHeight: '120px' }}
+              className="flex-1 text-sm text-white placeholder-gray-500 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.2)', minHeight: '48px', maxHeight: '120px' }}
             />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <Send size={20} />
-            </button>
+            <motion.button whileHover={{ scale: input.trim() ? 1.08 : 1 }} whileTap={{ scale: input.trim() ? 0.92 : 1 }}
+              onClick={handleSend} disabled={!input.trim() || loading}
+              className="w-12 h-12 flex items-center justify-center rounded-xl text-white transition flex-shrink-0 disabled:opacity-40"
+              style={{ background: input.trim() ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.2)', boxShadow: input.trim() ? '0 2px 12px rgba(99,102,241,0.4)' : 'none' }}>
+              <Send size={18} />
+            </motion.button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+          <p className="text-xs text-center mt-2" style={{ color: 'rgba(148,163,184,0.4)' }}>
             Press Enter to send • Shift + Enter for new line
           </p>
         </div>
