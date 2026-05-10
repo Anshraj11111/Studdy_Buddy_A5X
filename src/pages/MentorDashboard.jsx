@@ -1,45 +1,34 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import { doubtAPI, roomAPI } from '../services/api'
-import { useAuthStore } from '../store/authStore'
-import Card from '../components/Card'
-import Badge from '../components/Badge'
-import Button from '../components/Button'
-import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle } from 'lucide-react'
+﻿import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
+import { motion, AnimatePresence } from "framer-motion"
+import { doubtAPI, roomAPI } from "../services/api"
+import { useAuthStore } from "../store/authStore"
+import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard } from "lucide-react"
+import Navbar from "../components/Navbar"
 
 export default function MentorDashboard() {
   const { user } = useAuthStore()
-  const [activeTab, setActiveTab] = useState('doubts')
+  const [activeTab, setActiveTab] = useState("doubts")
   const [doubts, setDoubts] = useState([])
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
   const [replyingTo, setReplyingTo] = useState(null)
   const [editingReply, setEditingReply] = useState(null)
-  const [replyText, setReplyText] = useState('')
+  const [replyText, setReplyText] = useState("")
   const [stats, setStats] = useState({ totalDoubts: 0, pendingReplies: 0, activeChats: 0 })
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  useEffect(() => {
-    fetchAllDoubts()
-    fetchRooms()
-  }, [])
+  useEffect(() => { fetchAllDoubts(); fetchRooms() }, [])
 
   const fetchAllDoubts = async () => {
     try {
       setLoading(true)
       const res = await doubtAPI.list(1, 100)
-      const allDoubts = res.data.data.doubts || []
-      setDoubts(allDoubts)
-      setStats(prev => ({
-        ...prev,
-        totalDoubts: allDoubts.length,
-        pendingReplies: allDoubts.filter(d => !d.replies || d.replies.length === 0).length,
-      }))
-    } catch (error) {
-      console.error('Failed to fetch doubts:', error)
-    } finally {
-      setLoading(false)
-    }
+      const all = res.data.data.doubts || []
+      setDoubts(all)
+      setStats(prev => ({ ...prev, totalDoubts: all.length, pendingReplies: all.filter(d => !d.replies || d.replies.length === 0).length }))
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
   }
 
   const fetchRooms = async () => {
@@ -48,307 +37,327 @@ export default function MentorDashboard() {
       const r = res.data.data?.rooms || []
       setRooms(r)
       setStats(prev => ({ ...prev, activeChats: r.length }))
-    } catch (error) {
-      console.error('Failed to fetch rooms:', error)
-    }
+    } catch (err) { console.error(err) }
   }
 
   const handleReply = async (doubtId) => {
     if (!replyText.trim()) return
     try {
-      if (editingReply) {
-        await doubtAPI.editReply(doubtId, editingReply, { content: replyText })
-        setEditingReply(null)
-      } else {
-        await doubtAPI.addReply(doubtId, { content: replyText })
-      }
-      setReplyText('')
-      setReplyingTo(null)
-      fetchAllDoubts()
-    } catch (error) {
-      alert(error.response?.data?.error?.message || 'Failed to save reply')
-    }
+      if (editingReply) { await doubtAPI.editReply(doubtId, editingReply, { content: replyText }); setEditingReply(null) }
+      else await doubtAPI.addReply(doubtId, { content: replyText })
+      setReplyText(""); setReplyingTo(null); fetchAllDoubts()
+    } catch (err) { alert(err.response?.data?.error?.message || "Failed to save reply") }
   }
 
-  const handleEditReply = (doubtId, reply) => {
-    setReplyingTo(doubtId)
-    setEditingReply(reply._id)
-    setReplyText(reply.content)
-  }
+  const handleEditReply = (doubtId, reply) => { setReplyingTo(doubtId); setEditingReply(reply._id); setReplyText(reply.content) }
 
   const handleDeleteReply = async (doubtId, replyId) => {
-    if (!window.confirm('Delete this reply?')) return
-    try {
-      await doubtAPI.deleteReply(doubtId, replyId)
-      fetchAllDoubts()
-    } catch (error) {
-      alert(error.response?.data?.error?.message || 'Failed to delete reply')
-    }
+    if (!window.confirm("Delete this reply?")) return
+    try { await doubtAPI.deleteReply(doubtId, replyId); fetchAllDoubts() }
+    catch (err) { alert(err.response?.data?.error?.message || "Failed to delete reply") }
   }
 
-  const cancelReply = () => {
-    setReplyingTo(null)
-    setEditingReply(null)
-    setReplyText('')
-  }
+  const cancelReply = () => { setReplyingTo(null); setEditingReply(null); setReplyText("") }
 
   const getOtherUser = (room) => {
     if (!user || !room) return null
-    const userId = String(user._id)
-    if (userId === String(room.student1?._id || room.student1)) return room.student2
-    return room.student1
+    return String(user._id) === String(room.student1?._id || room.student1) ? room.student2 : room.student1
   }
 
+  const STAT_CARDS = [
+    { label: "Total Doubts", value: stats.totalDoubts, icon: MessageSquare, color: "#6366f1", glow: "rgba(99,102,241,0.4)" },
+    { label: "Pending", value: stats.pendingReplies, icon: Users, color: "#fbbf24", glow: "rgba(251,191,36,0.4)" },
+    { label: "Chats", value: stats.activeChats, icon: CheckCircle, color: "#34d399", glow: "rgba(52,211,153,0.4)" },
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-6 sm:mb-8">
-            Mentor Dashboard
-          </h1>
+    <div className="flex min-h-screen" style={{ position: "relative" }}>
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+
+      {/* Background */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/src/assets/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(5,3,20,0.82)" }} />
+
+      <div className="relative flex-1 mt-16 px-3 sm:px-5 py-5 overflow-x-hidden" style={{ zIndex: 5 }}>
+        <div className="max-w-5xl mx-auto">
+
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-6">
+            <motion.div animate={{ boxShadow: ["0 0 0px rgba(99,102,241,0)", "0 0 24px rgba(99,102,241,0.5)", "0 0 0px rgba(99,102,241,0)"] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.25))", border: "1px solid rgba(99,102,241,0.4)" }}>
+              <LayoutDashboard size={26} style={{ color: "#818cf8" }} />
+            </motion.div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold"
+                style={{ background: "linear-gradient(135deg,#a5b4fc,#818cf8,#c4b5fd)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Mentor Dashboard
+              </h1>
+              <p style={{ color: "rgba(148,163,184,0.7)", fontSize: "0.8rem", fontFamily: "monospace" }}>
+                Welcome back, {user?.name?.split(" ")[0] || "Mentor"}
+              </p>
+            </div>
+          </motion.div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-6 sm:mb-8">
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-3 sm:p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Doubts</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.totalDoubts}</p>
-                </div>
-                <MessageSquare className="text-blue-400 dark:text-blue-500 hidden sm:block" size={36} />
-              </div>
-            </Card>
-            <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-3 sm:p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Pending</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pendingReplies}</p>
-                </div>
-                <Users className="text-yellow-400 dark:text-yellow-500 hidden sm:block" size={36} />
-              </div>
-            </Card>
-            <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-3 sm:p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Chats</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">{stats.activeChats}</p>
-                </div>
-                <CheckCircle className="text-green-400 dark:text-green-500 hidden sm:block" size={36} />
-              </div>
-            </Card>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+            {STAT_CARDS.map((s, i) => {
+              const Icon = s.icon
+              return (
+                <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.08, type: "spring", stiffness: 200 }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  className="rounded-2xl p-4 relative overflow-hidden"
+                  style={{ background: "rgba(10,8,30,0.75)", border: "1px solid rgba(99,102,241,0.15)", backdropFilter: "blur(20px)" }}>
+                  <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(ellipse at top right,${s.color},transparent 70%)` }} />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-2">
+                      <p style={{ color: "rgba(148,163,184,0.6)", fontSize: "0.7rem", fontFamily: "monospace" }}>{s.label}</p>
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                        style={{ background: `${s.color}20`, border: `1px solid ${s.color}30` }}>
+                        <Icon size={14} style={{ color: s.color }} />
+                      </div>
+                    </div>
+                    <motion.p className="text-2xl sm:text-3xl font-bold text-white"
+                      initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 + i * 0.1, type: "spring" }}>
+                      {s.value}
+                    </motion.p>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-2xl"
+                    style={{ background: `linear-gradient(90deg,transparent,${s.color},transparent)` }} />
+                </motion.div>
+              )
+            })}
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setActiveTab('doubts')}
-              className={`px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-medium transition border-b-2 -mb-px ${
-                activeTab === 'doubts'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
-              Student Doubts
-            </button>
-            <button
-              onClick={() => setActiveTab('chats')}
-              className={`px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-medium transition border-b-2 -mb-px ${
-                activeTab === 'chats'
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
-              Chats ({rooms.length})
-            </button>
+          <div className="flex gap-1 p-1 rounded-2xl mb-5"
+            style={{ background: "rgba(10,8,30,0.6)", border: "1px solid rgba(99,102,241,0.15)", backdropFilter: "blur(20px)" }}>
+            {[
+              { key: "doubts", label: "Student Doubts", icon: MessageSquare },
+              { key: "chats", label: `Chats (${rooms.length})`, icon: MessageCircle },
+            ].map(({ key, label, icon: Icon }) => (
+              <button key={key} onClick={() => setActiveTab(key)}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-all"
+                style={{
+                  background: activeTab === key ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
+                  color: activeTab === key ? "white" : "rgba(148,163,184,0.7)",
+                  boxShadow: activeTab === key ? "0 2px 12px rgba(99,102,241,0.35)" : "none",
+                }}>
+                <Icon size={14} /> {label}
+              </button>
+            ))}
           </div>
 
           {/* Doubts Tab */}
-          {activeTab === 'doubts' && (
-            loading ? (
-              <div className="text-center py-12 text-gray-500 dark:text-gray-400">Loading...</div>
-            ) : doubts.length > 0 ? (
-              <div className="space-y-4">
-                {doubts.map((doubt, index) => (
-                  <motion.div
-                    key={doubt._id}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.04 }}
-                  >
-                    <Card>
-                      <div className="flex items-start gap-3 sm:gap-4 mb-4">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-base sm:text-lg flex-shrink-0">
-                          {doubt.userId?.profileImage ? (
-                            <img src={doubt.userId.profileImage} alt={doubt.userId.name} className="w-full h-full object-cover rounded-full" />
+          <AnimatePresence mode="wait">
+            {activeTab === "doubts" && (
+              <motion.div key="doubts" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                {loading ? (
+                  <div className="flex flex-col items-center py-20 gap-3">
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                      <Loader2 size={36} style={{ color: "#818cf8" }} />
+                    </motion.div>
+                    <p style={{ color: "rgba(148,163,184,0.6)", fontSize: "0.8rem", fontFamily: "monospace" }}>Loading doubts...</p>
+                  </div>
+                ) : doubts.length > 0 ? (
+                  <div className="space-y-3">
+                    {doubts.map((doubt, i) => (
+                      <motion.div key={doubt._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: Math.min(i * 0.04, 0.3) }}
+                        className="rounded-2xl overflow-hidden"
+                        style={{ background: "rgba(10,8,30,0.7)", border: "1px solid rgba(99,102,241,0.15)", backdropFilter: "blur(20px)" }}>
+                        <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
+                        <div className="p-4 sm:p-5">
+                          <div className="flex items-start gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
+                              style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 0 12px rgba(99,102,241,0.4)" }}>
+                              {doubt.userId?.profileImage
+                                ? <img src={doubt.userId.profileImage} alt={doubt.userId.name} className="w-full h-full object-cover rounded-full" />
+                                : doubt.userId?.name?.charAt(0).toUpperCase() || "U"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                <div>
+                                  <h3 className="font-bold text-white text-sm sm:text-base">{doubt.title}</h3>
+                                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                    <User size={11} style={{ color: "rgba(148,163,184,0.5)" }} />
+                                    <span className="text-xs" style={{ color: "rgba(148,163,184,0.6)" }}>{doubt.userId?.name || "Unknown"}</span>
+                                    <span style={{ color: "rgba(148,163,184,0.3)" }}>·</span>
+                                    <span className="text-xs" style={{ color: "rgba(148,163,184,0.5)" }}>{new Date(doubt.createdAt).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1.5 flex-wrap flex-shrink-0">
+                                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                                    style={{ background: doubt.status === "resolved" ? "rgba(52,211,153,0.15)" : doubt.status === "matched" ? "rgba(251,191,36,0.15)" : "rgba(99,102,241,0.15)", border: `1px solid ${doubt.status === "resolved" ? "rgba(52,211,153,0.35)" : doubt.status === "matched" ? "rgba(251,191,36,0.35)" : "rgba(99,102,241,0.35)"}`, color: doubt.status === "resolved" ? "#34d399" : doubt.status === "matched" ? "#fbbf24" : "#a5b4fc" }}>
+                                    {doubt.status}
+                                  </span>
+                                  <span className="text-xs px-2 py-0.5 rounded-full"
+                                    style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", color: "#c4b5fd" }}>
+                                    {doubt.topic}
+                                  </span>
+                                </div>
+                              </div>
+                              <p className="text-xs sm:text-sm mt-2 line-clamp-2" style={{ color: "rgba(148,163,184,0.7)" }}>{doubt.description}</p>
+                            </div>
+                          </div>
+
+                          {/* Replies */}
+                          {doubt.replies?.length > 0 && (
+                            <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid rgba(99,102,241,0.15)" }}>
+                              <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "rgba(99,102,241,0.7)", fontFamily: "monospace" }}>
+                                <MessageSquare size={12} /> Replies ({doubt.replies.length})
+                              </p>
+                              {doubt.replies.map(reply => (
+                                <div key={reply._id} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,102,241,0.12)" }}>
+                                  <div className="flex justify-between items-start mb-1.5">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                                        style={{ background: "linear-gradient(135deg,#059669,#047857)" }}>
+                                        {reply.user?.profileImage
+                                          ? <img src={reply.user.profileImage} alt={reply.user.name} className="w-full h-full object-cover rounded-full" />
+                                          : reply.user?.name?.charAt(0).toUpperCase() || "M"}
+                                      </div>
+                                      <div>
+                                        <p className="text-xs font-semibold text-white">{reply.user?.name || "Mentor"}</p>
+                                        <p className="text-xs" style={{ color: "rgba(148,163,184,0.4)" }}>{new Date(reply.createdAt).toLocaleDateString()}</p>
+                                      </div>
+                                    </div>
+                                    {user && reply.user?._id === user._id && (
+                                      <div className="flex gap-1">
+                                        <button onClick={() => handleEditReply(doubt._id, reply)}
+                                          className="p-1.5 rounded-lg transition hover:bg-white/10" style={{ color: "#60a5fa" }}>
+                                          <Edit2 size={12} />
+                                        </button>
+                                        <button onClick={() => handleDeleteReply(doubt._id, reply._id)}
+                                          className="p-1.5 rounded-lg transition hover:bg-red-500/20" style={{ color: "#f87171" }}>
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <p className="text-xs sm:text-sm" style={{ color: "rgba(226,232,240,0.85)" }}>{reply.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Reply Form */}
+                          {replyingTo === doubt._id ? (
+                            <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(99,102,241,0.15)" }}>
+                              <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
+                                placeholder="Write your reply..."
+                                rows={3}
+                                className="w-full text-sm text-white placeholder-gray-500 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none mb-2"
+                                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(99,102,241,0.2)" }} />
+                              <div className="flex gap-2">
+                                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                                  onClick={() => handleReply(doubt._id)}
+                                  className="flex items-center gap-1.5 px-4 py-2 text-white text-xs font-semibold rounded-xl"
+                                  style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 2px 10px rgba(99,102,241,0.35)" }}>
+                                  <Send size={12} /> {editingReply ? "Update" : "Send Reply"}
+                                </motion.button>
+                                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                                  onClick={cancelReply}
+                                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl"
+                                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(148,163,184,0.8)" }}>
+                                  <X size={12} /> Cancel
+                                </motion.button>
+                              </div>
+                            </div>
                           ) : (
-                            doubt.userId?.name?.charAt(0).toUpperCase() || 'U'
+                            <div className="mt-3">
+                              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                                onClick={() => setReplyingTo(doubt._id)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl"
+                                style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}>
+                                <MessageSquare size={12} /> Reply
+                              </motion.button>
+                            </div>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
-                            <div className="min-w-0">
-                              <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white truncate">{doubt.title}</h3>
-                              <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 flex-wrap">
-                                <User size={12} />
-                                <span className="font-medium">{doubt.userId?.name || 'Unknown'}</span>
-                                <span>·</span>
-                                <span>{new Date(doubt.createdAt).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-                            <div className="flex gap-1.5 flex-wrap flex-shrink-0">
-                              <Badge variant={doubt.status === 'resolved' ? 'success' : doubt.status === 'matched' ? 'warning' : 'default'}>
-                                {doubt.status}
-                              </Badge>
-                              <Badge>{doubt.topic}</Badge>
-                            </div>
-                          </div>
-                          <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-3">{doubt.description}</p>
-                        </div>
-                      </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 rounded-2xl"
+                    style={{ background: "rgba(10,8,30,0.6)", border: "1px solid rgba(99,102,241,0.15)", backdropFilter: "blur(20px)" }}>
+                    <MessageSquare size={36} className="mx-auto mb-3" style={{ color: "rgba(99,102,241,0.4)" }} />
+                    <p style={{ color: "rgba(148,163,184,0.6)" }}>No student doubts yet.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
 
-                      {/* Replies */}
-                      {doubt.replies && doubt.replies.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                          <p className="text-xs sm:text-sm font-semibold mb-3 flex items-center gap-1.5 text-gray-700 dark:text-gray-300">
-                            <MessageSquare size={14} /> Replies ({doubt.replies.length})
-                          </p>
-                          <div className="space-y-2.5">
-                            {doubt.replies.map((reply) => (
-                              <div key={reply._id} className="bg-gray-50 dark:bg-gray-800/60 p-3 sm:p-4 rounded-lg">
-                                <div className="flex justify-between items-start mb-1.5">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0">
-                                      {reply.user?.profileImage ? (
-                                        <img src={reply.user.profileImage} alt={reply.user.name} className="w-full h-full object-cover rounded-full" />
-                                      ) : (
-                                        reply.user?.name?.charAt(0).toUpperCase() || 'M'
-                                      )}
-                                    </div>
-                                    <div>
-                                      <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">{reply.user?.name || 'Mentor'}</p>
-                                      <p className="text-xs text-gray-400">{new Date(reply.createdAt).toLocaleDateString()}</p>
-                                    </div>
-                                  </div>
-                                  {user && reply.user?._id === user._id && (
-                                    <div className="flex gap-1">
-                                      <button onClick={() => handleEditReply(doubt._id, reply)} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition">
-                                        <Edit2 size={13} />
-                                      </button>
-                                      <button onClick={() => handleDeleteReply(doubt._id, reply._id)} className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition">
-                                        <Trash2 size={13} />
-                                      </button>
-                                    </div>
-                                  )}
+            {/* Chats Tab */}
+            {activeTab === "chats" && (
+              <motion.div key="chats" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                {rooms.length > 0 ? (
+                  <div className="space-y-3">
+                    {rooms.map((room, i) => {
+                      const other = getOtherUser(room)
+                      return (
+                        <motion.div key={room._id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: Math.min(i * 0.06, 0.4), type: "spring", stiffness: 200 }}
+                          whileHover={{ x: 4, transition: { duration: 0.15 } }}
+                          className="group relative rounded-2xl overflow-hidden"
+                          style={{ background: "rgba(10,8,30,0.7)", border: "1px solid rgba(99,102,241,0.15)", backdropFilter: "blur(20px)" }}>
+                          <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background: "linear-gradient(to bottom,#6366f1,#8b5cf6)" }} />
+                          <div className="flex items-center justify-between gap-3 p-4 pl-5">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="relative flex-shrink-0">
+                                <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                                  style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 0 14px rgba(99,102,241,0.4)" }}>
+                                  {other?.profileImage
+                                    ? <img src={other.profileImage} alt={other.name} className="w-full h-full object-cover rounded-full" />
+                                    : other?.name?.charAt(0).toUpperCase() || "U"}
                                 </div>
-                                <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">{reply.content}</p>
+                                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
+                                  style={{ background: "#34d399", borderColor: "rgba(10,8,30,0.9)" }} />
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Reply Form */}
-                      {replyingTo === doubt._id ? (
-                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                          <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                            {editingReply ? 'Edit Reply' : 'Write a Reply'}
-                          </label>
-                          <textarea
-                            value={replyText}
-                            onChange={e => setReplyText(e.target.value)}
-                            placeholder="Write your reply..."
-                            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            rows="3"
-                          />
-                          <div className="flex gap-2 mt-2">
-                            <Button variant="primary" size="sm" onClick={() => handleReply(doubt._id)}>
-                              {editingReply ? 'Update' : 'Send Reply'}
-                            </Button>
-                            <Button variant="secondary" size="sm" onClick={cancelReply}>Cancel</Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-3">
-                          <Button variant="outline" size="sm" onClick={() => setReplyingTo(doubt._id)}>
-                            Reply
-                          </Button>
-                        </div>
-                      )}
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <Card className="text-center py-12">
-                <MessageSquare size={40} className="mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-                <p className="text-gray-500 dark:text-gray-400">No student doubts yet.</p>
-              </Card>
-            )
-          )}
-
-          {/* Chats Tab */}
-          {activeTab === 'chats' && (
-            rooms.length > 0 ? (
-              <div className="space-y-3">
-                {rooms.map((room, index) => {
-                  const otherUser = getOtherUser(room)
-                  return (
-                    <motion.div
-                      key={room._id}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.04 }}
-                    >
-                      <Card className="hover:shadow-lg transition-shadow border-l-4 border-blue-500">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="relative flex-shrink-0">
-                              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg sm:text-xl shadow">
-                                {otherUser?.profileImage ? (
-                                  <img src={otherUser.profileImage} alt={otherUser.name} className="w-full h-full object-cover" />
-                                ) : (
-                                  otherUser?.name?.charAt(0).toUpperCase() || 'U'
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-bold text-white text-sm truncate">{other?.name || "Unknown User"}</h3>
+                                <p className="text-xs truncate" style={{ color: "rgba(148,163,184,0.6)" }}>{other?.email}</p>
+                                {room.topic && (
+                                  <p className="text-xs mt-0.5" style={{ color: "rgba(99,102,241,0.7)", fontFamily: "monospace" }}># {room.topic}</p>
                                 )}
                               </div>
-                              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-800 rounded-full" />
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white truncate">
-                                {otherUser?.name || 'Unknown User'}
-                              </h3>
-                              <p className="text-xs text-gray-400 truncate">{otherUser?.email}</p>
-                              <Badge className="mt-1 text-xs">{room.topic}</Badge>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <Link to={`/chat/${room._id}`}>
+                                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                                  className="flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-xl"
+                                  style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)", boxShadow: "0 2px 10px rgba(99,102,241,0.35)" }}>
+                                  <MessageCircle size={13} /><span className="hidden sm:inline">Chat</span>
+                                </motion.button>
+                              </Link>
+                              <Link to={`/video-call/${room._id}`}>
+                                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                                  className="flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-xl"
+                                  style={{ background: "linear-gradient(135deg,#059669,#047857)", boxShadow: "0 2px 10px rgba(5,150,105,0.35)" }}>
+                                  <Video size={13} /><span className="hidden sm:inline">Video</span>
+                                </motion.button>
+                              </Link>
                             </div>
                           </div>
-                          <div className="flex gap-2 flex-shrink-0">
-                            <Link to={`/chat/${room._id}`}>
-                              <button className="flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition shadow text-sm font-medium">
-                                <MessageCircle size={16} />
-                                <span className="hidden sm:inline">Chat</span>
-                              </button>
-                            </Link>
-                            <Link to={`/video-call/${room._id}`}>
-                              <button className="flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-xl transition shadow text-sm font-medium">
-                                <Video size={16} />
-                                <span className="hidden sm:inline">Video</span>
-                              </button>
-                            </Link>
-                          </div>
-                        </div>
-                      </Card>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            ) : (
-              <Card className="text-center py-14 border-2 border-dashed border-blue-200 dark:border-blue-800">
-                <MessageCircle className="mx-auto mb-3 text-blue-300 dark:text-blue-700" size={48} />
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1">No chats yet</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Students will appear here when they message you.</p>
-              </Card>
-            )
-          )}
-        </motion.div>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 rounded-2xl"
+                    style={{ background: "rgba(10,8,30,0.6)", border: "1px solid rgba(99,102,241,0.15)", backdropFilter: "blur(20px)" }}>
+                    <MessageCircle size={36} className="mx-auto mb-3" style={{ color: "rgba(99,102,241,0.4)" }} />
+                    <h3 className="font-bold text-white mb-1">No chats yet</h3>
+                    <p className="text-sm" style={{ color: "rgba(148,163,184,0.6)" }}>Students will appear here when they message you.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   )
