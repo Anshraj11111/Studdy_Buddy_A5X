@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { LogIn, Mail, Lock, UserCircle, Loader2, AlertCircle, Sparkles } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
+
 export default function Login() {
   const [formData, setFormData] = useState({
     email: '',
@@ -21,7 +23,7 @@ export default function Login() {
     // Initialize Google Sign-In button
     if (window.google && googleBtnRef.current) {
       window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        client_id: GOOGLE_CLIENT_ID,
         callback: handleGoogleResponse,
       })
       window.google.accounts.id.renderButton(googleBtnRef.current, {

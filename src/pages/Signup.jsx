@@ -5,6 +5,7 @@ import { UserPlus, Mail, Lock, User, UserCircle, Loader2, AlertCircle, Sparkles,
 import { useAuthStore } from '../store/authStore'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -25,7 +26,7 @@ export default function Signup() {
   useEffect(() => {
     if (window.google && googleBtnRef.current) {
       window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        client_id: GOOGLE_CLIENT_ID,
         callback: handleGoogleResponse,
       })
       window.google.accounts.id.renderButton(googleBtnRef.current, {
