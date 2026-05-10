@@ -246,3 +246,8 @@ export const adminAPI = {
   toggleUser: (id) => api.put(`/admin/users/${id}/toggle`, {}, { headers: adminHeaders() }),
   deleteUser: (id) => api.delete(`/admin/users/${id}`, { headers: adminHeaders() }),
 };
+
+/* ---------------- AI CHAT ---------------- */
+export const aiAPI = {
+  chat: (message, history = []) => api.post('/ai/chat', { message, history }),
+};

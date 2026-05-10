@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bot, Send, Loader2, Sparkles, Zap } from 'lucide-react'
+import { Bot, Send, Loader2, Sparkles, Zap, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
+import { aiAPI } from '../services/api'
 
 export default function AIBot() {
   const { user } = useAuthStore()
@@ -26,24 +27,20 @@ export default function AIBot() {
     if (!input.trim() || loading) return
     const userMessage = input.trim()
     setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
+    const newMessages = [...messages, { role: 'user', content: userMessage }]
+    setMessages(newMessages)
     setLoading(true)
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', content: generateAIResponse(userMessage) }])
+    try {
+      // Build history for context (last 10 messages)
+      const history = newMessages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+      const res = await aiAPI.chat(userMessage, history.slice(0, -1)) // exclude current message
+      setMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
+    } catch (err) {
+      const errMsg = err.response?.data?.message || 'Failed to get AI response. Please try again.'
+      setMessages(prev => [...prev, { role: 'error', content: errMsg }])
+    } finally {
       setLoading(false)
-    }, 1500)
-  }
-
-  const generateAIResponse = (question) => {
-    const responses = [
-      "That's a great question! Let me break it down for you...",
-      "I understand your confusion. Here's a simpler way to think about it...",
-      "Let me explain this concept step by step...",
-      "Good thinking! The key concept here is...",
-      "Let's solve this together. First, we need to understand..."
-    ]
-    const r = responses[Math.floor(Math.random() * responses.length)]
-    return `${r}\n\nFor "${question}", here's what you need to know:\n\n1. Start by understanding the basic concept\n2. Break down the problem into smaller parts\n3. Apply the formula or method step by step\n4. Verify your answer\n\nWould you like me to explain any specific part in more detail?`
+    }
   }
 
   const handleKeyPress = (e) => {
@@ -114,13 +111,23 @@ export default function AIBot() {
                     background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
                     borderRadius: '18px 18px 4px 18px',
                     boxShadow: '0 2px 12px rgba(99,102,241,0.4)',
+                  } : msg.role === 'error' ? {
+                    background: 'rgba(239,68,68,0.1)',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: '18px 18px 18px 4px',
                   } : {
                     background: 'rgba(10,8,30,0.85)',
                     border: '1px solid rgba(99,102,241,0.2)',
                     backdropFilter: 'blur(20px)',
                     borderRadius: '18px 18px 18px 4px',
                   }}>
-                  <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  {msg.role === 'error' ? (
+                    <p className="text-sm flex items-center gap-2" style={{ color: '#fca5a5' }}>
+                      <AlertCircle size={14} /> {msg.content}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  )}
                 </div>
               </div>
             </motion.div>
