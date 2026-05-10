@@ -118,8 +118,12 @@ export default function Doubts() {
         const d1 = r.doubt1?._id || r.doubt1; const d2 = r.doubt2?._id || r.doubt2
         return String(d1) === String(doubt._id) || String(d2) === String(doubt._id)
       })
-      if (room) { setSelectedMatch(doubt); setMatchedRoom(room); setShowMatchModal(true) }
-      else alert("Match details not found.")
+      if (room) {
+        // Navigate directly to chat
+        navigate(`/chat/${room._id}`)
+      } else {
+        alert("Match room not found. Please try again.")
+      }
     } catch (err) { alert("Failed to load match details: " + (err.response?.data?.error?.message || err.message)) }
   }
 

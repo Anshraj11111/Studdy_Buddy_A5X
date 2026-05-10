@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
+import { getSocket } from '../services/socket'
 import {
   Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
   UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
@@ -579,6 +580,18 @@ function ConnectionsTab({ user }) {
     if (subTab === 'discover') fetchDiscover('')
     else if (subTab === 'pending') fetchPending()
     else fetchMyConns()
+  }, [subTab])
+
+  // Listen for real-time connection requests
+  useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
+    const handleConnectionRequest = () => {
+      // If on pending tab, refresh it
+      if (subTab === 'pending') fetchPending()
+    }
+    socket.on('connectionRequest', handleConnectionRequest)
+    return () => socket.off('connectionRequest', handleConnectionRequest)
   }, [subTab])
 
   const act = async (key, fn) => {

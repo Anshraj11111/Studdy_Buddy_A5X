@@ -7,7 +7,6 @@ import {
   Bookmark,
   FolderOpen,
   Star,
-  Award,
   Settings,
   Sparkles,
   X
@@ -22,7 +21,6 @@ export default function Sidebar({ isOpen = false, onClose }) {
     { icon: Bookmark,        label: 'Bookmarks',    path: '/resources' },
     { icon: FolderOpen,      label: 'My Projects',  path: '/communities' },
     { icon: Star,            label: 'XP & Rewards', path: '/dashboard#xp' },
-    { icon: Award,           label: 'Achievements', path: '/dashboard#ach' },
     { icon: Settings,        label: 'Settings',     path: '/settings' },
   ]
 

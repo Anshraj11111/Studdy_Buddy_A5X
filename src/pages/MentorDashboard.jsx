@@ -18,12 +18,18 @@ export default function MentorDashboard() {
   const [stats, setStats] = useState({ totalDoubts: 0, pendingReplies: 0, activeChats: 0 })
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  useEffect(() => { fetchAllDoubts(); fetchRooms() }, [])
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchAllDoubts()
+      fetchRooms()
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [])
 
   const fetchAllDoubts = async () => {
     try {
       setLoading(true)
-      const res = await doubtAPI.list(1, 100)
+      const res = await doubtAPI.list(1, 50) // Reduced from 100 to 50
       const all = res.data.data.doubts || []
       setDoubts(all)
       setStats(prev => ({ ...prev, totalDoubts: all.length, pendingReplies: all.filter(d => !d.replies || d.replies.length === 0).length }))
