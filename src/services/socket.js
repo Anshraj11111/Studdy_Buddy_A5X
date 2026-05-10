@@ -115,3 +115,35 @@ export const onNotification = (callback) => {
 export const offNotification = () => {
   socket?.off('notification')
 }
+
+// Online status tracking
+const onlineUsers = new Set()
+
+export const getOnlineUsers = () => onlineUsers
+
+export const setupOnlineTracking = (callback) => {
+  if (!socket) return
+
+  // Get initial online users list
+  socket.on('onlineUsers', ({ userIds }) => {
+    onlineUsers.clear()
+    userIds.forEach(id => onlineUsers.add(String(id)))
+    callback?.(new Set(onlineUsers))
+  })
+
+  // User came online
+  socket.on('userOnline', ({ userId }) => {
+    onlineUsers.add(String(userId))
+    callback?.(new Set(onlineUsers))
+  })
+
+  // User went offline
+  socket.on('userOffline', ({ userId }) => {
+    onlineUsers.delete(String(userId))
+    callback?.(new Set(onlineUsers))
+  })
+}
+
+export const isUserOnline = (userId) => {
+  return onlineUsers.has(String(userId))
+}

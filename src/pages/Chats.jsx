@@ -6,12 +6,14 @@ import { useAuthStore } from '../store/authStore'
 import { MessageSquare, Video, Users, Trash2, MessageCircle, Search, Loader2 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
+import { setupOnlineTracking, isUserOnline, getSocket } from '../services/socket'
 
 export default function Chats() {
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [onlineUsers, setOnlineUsers] = useState(new Set())
   const { user } = useAuthStore()
 
   useEffect(() => {
@@ -43,6 +45,15 @@ export default function Chats() {
     const s2 = room.student2?._id || room.student2
     return String(uid) === String(s1) ? room.student2 : room.student1
   }
+
+  // Setup real-time online status tracking
+  useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
+    setupOnlineTracking((updatedSet) => {
+      setOnlineUsers(new Set(updatedSet))
+    })
+  }, [])
 
   const handleDeleteChat = (roomId, e) => {
     e.preventDefault(); e.stopPropagation()
@@ -115,6 +126,8 @@ export default function Chats() {
             {filtered.map((room, index) => {
               const other = getOtherUser(room)
               const statusColor = STATUS_COLORS[room.status] || '#818cf8'
+              const otherId = String(other?._id || other || '')
+              const isOnline = onlineUsers.has(otherId)
               return (
                 <motion.div key={room._id}
                   initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
@@ -140,16 +153,23 @@ export default function Chats() {
                             : other?.name?.charAt(0).toUpperCase() || 'U'}
                         </div>
                         <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
-                          style={{ background: '#34d399', borderColor: 'rgba(10,8,30,0.9)' }} />
+                          style={{ background: isOnline ? '#34d399' : '#6b7280', borderColor: 'rgba(10,8,30,0.9)' }} />
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
                           <h3 className="font-bold text-white text-sm truncate">{other?.name || 'Unknown User'}</h3>
-                          <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                            style={{ background: `${statusColor}20`, border: `1px solid ${statusColor}40`, color: statusColor }}>
-                            {room.status}
+                          {/* Real online/offline status */}
+                          <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 flex items-center gap-1"
+                            style={{
+                              background: isOnline ? 'rgba(52,211,153,0.15)' : 'rgba(107,114,128,0.15)',
+                              border: `1px solid ${isOnline ? 'rgba(52,211,153,0.4)' : 'rgba(107,114,128,0.3)'}`,
+                              color: isOnline ? '#34d399' : '#9ca3af',
+                            }}>
+                            <span className="w-1.5 h-1.5 rounded-full inline-block"
+                              style={{ background: isOnline ? '#34d399' : '#6b7280' }} />
+                            {isOnline ? 'online' : 'offline'}
                           </span>
                         </div>
                         <p className="text-xs truncate" style={{ color: 'rgba(148,163,184,0.6)' }}>{other?.email || 'No email'}</p>
