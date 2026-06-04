@@ -137,7 +137,7 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
           margin: 'auto',
           width: 'min(560px, calc(100vw - 24px))',
           height: 'fit-content',
-          maxHeight: '90vh',
+          maxHeight: '92vh',
           zIndex: 99999,
           background: 'rgba(8,6,28,0.98)',
           border: '1px solid rgba(99,102,241,0.3)',
@@ -160,40 +160,43 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
         ) : (
           /* Scrollable body */
           <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
-            {/* Banner */}
-            <div style={{
-              height: 140, position: 'relative', flexShrink: 0,
-              background: u.bannerImage
-                ? `url(${u.bannerImage}) center/cover no-repeat`
-                : 'linear-gradient(135deg,rgba(99,102,241,0.5),rgba(139,92,246,0.5))',
-            }}>
-              {!u.bannerImage && (
-                <div style={{ position: 'absolute', inset: 0, opacity: 0.2, backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
-              )}
-              {/* Close button */}
-              <button onClick={onClose}
-                style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', flexShrink: 0 }}>
-                <X size={16} color="white" />
-              </button>
-            </div>
-
-            {/* Profile content */}
-            <div style={{ padding: '0 22px 28px' }}>
-              {/* Avatar — overlaps banner */}
+            {/* Banner + Avatar (avatar overlaps banner from inside it) */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
               <div style={{
-                marginTop: -46, marginBottom: 14,
+                height: 130,
+                position: 'relative',
+                background: u.bannerImage
+                  ? `url(${u.bannerImage}) center/cover no-repeat`
+                  : 'linear-gradient(135deg,rgba(99,102,241,0.45),rgba(139,92,246,0.45))',
+              }}>
+                {!u.bannerImage && (
+                  <div style={{ position: 'absolute', inset: 0, opacity: 0.2, backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
+                )}
+                <button onClick={onClose}
+                  style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', flexShrink: 0 }}>
+                  <X size={16} color="white" />
+                </button>
+              </div>
+              {/* Avatar anchored to bottom of banner, sticks out below */}
+              <div style={{
+                position: 'absolute',
+                bottom: -46,
+                left: 22,
                 width: 92, height: 92, borderRadius: '50%', overflow: 'hidden',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
                 boxShadow: '0 0 28px rgba(99,102,241,0.55)',
                 border: '4px solid rgba(8,6,28,0.98)',
-                color: 'white', fontWeight: 700, fontSize: 28, flexShrink: 0,
+                color: 'white', fontWeight: 700, fontSize: 28,
               }}>
                 {u.profileImage
                   ? <img src={u.profileImage} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : u.name?.[0]?.toUpperCase()}
               </div>
+            </div>
 
+            {/* Profile content with padding-top to clear the avatar */}
+            <div style={{ padding: '54px 22px 28px' }}>
               {/* Name + info row */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
