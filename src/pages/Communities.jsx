@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { feedAPI, connectionAPI, followAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
@@ -64,6 +65,272 @@ function RoleBadge({ role }) {
     }`}>
       {role === 'mentor' ? '✦ Mentor' : '● Student'}
     </span>
+  )
+}
+
+// ─── USER PROFILE MODAL (LinkedIn-style) ─────────────────────────────────────
+function UserProfileModal({ userId, currentUserId, onClose }) {
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [following, setFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
+
+  useEffect(() => {
+    if (!userId) return
+    setLoading(true)
+    followAPI.getProfile(userId)
+      .then(res => {
+        setProfile(res.data.data)
+        setFollowing(res.data.data.isFollowing || false)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [userId])
+
+  const handleFollow = async () => {
+    setFollowLoading(true)
+    try {
+      if (following) {
+        await followAPI.unfollow(userId)
+        setFollowing(false)
+        setProfile(p => ({ ...p, followersCount: Math.max(0, (p.followersCount || 1) - 1) }))
+      } else {
+        await followAPI.follow(userId)
+        setFollowing(true)
+        setProfile(p => ({ ...p, followersCount: (p.followersCount || 0) + 1 }))
+      }
+    } catch {}
+    finally { setFollowLoading(false) }
+  }
+
+  const u = profile?.user
+  const isOwn = String(userId) === String(currentUserId)
+  const hasEdu = u?.education?.institution
+  const hasExp = u?.experience?.company
+  const hasSocial = u?.socialLinks && Object.values(u.socialLinks).some(Boolean)
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.75)',
+          zIndex: 99998,
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.93, y: 24 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.93, y: 24 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          right: 0, bottom: 0,
+          margin: 'auto',
+          width: 'min(560px, calc(100vw - 24px))',
+          height: 'fit-content',
+          maxHeight: '90vh',
+          zIndex: 99999,
+          background: 'rgba(8,6,28,0.98)',
+          border: '1px solid rgba(99,102,241,0.3)',
+          borderRadius: '24px',
+          boxShadow: '0 28px 80px rgba(0,0,0,0.9)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+        {/* Gradient top line */}
+        <div style={{ height: 2, flexShrink: 0, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260, flexDirection: 'column', gap: 12 }}>
+            <Loader2 size={30} className="animate-spin" style={{ color: '#818cf8' }} />
+            <span style={{ color: 'rgba(148,163,184,0.6)', fontSize: '0.8rem' }}>Loading profile...</span>
+          </div>
+        ) : !u ? (
+          <div style={{ padding: 32, textAlign: 'center', color: 'rgba(148,163,184,0.6)' }}>Profile not found</div>
+        ) : (
+          /* Scrollable body */
+          <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+            {/* Banner */}
+            <div style={{
+              height: 140, position: 'relative', flexShrink: 0,
+              background: u.bannerImage
+                ? `url(${u.bannerImage}) center/cover no-repeat`
+                : 'linear-gradient(135deg,rgba(99,102,241,0.5),rgba(139,92,246,0.5))',
+            }}>
+              {!u.bannerImage && (
+                <div style={{ position: 'absolute', inset: 0, opacity: 0.2, backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
+              )}
+              {/* Close button */}
+              <button onClick={onClose}
+                style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', flexShrink: 0 }}>
+                <X size={16} color="white" />
+              </button>
+            </div>
+
+            {/* Profile content */}
+            <div style={{ padding: '0 22px 28px' }}>
+              {/* Avatar — overlaps banner */}
+              <div style={{
+                marginTop: -46, marginBottom: 14,
+                width: 92, height: 92, borderRadius: '50%', overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                boxShadow: '0 0 28px rgba(99,102,241,0.55)',
+                border: '4px solid rgba(8,6,28,0.98)',
+                color: 'white', fontWeight: 700, fontSize: 28, flexShrink: 0,
+              }}>
+                {u.profileImage
+                  ? <img src={u.profileImage} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : u.name?.[0]?.toUpperCase()}
+              </div>
+
+              {/* Name + info row */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: 'white', lineHeight: 1.2 }}>{u.name}</h2>
+                  {u.headline && (
+                    <p style={{ margin: '5px 0 0', fontSize: '0.88rem', color: 'rgba(148,163,184,0.85)', lineHeight: 1.4 }}>{u.headline}</p>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <RoleBadge role={u.role} />
+                    {u.address && (
+                      <span style={{ fontSize: '0.75rem', color: 'rgba(148,163,184,0.5)' }}>
+                        📍 {u.address.split(',').slice(0, 2).join(',')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Follower count */}
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>{profile?.followersCount ?? 0}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: 'rgba(148,163,184,0.5)' }}>followers</p>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              {!isOwn && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                  <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                    onClick={handleFollow} disabled={followLoading}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      padding: '9px 22px', borderRadius: 22,
+                      fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
+                      border: following ? '1px solid rgba(139,92,246,0.45)' : 'none',
+                      background: following ? 'rgba(139,92,246,0.18)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                      color: following ? '#c4b5fd' : 'white',
+                      boxShadow: following ? 'none' : '0 2px 16px rgba(99,102,241,0.45)',
+                      opacity: followLoading ? 0.7 : 1,
+                    }}>
+                    {followLoading ? <Loader2 size={14} className="animate-spin" /> : following ? <UserCheck size={14} /> : <UserPlus size={14} />}
+                    {following ? 'Following' : '+ Follow'}
+                  </motion.button>
+                </div>
+              )}
+
+              {/* ── About ─────────────────────────────────────── */}
+              {u.bio && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About</p>
+                  <p style={{ margin: 0, fontSize: '0.87rem', lineHeight: 1.65, color: 'rgba(226,232,240,0.85)' }}>{u.bio}</p>
+                </div>
+              )}
+
+              {/* ── Education ─────────────────────────────────── */}
+              {hasEdu && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(52,211,153,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🎓 Education</p>
+                  <div style={{ display: 'flex', gap: 13 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.25)' }}>🎓</div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white' }}>{u.education.institution}</p>
+                      {u.education.degree && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'rgba(148,163,184,0.75)' }}>{u.education.degree}{u.education.field ? ` · ${u.education.field}` : ''}</p>}
+                      {(u.education.startYear || u.education.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: 'rgba(148,163,184,0.5)' }}>{u.education.startYear}{u.education.startYear && u.education.endYear ? ' – ' : ''}{u.education.endYear}</p>}
+                      {u.education.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: 'rgba(148,163,184,0.65)' }}>{u.education.description}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Experience ────────────────────────────────── */}
+              {hasExp && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(196,181,253,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Experience</p>
+                  <div style={{ display: 'flex', gap: 13 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)' }}>🏢</div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: 'white' }}>{u.experience.role || u.experience.company}</p>
+                      {u.experience.role && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'rgba(148,163,184,0.75)' }}>{u.experience.company}</p>}
+                      {(u.experience.startYear || u.experience.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: 'rgba(148,163,184,0.5)' }}>{u.experience.startYear}{u.experience.startYear && u.experience.endYear ? ' – ' : ''}{u.experience.endYear || 'Present'}</p>}
+                      {u.experience.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: 'rgba(148,163,184,0.65)' }}>{u.experience.description}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Skills ────────────────────────────────────── */}
+              {u.skills?.length > 0 && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Skills</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                    {u.skills.map(s => (
+                      <span key={s} style={{ fontSize: '0.78rem', padding: '4px 11px', borderRadius: 20, fontWeight: 600, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Social Links ──────────────────────────────── */}
+              {hasSocial && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Links</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {u.socialLinks?.github && (
+                      <a href={u.socialLinks.github} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(226,232,240,0.08)', border: '1px solid rgba(226,232,240,0.15)', color: '#e2e8f0', textDecoration: 'none' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                        GitHub
+                      </a>
+                    )}
+                    {u.socialLinks?.linkedin && (
+                      <a href={u.socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', color: '#60a5fa', textDecoration: 'none' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                        LinkedIn
+                      </a>
+                    )}
+                    {u.socialLinks?.instagram && (
+                      <a href={u.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(244,114,182,0.08)', border: '1px solid rgba(244,114,182,0.2)', color: '#f472b6', textDecoration: 'none' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                        Instagram
+                      </a>
+                    )}
+                    {u.socialLinks?.website && (
+                      <a href={u.socialLinks.website} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', textDecoration: 'none' }}>
+                        🌐 Portfolio
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>,
+    document.body
   )
 }
 
@@ -229,13 +496,78 @@ function PostComposer({ user, onPost }) {
 }
 
 // ─── SINGLE POST CARD ─────────────────────────────────────────────────────────
-function PostCard({ post, user, onLike, onDelete, onComment }) {
+function PostCard({ post, user, onLike, onDelete, onComment, onFollow }) {
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [following, setFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
+  const [showShare, setShowShare] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [viewProfileId, setViewProfileId] = useState(null)
+  const shareRef = useRef(null)
   const isLiked = (post.likes || []).map(String).includes(String(user?._id))
   const isOwner = String(post.userId?._id) === String(user?._id)
   const grad = CAT_GRADIENT[post.category] || CAT_GRADIENT.All
+
+  // Close share dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => { if (shareRef.current && !shareRef.current.contains(e.target)) setShowShare(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleFollow = async () => {
+    setFollowLoading(true)
+    try {
+      if (following) {
+        await followAPI.unfollow(post.userId?._id)
+        setFollowing(false)
+      } else {
+        await followAPI.follow(post.userId?._id)
+        setFollowing(true)
+      }
+    } catch {}
+    finally { setFollowLoading(false) }
+  }
+
+  const postUrl = `${window.location.origin}/community?post=${post._id}`
+  const shareText = `${post.userId?.name} posted on Studdy Buddy: ${post.content?.slice(0, 100) || ''}...`
+
+  const shareOptions = [
+    {
+      label: 'WhatsApp',
+      color: '#25D366',
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+      ),
+      action: () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + '\n' + postUrl)}`, '_blank'),
+    },
+    {
+      label: 'Twitter / X',
+      color: '#1DA1F2',
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.254 5.622 5.91-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+      ),
+      action: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(postUrl)}`, '_blank'),
+    },
+    {
+      label: 'Copy Link',
+      color: '#a5b4fc',
+      icon: copied
+        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
+      action: () => {
+        navigator.clipboard.writeText(postUrl)
+        setCopied(true)
+        setTimeout(() => { setCopied(false); setShowShare(false) }, 1800)
+      },
+    },
+  ]
 
   const submitComment = async () => {
     if (!commentText.trim()) return
@@ -247,17 +579,35 @@ function PostCard({ post, user, onLike, onDelete, onComment }) {
   }
 
   return (
+    <>
     <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
       <div className={`h-0.5 bg-gradient-to-r ${grad}`} />
       <div className="p-4 sm:p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Avatar src={post.userId?.profileImage} name={post.userId?.name} size={10} />
+            <div className="cursor-pointer flex-shrink-0" onClick={() => setViewProfileId(post.userId?._id)}>
+              <Avatar src={post.userId?.profileImage} name={post.userId?.name} size={10} />
+            </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-sm text-white">{post.userId?.name}</span>
+                <span className="font-bold text-sm text-white cursor-pointer hover:text-indigo-300 transition"
+                  onClick={() => setViewProfileId(post.userId?._id)}>{post.userId?.name}</span>
                 <RoleBadge role={post.userId?.role} />
+                {/* Follow button — only for other users' posts */}
+                {!isOwner && (
+                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                    onClick={handleFollow} disabled={followLoading}
+                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold transition disabled:opacity-50"
+                    style={following
+                      ? { background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.4)', color: '#c4b5fd' }
+                      : { background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc' }}>
+                    {followLoading
+                      ? <Loader2 size={10} className="animate-spin" />
+                      : following ? <UserCheck size={10} /> : <UserPlus size={10} />}
+                    {following ? 'Following' : '+ Follow'}
+                  </motion.button>
+                )}
               </div>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <span className="text-xs" style={{ color: 'rgba(148,163,184,0.5)' }}>
@@ -269,13 +619,52 @@ function PostCard({ post, user, onLike, onDelete, onComment }) {
               </div>
             </div>
           </div>
-          {isOwner && (
-            <button onClick={() => onDelete(post._id)}
-              className="p-1.5 rounded-lg transition flex-shrink-0 hover:bg-red-500/20"
-              style={{ color: 'rgba(148,163,184,0.4)' }}>
-              <Trash2 size={14} />
-            </button>
-          )}
+
+          {/* Right side — delete (owner) + 3-dot share menu */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isOwner && (
+              <button onClick={() => onDelete(post._id)}
+                className="p-1.5 rounded-lg transition hover:bg-red-500/20"
+                style={{ color: 'rgba(148,163,184,0.4)' }}>
+                <Trash2 size={14} />
+              </button>
+            )}
+            {/* 3-dot share menu */}
+            <div className="relative" ref={shareRef}>
+              <button onClick={() => setShowShare(v => !v)}
+                className="p-1.5 rounded-lg transition hover:bg-white/10"
+                style={{ color: 'rgba(148,163,184,0.5)' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                </svg>
+              </button>
+              <AnimatePresence>
+                {showShare && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.92, y: -6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.92, y: -6 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-1 rounded-2xl overflow-hidden z-30"
+                    style={{ background: 'rgba(10,8,35,0.97)', border: '1px solid rgba(99,102,241,0.3)', boxShadow: '0 8px 32px rgba(0,0,0,0.6)', minWidth: '160px' }}>
+                    <div className="px-3 pt-2.5 pb-1">
+                      <p className="text-xs font-bold" style={{ color: 'rgba(148,163,184,0.5)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Share post</p>
+                    </div>
+                    {shareOptions.map(opt => (
+                      <button key={opt.label} onClick={opt.action}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition"
+                        style={{ color: opt.color }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                        <span style={{ color: opt.color }}>{opt.icon}</span>
+                        {opt.label === 'Copy Link' && copied ? 'Copied!' : opt.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
 
         {post.content && (
@@ -355,6 +744,18 @@ function PostCard({ post, user, onLike, onDelete, onComment }) {
         </AnimatePresence>
       </div>
     </div>
+
+    {/* LinkedIn-style profile modal on author click */}
+    <AnimatePresence>
+      {viewProfileId && (
+        <UserProfileModal
+          userId={viewProfileId}
+          currentUserId={user?._id}
+          onClose={() => setViewProfileId(null)}
+        />
+      )}
+    </AnimatePresence>
+  </>
   )
 }
 
@@ -835,34 +1236,203 @@ function ConnectionsTab({ user }) {
 
 // ─── LEFT SIDEBAR ─────────────────────────────────────────────────────────────
 function ProfileSidebar({ user }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const hasEducation = user?.education?.institution
+  const hasExperience = user?.experience?.company
+  const hasSocialLinks = user?.socialLinks && Object.values(user.socialLinks).some(v => v)
+
   return (
     <div className="space-y-3">
       <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
-        <div className="h-16 relative overflow-hidden" style={{ background: 'linear-gradient(135deg,rgba(99,102,241,0.4),rgba(139,92,246,0.4))' }}>
-          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+        {/* Banner */}
+        <div className="h-20 relative overflow-hidden"
+          style={{
+            background: user?.bannerImage
+              ? `url(${user.bannerImage}) center/cover no-repeat`
+              : 'linear-gradient(135deg,rgba(99,102,241,0.5),rgba(139,92,246,0.5))',
+          }}>
+          {!user?.bannerImage && (
+            <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+          )}
         </div>
+
         <div className="px-4 pb-4">
-          <div className="-mt-7 mb-2 w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-lg flex-shrink-0 relative z-10"
-            style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 16px rgba(99,102,241,0.4)', border: '3px solid rgba(10,8,30,0.9)' }}>
+          {/* Avatar */}
+          <div className="-mt-8 mb-2 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xl flex-shrink-0 relative"
+            style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 20px rgba(99,102,241,0.5)', border: '3px solid rgba(10,8,30,0.95)' }}>
             {user?.profileImage
               ? <img src={user.profileImage} alt={user?.name} className="w-full h-full object-cover" />
               : user?.name?.[0]?.toUpperCase() || '?'}
           </div>
-          <p className="font-bold text-white text-sm">{user?.name}</p>
-          <div className="mt-1"><RoleBadge role={user?.role} /></div>
+
+          {/* Name + Headline */}
+          <p className="font-bold text-white text-sm leading-tight">{user?.name}</p>
+          {user?.headline && (
+            <p className="text-xs mt-0.5 leading-snug" style={{ color: 'rgba(148,163,184,0.7)' }}>{user.headline}</p>
+          )}
+          <div className="mt-1.5"><RoleBadge role={user?.role} /></div>
+
+          {/* Location */}
+          {user?.address && (
+            <p className="flex items-center gap-1 text-xs mt-1.5" style={{ color: 'rgba(148,163,184,0.5)' }}>
+              📍 <span className="truncate">{user.address.split(',').slice(0, 2).join(',')}</span>
+            </p>
+          )}
+
+          {/* Bio preview */}
+          {user?.bio && (
+            <p className="text-xs mt-2 leading-relaxed line-clamp-2" style={{ color: 'rgba(148,163,184,0.65)' }}>{user.bio}</p>
+          )}
+
+          {/* Skills preview */}
           {user?.skills?.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {user.skills.map(s => (
+            <div className="flex flex-wrap gap-1 mt-2.5">
+              {user.skills.slice(0, 3).map(s => (
                 <span key={s} className="text-xs px-2 py-0.5 rounded-full"
-                  style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>
-                  {s}
-                </span>
+                  style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>{s}</span>
               ))}
+              {user.skills.length > 3 && (
+                <span className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: 'rgba(165,180,252,0.6)' }}>
+                  +{user.skills.length - 3}
+                </span>
+              )}
             </div>
           )}
+
+          {/* View Full Profile toggle button */}
+          <button onClick={() => setExpanded(v => !v)}
+            className="mt-3 w-full py-2 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5"
+            style={{ background: expanded ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>
+            {expanded ? '▲ Show Less' : '▼ View Full Profile'}
+          </button>
         </div>
+
+        {/* ── Inline expanded section ─────────────────────────── */}
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}>
+              <div className="px-4 pb-4 space-y-4" style={{ borderTop: '1px solid rgba(99,102,241,0.12)' }}>
+
+                {/* Full bio */}
+                {user?.bio && (
+                  <div className="pt-3">
+                    <p className="text-xs font-bold mb-1.5" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About</p>
+                    <p className="text-xs leading-relaxed" style={{ color: 'rgba(226,232,240,0.8)' }}>{user.bio}</p>
+                  </div>
+                )}
+
+                {/* Education */}
+                {hasEducation && (
+                  <div>
+                    <p className="text-xs font-bold mb-2" style={{ color: 'rgba(52,211,153,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🎓 Education</p>
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
+                        style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}>🎓</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-xs text-white">{user.education.institution}</p>
+                        {user.education.degree && <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.7)' }}>{user.education.degree}{user.education.field ? ` · ${user.education.field}` : ''}</p>}
+                        {(user.education.startYear || user.education.endYear) && (
+                          <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>
+                            {user.education.startYear}{user.education.startYear && user.education.endYear ? ' – ' : ''}{user.education.endYear}
+                          </p>
+                        )}
+                        {user.education.description && (
+                          <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'rgba(148,163,184,0.6)' }}>{user.education.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Experience */}
+                {hasExperience && (
+                  <div>
+                    <p className="text-xs font-bold mb-2" style={{ color: 'rgba(196,181,253,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Experience</p>
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
+                        style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}>🏢</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-xs text-white">{user.experience.role || user.experience.company}</p>
+                        {user.experience.role && <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.7)' }}>{user.experience.company}</p>}
+                        {(user.experience.startYear || user.experience.endYear) && (
+                          <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>
+                            {user.experience.startYear}{user.experience.startYear && user.experience.endYear ? ' – ' : ''}{user.experience.endYear || 'Present'}
+                          </p>
+                        )}
+                        {user.experience.description && (
+                          <p className="text-xs mt-1.5 leading-relaxed" style={{ color: 'rgba(148,163,184,0.6)' }}>{user.experience.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* All Skills */}
+                {user?.skills?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold mb-2" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Skills</p>
+                    <div className="flex flex-wrap gap-1">
+                      {user.skills.map(s => (
+                        <span key={s} className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Social Links */}
+                {hasSocialLinks && (
+                  <div>
+                    <p className="text-xs font-bold mb-2" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Links</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {user.socialLinks?.github && (
+                        <a href={user.socialLinks.github} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition hover:scale-105"
+                          style={{ background: 'rgba(226,232,240,0.08)', border: '1px solid rgba(226,232,240,0.15)', color: '#e2e8f0', textDecoration: 'none' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                          GitHub
+                        </a>
+                      )}
+                      {user.socialLinks?.linkedin && (
+                        <a href={user.socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition hover:scale-105"
+                          style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', color: '#60a5fa', textDecoration: 'none' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                          LinkedIn
+                        </a>
+                      )}
+                      {user.socialLinks?.instagram && (
+                        <a href={user.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition hover:scale-105"
+                          style={{ background: 'rgba(244,114,182,0.08)', border: '1px solid rgba(244,114,182,0.2)', color: '#f472b6', textDecoration: 'none' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                          Instagram
+                        </a>
+                      )}
+                      {user.socialLinks?.website && (
+                        <a href={user.socialLinks.website} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition hover:scale-105"
+                          style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', textDecoration: 'none' }}>
+                          🌐 Portfolio
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
+      {/* Topics */}
       <div className="rounded-2xl p-4" style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
         <p className="text-xs font-bold mb-3" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Topics</p>
         <div className="space-y-0.5">

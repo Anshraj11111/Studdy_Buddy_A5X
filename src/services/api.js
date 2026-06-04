@@ -194,6 +194,7 @@ export const followAPI = {
   getFollowers: (userId) => api.get(`/follow/followers/${userId}`),
   getFollowing: (userId) => api.get(`/follow/following/${userId}`),
   getCounts: (userId) => api.get(`/follow/counts/${userId}`),
+  getProfile: (userId) => api.get(`/follow/profile/${userId}`),
 };
 
 export const connectionAPI = {

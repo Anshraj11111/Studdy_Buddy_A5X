@@ -5,6 +5,7 @@ import { doubtAPI, roomAPI } from "../services/api"
 import { useAuthStore } from "../store/authStore"
 import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard } from "lucide-react"
 import Navbar from "../components/Navbar"
+import Sidebar from "../components/Sidebar"
 
 export default function MentorDashboard() {
   const { user } = useAuthStore()
