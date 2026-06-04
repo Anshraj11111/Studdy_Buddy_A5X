@@ -114,7 +114,7 @@ export default function Dashboard() {
       {/* Full page background image */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0,
-        backgroundImage: "url(/src/assets/image.png)",
+        backgroundImage: "url(/image.png)",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundAttachment: "fixed",

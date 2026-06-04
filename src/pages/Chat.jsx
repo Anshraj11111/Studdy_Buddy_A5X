@@ -100,7 +100,7 @@ export default function Chat() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ position: 'relative' }}>
-        <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/src/assets/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
         <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.85)' }} />
         <div className="text-center" style={{ position: 'relative', zIndex: 2 }}>
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
@@ -115,7 +115,7 @@ export default function Chat() {
   return (
     <div className="flex flex-col" style={{ height: '100vh', position: 'relative' }}>
       {/* Background */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/src/assets/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.88)' }} />
 
       {/* Chat Header */}

@@ -52,7 +52,7 @@ export default function AIBot() {
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
       {/* Background */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/src/assets/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.88)' }} />
 
       <div style={{ position: 'relative', zIndex: 60 }}>

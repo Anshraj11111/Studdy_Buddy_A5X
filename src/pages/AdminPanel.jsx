@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { adminAPI } from "../services/api"
 import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp } from "lucide-react"
@@ -81,11 +81,11 @@ export default function AdminPanel() {
     finally { setActionLoading(null) }
   }
 
-  // ── LOGIN SCREEN ──────────────────────────────────────────────
+  // -- LOGIN SCREEN ----------------------------------------------
   if (!authed) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4" style={{ position: "relative" }}>
-        <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/src/assets/image.png)", backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/image.png)", backgroundSize: "cover", backgroundPosition: "center" }} />
         <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(5,3,20,0.88)" }} />
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-sm relative" style={{ zIndex: 10 }}>
@@ -121,7 +121,7 @@ export default function AdminPanel() {
     )
   }
 
-  // ── MAIN PANEL ────────────────────────────────────────────────
+  // -- MAIN PANEL ------------------------------------------------
   const STAT_CARDS = [
     { label: "Total Users", value: stats?.totalUsers, icon: Users, color: "#818cf8" },
     { label: "Students", value: stats?.totalStudents, icon: GraduationCap, color: "#60a5fa" },
@@ -132,7 +132,7 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen" style={{ position: "relative" }}>
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/src/assets/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
       <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(5,3,20,0.82)" }} />
 
       {/* Toast */}

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { doubtAPI, roomAPI } from "../services/api"
 import Sidebar from "../components/Sidebar"
@@ -9,11 +9,11 @@ import { Search, Trash2, Edit, Users, X, MessageCircle, Loader2, Plus } from "lu
 import { useAuthStore } from "../store/authStore"
 
 const STATUS_FILTERS = [
-  { id: "all", label: "All", icon: "📋" },
-  { id: "unsolved", label: "Unsolved", icon: "🔴" },
-  { id: "solved", label: "Solved", icon: "✅" },
-  { id: "matched", label: "Matched", icon: "🤝" },
-  { id: "trending", label: "Trending", icon: "🔥" },
+  { id: "all", label: "All", icon: "??" },
+  { id: "unsolved", label: "Unsolved", icon: "??" },
+  { id: "solved", label: "Solved", icon: "?" },
+  { id: "matched", label: "Matched", icon: "??" },
+  { id: "trending", label: "Trending", icon: "??" },
 ]
 
 const TOPICS = ["Robotics", "Programming", "Electronics", "Mechanics", "AI/ML"]
@@ -130,7 +130,7 @@ export default function Doubts() {
   return (
     <div className="flex min-h-screen" style={{ position: "relative" }}>
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/src/assets/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
       <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(5,3,20,0.80)" }} />
       <div style={{ position: "relative", zIndex: 60 }}>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -246,7 +246,7 @@ export default function Doubts() {
                           <button onClick={e => handleViewMatch(doubt, e)}
                             className="text-xs px-2 py-0.5 rounded-full font-semibold transition hover:opacity-80"
                             style={{ background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.4)", color: "#a5b4fc" }}>
-                            matched · tap to view
+                            matched � tap to view
                           </button>
                         ) : <StatusBadge status={doubt.status} />}
                         {doubt.tags?.slice(0, 2).map(tag => (
@@ -343,7 +343,7 @@ export default function Doubts() {
                 <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
                 <div className="p-5 flex justify-between items-start" style={{ borderBottom: "1px solid rgba(99,102,241,0.2)" }}>
                   <div>
-                    <h2 className="text-lg font-bold text-white mb-0.5">🎉 Match Found!</h2>
+                    <h2 className="text-lg font-bold text-white mb-0.5">?? Match Found!</h2>
                     <p style={{ color: "rgba(99,102,241,0.7)", fontSize: "0.75rem", fontFamily: "monospace" }}>You have been matched with another student</p>
                   </div>
                   <button onClick={() => setShowMatchModal(false)} className="p-1.5 rounded-lg hover:bg-white/5 transition">

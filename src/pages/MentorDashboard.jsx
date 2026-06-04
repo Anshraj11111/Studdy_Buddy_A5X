@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { doubtAPI, roomAPI } from "../services/api"
@@ -82,7 +82,7 @@ export default function MentorDashboard() {
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
       {/* Background */}
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/src/assets/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
       <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "rgba(5,3,20,0.82)" }} />
 
       <div className="relative flex-1 mt-16 px-3 sm:px-5 py-5 overflow-x-hidden" style={{ zIndex: 5 }}>
@@ -192,7 +192,7 @@ export default function MentorDashboard() {
                                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                     <User size={11} style={{ color: "rgba(148,163,184,0.5)" }} />
                                     <span className="text-xs" style={{ color: "rgba(148,163,184,0.6)" }}>{doubt.userId?.name || "Unknown"}</span>
-                                    <span style={{ color: "rgba(148,163,184,0.3)" }}>·</span>
+                                    <span style={{ color: "rgba(148,163,184,0.3)" }}>�</span>
                                     <span className="text-xs" style={{ color: "rgba(148,163,184,0.5)" }}>{new Date(doubt.createdAt).toLocaleDateString()}</span>
                                   </div>
                                 </div>
