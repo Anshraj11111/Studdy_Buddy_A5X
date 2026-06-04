@@ -186,7 +186,15 @@ export const feedAPI = {
   addComment: (id, data) => api.post(`/feed/${id}/comment`, data),
 };
 
-/* ---------------- CONNECTIONS ---------------- */
+/* ---------------- FOLLOW / FOLLOWERS ---------------- */
+export const followAPI = {
+  follow: (userId) => api.post(`/follow/${userId}`),
+  unfollow: (userId) => api.delete(`/follow/${userId}`),
+  checkStatus: (userId) => api.get(`/follow/status/${userId}`),
+  getFollowers: (userId) => api.get(`/follow/followers/${userId}`),
+  getFollowing: (userId) => api.get(`/follow/following/${userId}`),
+  getCounts: (userId) => api.get(`/follow/counts/${userId}`),
+};
 
 export const connectionAPI = {
   getUsers: (search = '', page = 1) =>

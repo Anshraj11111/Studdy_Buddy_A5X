@@ -9,6 +9,7 @@ function NotifIcon({ type }) {
   if (type === 'like') return <Heart size={11} className="text-red-400" fill="currentColor" />
   if (type === 'comment') return <MessageCircle size={11} className="text-blue-400" />
   if (type === 'connection') return <UserPlus size={11} className="text-green-400" />
+  if (type === 'follow') return <UserPlus size={11} className="text-purple-400" />
   return <Bell size={11} className="text-gray-400" />
 }
 

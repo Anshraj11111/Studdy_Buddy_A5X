@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { feedAPI, connectionAPI } from '../services/api'
+import { feedAPI, connectionAPI, followAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import Sidebar from '../components/Sidebar'
@@ -10,7 +10,7 @@ import {
   Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
   UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
   Zap, FolderKanban, GraduationCap, Globe2, TrendingUp, BookOpen,
-  Sparkles, ChevronDown
+  Sparkles, ChevronDown, Bell, BellOff
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -560,9 +560,16 @@ function ConnectionsTab({ user }) {
 
   const fetchDiscover = useCallback(async (q = '') => {
     setLoading(true)
-    try { const res = await connectionAPI.getUsers(q); setDiscoverUsers(res.data.data?.users || []) }
-    catch { /* ignore */ } finally { setLoading(false) }
-  }, [])
+    try {
+      const [usersRes, followingRes] = await Promise.all([
+        connectionAPI.getUsers(q),
+        followAPI.getFollowing(user._id),
+      ])
+      const users = usersRes.data.data?.users || []
+      const followingIds = new Set((followingRes.data.data?.following || []).map(f => String(f._id)))
+      setDiscoverUsers(users.map(u => ({ ...u, isFollowing: followingIds.has(String(u._id)) })))
+    } catch { /* ignore */ } finally { setLoading(false) }
+  }, [user._id])
 
   const fetchPending = useCallback(async () => {
     setLoading(true)
@@ -572,9 +579,16 @@ function ConnectionsTab({ user }) {
 
   const fetchMyConns = useCallback(async () => {
     setLoading(true)
-    try { const res = await connectionAPI.getMyConnections(); setMyConns(res.data.data?.connections || []) }
-    catch { /* ignore */ } finally { setLoading(false) }
-  }, [])
+    try {
+      const [connsRes, followingRes] = await Promise.all([
+        connectionAPI.getMyConnections(),
+        followAPI.getFollowing(user._id),
+      ])
+      const conns = connsRes.data.data?.connections || []
+      const followingIds = new Set((followingRes.data.data?.following || []).map(f => String(f._id)))
+      setMyConns(conns.map(c => ({ ...c, isFollowing: followingIds.has(String(c.user?._id)) })))
+    } catch { /* ignore */ } finally { setLoading(false) }
+  }, [user._id])
 
   useEffect(() => {
     if (subTab === 'discover') fetchDiscover('')
@@ -582,14 +596,10 @@ function ConnectionsTab({ user }) {
     else fetchMyConns()
   }, [subTab])
 
-  // Listen for real-time connection requests
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
-    const handleConnectionRequest = () => {
-      // If on pending tab, refresh it
-      if (subTab === 'pending') fetchPending()
-    }
+    const handleConnectionRequest = () => { if (subTab === 'pending') fetchPending() }
     socket.on('connectionRequest', handleConnectionRequest)
     return () => socket.off('connectionRequest', handleConnectionRequest)
   }, [subTab])
@@ -600,42 +610,112 @@ function ConnectionsTab({ user }) {
     finally { setActionLoading(p => ({ ...p, [key]: false })) }
   }
 
-  const sendReq = (uid) => act(uid, async () => {
+  const sendReq = (uid) => act(uid + '_conn', async () => {
     await connectionAPI.sendRequest(uid)
     setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionStatus: 'pending', iRequested: true } : u))
   })
-  const accept = (id) => act(id, async () => { await connectionAPI.accept(id); setPending(p => p.filter(c => c._id !== id)) })
+  const toggleFollow = (uid, isFollowing) => act(uid + '_follow', async () => {
+    if (isFollowing) {
+      await followAPI.unfollow(uid)
+      setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, isFollowing: false } : u))
+      setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: false } : c))
+    } else {
+      await followAPI.follow(uid)
+      setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, isFollowing: true } : u))
+      setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: true } : c))
+    }
+  })
+  const accept = (id, requesterId) => act(id, async () => {
+    await connectionAPI.accept(id)
+    setPending(p => p.filter(c => c._id !== id))
+    setDiscoverUsers(p => p.map(u => String(u._id) === String(requesterId)
+      ? { ...u, connectionStatus: 'accepted', isFollowing: true } : u))
+  })
   const reject = (id) => act(id, async () => { await connectionAPI.reject(id); setPending(p => p.filter(c => c._id !== id)) })
   const remove = (id) => act(id, async () => { await connectionAPI.remove(id); setMyConns(p => p.filter(c => c.connectionId !== id)) })
 
-  const UserCard = ({ u, actions }) => (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl p-4 hover:border-indigo-500/30 transition-all"
-      style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
-      <div className="flex items-center gap-3 mb-3">
-        <Avatar src={u.profileImage || u.user?.profileImage} name={u.name || u.user?.name} size={12} />
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm text-white truncate">{u.name || u.user?.name}</p>
-          <RoleBadge role={u.role || u.user?.role} />
+  // ── Reusable User Card ──────────────────────────────────────────────────────
+  const UserCard = ({ u, connId, isConn, showRemove }) => {
+    const uid = String(u._id || u.user?._id || '')
+    const name = u.name || u.user?.name
+    const role = u.role || u.user?.role
+    const skills = u.skills || u.user?.skills || []
+    const profileImage = u.profileImage || u.user?.profileImage
+    const isFollowing = !!u.isFollowing
+    const connStatus = u.connectionStatus
+    const iReq = u.iRequested
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl overflow-hidden"
+        style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
+        <div className="h-0.5" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Avatar src={profileImage} name={name} size={12} />
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm text-white truncate">{name}</p>
+              <RoleBadge role={role} />
+            </div>
+          </div>
+          {skills.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {skills.slice(0, 3).map(s => (
+                <span key={s} className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>{s}</span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            {/* Connect / status */}
+            {!isConn && !showRemove && (
+              !connStatus ? (
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => sendReq(uid)} disabled={!!actionLoading[uid + '_conn']}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white py-2 rounded-xl disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 2px 8px rgba(99,102,241,0.35)' }}>
+                  {actionLoading[uid + '_conn'] ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />} Connect
+                </motion.button>
+              ) : connStatus === 'pending' && iReq ? (
+                <div className="flex-1 text-center text-xs py-2 rounded-xl"
+                  style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(148,163,184,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>Pending</div>
+              ) : connStatus === 'accepted' ? (
+                <div className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl font-semibold"
+                  style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }}>
+                  <UserCheck size={12} /> Connected
+                </div>
+              ) : null
+            )}
+            {/* Remove (connected tab) */}
+            {showRemove && (
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={() => remove(connId)} disabled={!!actionLoading[connId]}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl disabled:opacity-50"
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>
+                {actionLoading[connId] ? <Loader2 size={12} className="animate-spin" /> : <UserX size={12} />} Remove
+              </motion.button>
+            )}
+            {/* Follow / Unfollow */}
+            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              onClick={() => toggleFollow(uid, isFollowing)} disabled={!!actionLoading[uid + '_follow']}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-xl disabled:opacity-50"
+              style={isFollowing
+                ? { background: 'rgba(139,92,246,0.2)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.4)' }
+                : { background: 'rgba(139,92,246,0.08)', color: 'rgba(196,181,253,0.7)', border: '1px solid rgba(139,92,246,0.2)' }}>
+              {actionLoading[uid + '_follow']
+                ? <Loader2 size={12} className="animate-spin" />
+                : isFollowing ? <BellOff size={12} /> : <Bell size={12} />}
+              {isFollowing ? 'Following' : 'Follow'}
+            </motion.button>
+          </div>
         </div>
-      </div>
-      {(u.skills || u.user?.skills)?.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {(u.skills || u.user?.skills).slice(0, 3).map(s => (
-            <span key={s} className="text-xs px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>
-              {s}
-            </span>
-          ))}
-        </div>
-      )}
-      {actions}
-    </motion.div>
-  )
+      </motion.div>
+    )
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'rgba(10,8,30,0.6)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
+      <div className="flex gap-1 p-1 rounded-2xl"
+        style={{ background: 'rgba(10,8,30,0.6)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
         {[
           { key: 'discover', label: 'Discover', icon: Search },
           { key: 'pending', label: `Pending${pending.length ? ` (${pending.length})` : ''}`, icon: UserPlus },
@@ -665,7 +745,7 @@ function ConnectionsTab({ user }) {
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(99,102,241,0.2)' }} />
             </div>
             <button onClick={() => fetchDiscover(search)}
-              className="px-4 py-2.5 text-white text-sm font-semibold rounded-xl transition"
+              className="px-4 py-2.5 text-white text-sm font-semibold rounded-xl"
               style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 2px 10px rgba(99,102,241,0.35)' }}>
               Search
             </button>
@@ -675,27 +755,8 @@ function ConnectionsTab({ user }) {
             : discoverUsers.length === 0
               ? <div className="text-center py-12 text-sm" style={{ color: 'rgba(148,163,184,0.5)' }}>No users found</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {discoverUsers.map(u => (
-                    <UserCard key={u._id} u={u} actions={
-                      !u.connectionStatus ? (
-                        <button onClick={() => sendReq(u._id)} disabled={actionLoading[u._id]}
-                          className="w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-white py-2 rounded-xl transition disabled:opacity-50"
-                          style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 2px 8px rgba(99,102,241,0.35)' }}>
-                          {actionLoading[u._id] ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />} Connect
-                        </button>
-                      ) : u.connectionStatus === 'pending' && u.iRequested ? (
-                        <div className="w-full text-center text-xs py-2 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(148,163,184,0.6)', border: '1px solid rgba(255,255,255,0.1)' }}>Request Sent</div>
-                      ) : u.connectionStatus === 'pending' ? (
-                        <div className="w-full text-center text-xs py-2 rounded-xl font-medium" style={{ background: 'rgba(251,191,36,0.1)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}>Incoming Request</div>
-                      ) : (
-                        <div className="w-full flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl font-semibold" style={{ background: 'rgba(52,211,153,0.1)', color: '#34d399', border: '1px solid rgba(52,211,153,0.3)' }}>
-                          <UserCheck size={12} /> Connected
-                        </div>
-                      )
-                    } />
-                  ))}
-                </div>
-          }
+                  {discoverUsers.map(u => <UserCard key={u._id} u={u} />)}
+                </div>}
         </div>
       )}
 
@@ -704,22 +765,46 @@ function ConnectionsTab({ user }) {
           {loading
             ? <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={26} style={{ color: '#818cf8' }} /></div>
             : pending.length === 0
-              ? <div className="flex flex-col items-center py-16 gap-3" style={{ color: 'rgba(148,163,184,0.5)' }}><UserPlus size={36} className="opacity-30" /><p className="text-sm">No pending requests</p></div>
+              ? <div className="flex flex-col items-center py-16 gap-3" style={{ color: 'rgba(148,163,184,0.5)' }}>
+                  <UserPlus size={36} className="opacity-30" /><p className="text-sm">No pending requests</p>
+                </div>
               : pending.map(c => (
-                  <UserCard key={c._id} u={c.requester} actions={
-                    <div className="flex gap-2">
-                      <button onClick={() => accept(c._id)} disabled={actionLoading[c._id]}
-                        className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold text-white py-2 rounded-xl transition disabled:opacity-50"
-                        style={{ background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 2px 8px rgba(5,150,105,0.35)' }}>
-                        {actionLoading[c._id] ? <Loader2 size={11} className="animate-spin" /> : <UserCheck size={11} />} Accept
-                      </button>
-                      <button onClick={() => reject(c._id)} disabled={actionLoading[c._id]}
-                        className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold py-2 rounded-xl transition disabled:opacity-50"
-                        style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
-                        <UserX size={11} /> Decline
-                      </button>
+                  <motion.div key={c._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    className="rounded-2xl overflow-hidden"
+                    style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}>
+                    <div className="h-0.5" style={{ background: 'linear-gradient(90deg,transparent,#fbbf24,transparent)' }} />
+                    <div className="p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Avatar src={c.requester?.profileImage} name={c.requester?.name} size={12} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm text-white truncate">{c.requester?.name}</p>
+                          <RoleBadge role={c.requester?.role} />
+                        </div>
+                      </div>
+                      {c.requester?.skills?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {c.requester.skills.slice(0, 3).map(s => (
+                            <span key={s} className="text-xs px-2 py-0.5 rounded-full"
+                              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>{s}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={() => accept(c._id, c.requester?._id)} disabled={!!actionLoading[c._id]}
+                          className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold text-white py-2 rounded-xl disabled:opacity-50"
+                          style={{ background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 2px 8px rgba(5,150,105,0.35)' }}>
+                          {actionLoading[c._id] ? <Loader2 size={11} className="animate-spin" /> : <UserCheck size={11} />} Accept & Follow
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={() => reject(c._id)} disabled={!!actionLoading[c._id]}
+                          className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold py-2 rounded-xl disabled:opacity-50"
+                          style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
+                          <UserX size={11} /> Decline
+                        </motion.button>
+                      </div>
                     </div>
-                  } />
+                  </motion.div>
                 ))
           }
         </div>
@@ -737,13 +822,8 @@ function ConnectionsTab({ user }) {
                 </div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {myConns.map(c => (
-                    <UserCard key={c.connectionId} u={c.user} actions={
-                      <button onClick={() => remove(c.connectionId)} disabled={actionLoading[c.connectionId]}
-                        className="w-full flex items-center justify-center gap-1.5 text-xs py-2 rounded-xl transition disabled:opacity-50"
-                        style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>
-                        {actionLoading[c.connectionId] ? <Loader2 size={12} className="animate-spin" /> : <UserX size={12} />} Remove
-                      </button>
-                    } />
+                    <UserCard key={c.connectionId} u={{ ...c.user, isFollowing: c.isFollowing }}
+                      connId={c.connectionId} isConn showRemove />
                   ))}
                 </div>
           }

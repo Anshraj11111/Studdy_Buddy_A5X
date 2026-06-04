@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, Save, User, Check, X, ZoomIn, Loader2, Settings as SettingsIcon, MapPin, FileText, Shield } from 'lucide-react'
+import { Camera, Save, User, Check, X, ZoomIn, Loader2, Settings as SettingsIcon, MapPin, FileText, Shield, Users, UserCheck } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 import { uploadToCloudinary } from '../utils/cloudinary'
+import { followAPI } from '../services/api'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
 const SKILL_COLORS = {
@@ -46,6 +47,15 @@ export default function Settings() {
   const [zoomed, setZoomed] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [counts, setCounts] = useState({ followersCount: 0, followingCount: 0, connectionsCount: 0 })
+
+  useEffect(() => {
+    if (user?._id) {
+      followAPI.getCounts(user._id)
+        .then(res => setCounts(res.data.data))
+        .catch(() => {})
+    }
+  }, [user?._id])
 
   const handleImageChange = async (e) => {
     const file = e.target.files[0]
@@ -108,6 +118,50 @@ export default function Settings() {
                 Settings
               </h1>
               <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: '0.8rem', fontFamily: 'monospace' }}>Manage your profile and preferences</p>
+            </div>
+          </motion.div>
+
+          {/* ── Social Stats ─────────────────────────────────────── */}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+            style={glassCard} className="p-5 sm:p-6 mb-4">
+            <div className="h-0.5 -mx-5 sm:-mx-6 -mt-5 sm:-mt-6 mb-5 rounded-t-2xl"
+              style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+
+            {/* Avatar + name row */}
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-2xl flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}>
+                {user?.profileImage
+                  ? <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
+                  : user?.name?.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="font-bold text-white text-lg leading-tight">{user?.name}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>{user?.email}</p>
+                <span className="inline-flex items-center gap-1 mt-1 text-xs px-2 py-0.5 rounded-full capitalize font-semibold"
+                  style={{ background: user?.role === 'mentor' ? 'rgba(196,181,253,0.15)' : 'rgba(96,165,250,0.15)', border: user?.role === 'mentor' ? '1px solid rgba(196,181,253,0.3)' : '1px solid rgba(96,165,250,0.3)', color: user?.role === 'mentor' ? '#c4b5fd' : '#93c5fd' }}>
+                  <Shield size={10} /> {user?.role}
+                </span>
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { icon: Users, label: 'Connections', value: counts.connectionsCount, color: '#6366f1' },
+                { icon: UserCheck, label: 'Followers', value: counts.followersCount, color: '#8b5cf6' },
+                { icon: User, label: 'Following', value: counts.followingCount, color: '#06b6d4' },
+              ].map(s => {
+                const Icon = s.icon
+                return (
+                  <div key={s.label} className="rounded-2xl p-3 text-center"
+                    style={{ background: `${s.color}12`, border: `1px solid ${s.color}30` }}>
+                    <Icon size={16} className="mx-auto mb-1" style={{ color: s.color }} />
+                    <p className="text-xl font-bold text-white">{s.value}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.6)' }}>{s.label}</p>
+                  </div>
+                )
+              })}
             </div>
           </motion.div>
 
