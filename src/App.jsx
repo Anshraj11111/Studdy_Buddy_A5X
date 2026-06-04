@@ -56,6 +56,8 @@ function AppShell() {
   useEffect(() => {
     initTheme()
     initAuth()
+    // Pre-warm backend immediately when app boots
+    fetch(`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://studdy-buddy-backend-a5x.onrender.com'}/health`).catch(() => {})
   }, [initAuth, initTheme])
 
   useEffect(() => {

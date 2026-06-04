@@ -4,16 +4,17 @@ import axios from "axios";
 const BASE = "https://studdy-buddy-backend-a5x.onrender.com";
 const envUrl = import.meta.env.VITE_API_URL;
 
-// Keep-alive ping every 10 minutes to prevent Render cold starts
-// Also ping immediately and after 30s to warm up on app load
+// Keep-alive ping — Render free tier sleeps after ~5 min of inactivity
+// Ping every 4 minutes to prevent cold starts
 const pingBackend = () => fetch(`${BASE}/health`).catch(() => {});
 pingBackend(); // ping immediately on app load
-setTimeout(pingBackend, 30 * 1000); // ping again after 30s
-setInterval(pingBackend, 10 * 60 * 1000); // then every 10 minutes
+setTimeout(pingBackend, 15 * 1000); // ping again after 15s (warm up)
+setTimeout(pingBackend, 45 * 1000); // ping once more at 45s
+setInterval(pingBackend, 4 * 60 * 1000); // then every 4 minutes
 
-// Simple in-memory cache for GET requests (30s TTL)
+// Simple in-memory cache for GET requests (5 min TTL)
 const cache = new Map();
-const CACHE_TTL = 30 * 1000;
+const CACHE_TTL = 5 * 60 * 1000;
 const getCached = (key) => {
   const entry = cache.get(key);
   if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
