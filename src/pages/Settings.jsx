@@ -386,13 +386,75 @@ export default function Settings() {
         socialLinks: formData.socialLinks, phone: formData.phone, privateAddress: formData.privateAddress,
         education: formData.education, experience: formData.experience,
       })
-      setSaved(true); setTimeout(() => setSaved(false), 2500)
-    } catch { setError('Failed to save settings') }
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err) {
+      const msg = err?.response?.data?.error?.message || err?.message || 'Failed to save settings'
+      setError(msg)
+    }
   }
 
   return (
     <div className="flex min-h-screen" style={{ position: 'relative' }}>
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+
+      {/* ── Toast Notifications ──────────────────────────── */}
+      <AnimatePresence>
+        {saved && (
+          <motion.div
+            initial={{ opacity: 0, y: -60, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -60, x: '-50%' }}
+            transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+            style={{
+              position: 'fixed', top: 72, left: '50%',
+              zIndex: 99999,
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '12px 20px', borderRadius: 16,
+              background: 'rgba(5,150,105,0.95)',
+              border: '1px solid rgba(52,211,153,0.4)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(52,211,153,0.25)',
+              backdropFilter: 'blur(16px)',
+              color: 'white', fontWeight: 700, fontSize: '0.9rem',
+              whiteSpace: 'nowrap',
+            }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Profile saved successfully!
+          </motion.div>
+        )}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -60, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -60, x: '-50%' }}
+            transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+            style={{
+              position: 'fixed', top: 72, left: '50%',
+              zIndex: 99999,
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '12px 20px', borderRadius: 16,
+              background: 'rgba(220,38,38,0.95)',
+              border: '1px solid rgba(248,113,113,0.4)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(16px)',
+              color: 'white', fontWeight: 700, fontSize: '0.9rem',
+              maxWidth: '80vw',
+            }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>Save failed: {error}</span>
+            <button onClick={() => setError('')}
+              style={{ marginLeft: 8, opacity: 0.7, cursor: 'pointer', background: 'none', border: 'none', color: 'white' }}>
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/src/assets/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.80)' }} />
       <div style={{ position: 'relative', zIndex: 60 }}>

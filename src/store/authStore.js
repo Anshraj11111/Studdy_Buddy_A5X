@@ -106,12 +106,16 @@ export const useAuthStore = create((set) => ({
   },
 
   updateProfile: async (updates) => {
+    set({ loading: true, error: null })
     try {
       const { data } = await authAPI.updateProfile(updates)
-      set({ user: data.data.user }) // Backend returns { success, data: { user } }
-      return data.data.user
+      const updatedUser = data.data.user
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+      set({ user: updatedUser, loading: false })
+      return updatedUser
     } catch (error) {
-      set({ error: error.response?.data?.error?.message || 'Failed to update profile' })
+      const msg = error.response?.data?.error?.message || error.message || 'Failed to update profile'
+      set({ error: msg, loading: false })
       throw error
     }
   },
