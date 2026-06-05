@@ -18,13 +18,14 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,   // strip all console.log in production
+        drop_console: true,
         drop_debugger: true,
+        passes: 2,       // extra compression pass
       },
+      mangle: true,
     },
     rollupOptions: {
       output: {
-        // Split vendor libs into separate cached chunks
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
           'router': ['react-router-dom'],
@@ -33,9 +34,12 @@ export default defineConfig({
           'ui': ['lucide-react'],
           'state': ['zustand', 'axios'],
         },
+        // Add content hash to filenames for long-term caching
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
-    // Warn if any chunk exceeds 400kb
     chunkSizeWarningLimit: 400,
   },
 })
