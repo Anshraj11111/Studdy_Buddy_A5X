@@ -62,7 +62,7 @@ function AppShell() {
 
   useEffect(() => {
     if (token && user) {
-      initSocket(token, user._id)
+      initSocket(token, user._id, user.name || '', user.profileImage || '')
       fetchNotifications()
       onNotification((notif) => addNew(notif))
     } else {

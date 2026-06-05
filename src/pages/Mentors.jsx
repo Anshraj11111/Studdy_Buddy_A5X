@@ -5,6 +5,7 @@ import { Star, MessageCircle, Video, Loader2, AlertCircle, Search, UserCircle2, 
 import { mentorAPI, roomAPI } from '../services/api'
 import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
+import { setupOnlineTracking, getSocket } from '../services/socket'
 
 const TOPICS = [
   { id: 'all', label: 'All Topics', color: '#818cf8' },
@@ -34,6 +35,13 @@ export default function Mentors() {
   const [selectedTopic, setSelectedTopic] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [onlineUsers, setOnlineUsers] = useState(new Set())
+
+  useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
+    setupOnlineTracking((updatedSet) => setOnlineUsers(new Set(updatedSet)))
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => { fetchMentors() }, 200)
@@ -204,9 +212,9 @@ export default function Mentors() {
                           ? <img src={mentor.profileImage} alt={mentor.name} className="w-full h-full object-cover" />
                           : mentor.name?.charAt(0).toUpperCase() || 'M'}
                       </div>
-                      {/* Online dot */}
+                      {/* Real online dot */}
                       <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2"
-                        style={{ background: '#34d399', borderColor: 'rgba(10,8,30,0.9)' }} />
+                        style={{ background: onlineUsers.has(String(mentor._id)) ? '#34d399' : '#6b7280', borderColor: 'rgba(10,8,30,0.9)' }} />
                     </motion.div>
 
                     <h3 className="font-bold text-white text-center text-sm mb-1">{mentor.name}</h3>

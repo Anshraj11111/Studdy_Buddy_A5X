@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { roomAPI } from '../services/api'
-import { joinRoom, sendMessage, onMessage, onTyping, sendTyping, leaveRoom, getSocket } from '../services/socket'
+import { joinRoom, sendMessage, onMessage, onTyping, sendTyping, leaveRoom, getSocket, setupOnlineTracking } from '../services/socket'
 import { showMessageNotification, playNotificationSound, requestNotificationPermission } from '../utils/notifications'
 import { Send, Video, ArrowLeft, Loader2, Phone } from 'lucide-react'
 
@@ -17,6 +17,7 @@ export default function Chat() {
   const [typing, setTyping] = useState(false)
   const [typingUsers, setTypingUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [onlineUsers, setOnlineUsers] = useState(new Set())
   const messagesEndRef = useRef(null)
   const typingTimeoutRef = useRef(null)
 
@@ -47,12 +48,24 @@ export default function Chat() {
     joinRoom(roomId, user._id)
 
     const handleMessage = (data) => {
-      setMessages(prev => [...prev, data])
+      // Replace temp optimistic message or add new one
+      setMessages(prev => {
+        const exists = prev.find(m => m._id === data._id)
+        if (exists) return prev
+        return [...prev, data]
+      })
       const isOwn = String(data.senderId) === String(user._id) || String(data.senderId?._id) === String(user._id)
       if (!isOwn && !document.hasFocus()) {
         showMessageNotification(otherUser?.name || 'Someone', data.content)
         playNotificationSound()
       }
+    }
+
+    const handleConfirmed = (data) => {
+      // Replace temp message with confirmed DB message
+      setMessages(prev => prev.map(m =>
+        m._id === data.tempId ? { ...data, temp: false } : m
+      ))
     }
 
     const handleTyping = (data) => {
@@ -63,11 +76,13 @@ export default function Chat() {
     }
 
     socket.on('messageReceived', handleMessage)
+    socket.on('messageConfirmed', handleConfirmed)
     socket.on('userTyping', handleTyping)
     socket.on('roomJoined', (data) => { if (data.messages?.length > 0) setMessages(data.messages) })
 
     return () => {
       socket.off('messageReceived', handleMessage)
+      socket.off('messageConfirmed', handleConfirmed)
       socket.off('userTyping', handleTyping)
       socket.off('roomJoined')
       leaveRoom(roomId)
@@ -77,6 +92,15 @@ export default function Chat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Track online status
+  useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
+    setupOnlineTracking((updatedSet) => setOnlineUsers(new Set(updatedSet)))
+  }, [])
+
+  const isOtherOnline = otherUser ? onlineUsers.has(String(otherUser._id || otherUser)) : false
 
   const handleSendMessage = (e) => {
     e.preventDefault()
@@ -140,12 +164,12 @@ export default function Chat() {
                     : otherUser?.name?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
-                  style={{ background: '#34d399', borderColor: 'rgba(10,8,30,0.9)' }} />
+                  style={{ background: isOtherOnline ? '#34d399' : '#6b7280', borderColor: 'rgba(10,8,30,0.9)' }} />
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="font-bold text-white text-sm truncate">{otherUser?.name || 'Unknown User'}</h2>
                 <p className="text-xs truncate" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace' }}>
-                  {room?.topic ? `# ${room.topic}` : 'Online'}
+                  {room?.topic ? `# ${room.topic}` : isOtherOnline ? '● Online' : '○ Offline'}
                 </p>
               </div>
             </div>

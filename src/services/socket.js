@@ -4,11 +4,11 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
 
 let socket = null
 
-export const initSocket = (token, userId) => {
+export const initSocket = (token, userId, userName = '', userImage = '') => {
   if (socket?.connected) return socket
 
   socket = io(SOCKET_URL, {
-    auth: { token, userId },
+    auth: { token, userId, userName, userImage },
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,

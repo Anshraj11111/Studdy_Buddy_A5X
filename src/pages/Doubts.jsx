@@ -62,6 +62,7 @@ export default function Doubts() {
         if (search) {
           res = await doubtAPI.search(search)
           const all = res.data.data?.doubts || []
+          // Filter to only current user's doubts (My Doubts page)
           const ud = all.filter(d => user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id)))
           setAllDoubts(ud); setTotal(ud.length)
         } else if (topic) {
@@ -70,7 +71,8 @@ export default function Doubts() {
           const ud = all.filter(d => user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id)))
           setAllDoubts(ud); setTotal(res.data.data?.pagination?.total || 0)
         } else {
-          res = await doubtAPI.list(page, 100)
+          // Fetch all doubts â€” limit 200 to get all user's doubts
+          res = await doubtAPI.list(page, 200)
           const all = res.data.data?.doubts || []
           const ud = all.filter(d => user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id)))
           setAllDoubts(ud); setTotal(ud.length)
@@ -246,7 +248,7 @@ export default function Doubts() {
                           <button onClick={e => handleViewMatch(doubt, e)}
                             className="text-xs px-2 py-0.5 rounded-full font-semibold transition hover:opacity-80"
                             style={{ background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.4)", color: "#a5b4fc" }}>
-                            matched · tap to view
+                            matched ï¿½ tap to view
                           </button>
                         ) : <StatusBadge status={doubt.status} />}
                         {doubt.tags?.slice(0, 2).map(tag => (
