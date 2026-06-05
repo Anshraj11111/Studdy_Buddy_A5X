@@ -20,6 +20,12 @@ export const initSocket = (token, userId, userName = '', userImage = '') => {
     console.log('✅ User ID:', userId)
   })
 
+  // Populate global onlineUsers set on first connect so late-mounting components get it
+  socket.on('onlineUsers', ({ userIds }) => {
+    onlineUsers.clear()
+    userIds.forEach(id => onlineUsers.add(String(id)))
+  })
+
   return socket
 }
 
@@ -124,7 +130,17 @@ export const getOnlineUsers = () => onlineUsers
 export const setupOnlineTracking = (callback) => {
   if (!socket) return
 
-  // Get initial online users list
+  // ── Fire immediately with whatever we already have ──────────────────────
+  if (onlineUsers.size > 0) {
+    callback?.(new Set(onlineUsers))
+  }
+
+  // Remove old listeners first to avoid duplicates on re-mount
+  socket.off('onlineUsers')
+  socket.off('userOnline')
+  socket.off('userOffline')
+
+  // Full list from server (sent on connect)
   socket.on('onlineUsers', ({ userIds }) => {
     onlineUsers.clear()
     userIds.forEach(id => onlineUsers.add(String(id)))
@@ -142,6 +158,11 @@ export const setupOnlineTracking = (callback) => {
     onlineUsers.delete(String(userId))
     callback?.(new Set(onlineUsers))
   })
+
+  // If socket already connected and we missed the onlineUsers event, request it again
+  if (socket.connected && onlineUsers.size === 0) {
+    socket.emit('getOnlineUsers')
+  }
 }
 
 export const isUserOnline = (userId) => {
