@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UserPlus, Mail, Lock, User, UserCircle, Loader2, AlertCircle, Sparkles, Check, Shield } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import loginBg from '../assets/login-signup.png'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
@@ -108,7 +109,7 @@ export default function Signup() {
       {/* Background image with overlay */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0,
-        backgroundImage: "url(/src/assets/login-signup.png)",
+        backgroundImage: `url(${loginBg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundAttachment: "fixed",

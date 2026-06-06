@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LogIn, Mail, Lock, UserCircle, Loader2, AlertCircle, Sparkles } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import loginBg from '../assets/login-signup.png'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
 
@@ -91,7 +92,7 @@ export default function Login() {
       {/* Background image with overlay */}
       <div style={{
         position: "fixed", inset: 0, zIndex: 0,
-        backgroundImage: "url(/src/assets/login-signup.png)",
+        backgroundImage: `url(${loginBg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundAttachment: "fixed",
