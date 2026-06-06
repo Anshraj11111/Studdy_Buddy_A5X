@@ -8,30 +8,30 @@ import { showCallNotification, playNotificationSound, requestNotificationPermiss
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, ArrowLeft, Monitor, MonitorOff, Maximize, Minimize } from 'lucide-react'
 import CallEndFeedbackModal from '../components/CallEndFeedbackModal'
 
-const ICE_SERVERS = {
+const DEFAULT_ICE_SERVERS = {
   iceServers: [
-    // STUN servers (find public IP, works on same network)
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    // Free TURN servers from Open Relay Project (required for cross-network calls)
+    { urls: 'stun:global.stun.twilio.com:3478' },
     {
-      urls: 'turn:openrelay.metered.ca:80',
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:80?transport=tcp',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp',
+        'turns:openrelay.metered.ca:443',
+      ],
       username: 'openrelayproject',
       credential: 'openrelayproject',
     },
     {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
+      urls: 'turn:numb.viagenie.ca',
+      username: 'webrtc@live.com',
+      credential: 'muazkh',
     },
   ],
   iceCandidatePoolSize: 10,
+  iceTransportPolicy: 'all',
 }
 
 export default function VideoCall() {
@@ -65,6 +65,7 @@ export default function VideoCall() {
   const pendingCandidates= useRef([])
   const pendingOfferRef  = useRef(null)
   const hasInitRef       = useRef(false)
+  const iceServersRef    = useRef(DEFAULT_ICE_SERVERS) // fetched from backend on mount
 
   // Refs that mirror the latest state values — lets socket callbacks always
   // read fresh data without ever being re-registered
@@ -73,6 +74,23 @@ export default function VideoCall() {
   const otherUserRef= useRef(null)
   const autoStartRef= useRef(autoStart)
 
+  // ── Fetch ICE servers from backend on mount ───────────────────────────────
+  useEffect(() => {
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
+    fetch(`${SOCKET_URL}/api/ice-servers`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.iceServers?.length) {
+          iceServersRef.current = {
+            iceServers: data.iceServers,
+            iceCandidatePoolSize: 10,
+            iceTransportPolicy: 'all',
+          }
+          console.log('✅ ICE servers loaded from backend:', data.iceServers.length, 'entries')
+        }
+      })
+      .catch(() => console.log('⚠️ Using default ICE servers'))
+  }, [])
   useEffect(() => { roomIdRef.current   = roomId   }, [roomId])
   useEffect(() => { userRef.current     = user     }, [user])
   useEffect(() => { otherUserRef.current= otherUser }, [otherUser])
@@ -100,7 +118,7 @@ export default function VideoCall() {
 
   // ── Build an RTCPeerConnection ────────────────────────────────────────────
   const buildPC = (socket, toUserId) => {
-    const pc = new RTCPeerConnection(ICE_SERVERS)
+    const pc = new RTCPeerConnection(iceServersRef.current)
 
     pc.ontrack = (e) => {
       console.log('📹 ontrack:', e.track.kind)
