@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
@@ -21,6 +21,7 @@ export default function VideoCall() {
   const remoteVideoRef = useRef(null)
   const peerConnectionRef = useRef(null)
   const localStreamRef = useRef(null)
+  const remoteStreamRef = useRef(null)   // keep remote stream in ref too
   const [callActive, setCallActive] = useState(false)
   const [incomingCall, setIncomingCall] = useState(false)
   const [micEnabled, setMicEnabled] = useState(true)
@@ -30,8 +31,7 @@ export default function VideoCall() {
   const hasAutoStarted = useRef(false)
   const originalStreamRef = useRef(null)
   const pendingCandidates = useRef([])
-  const pendingOffer = useRef(null)   // store offer that arrived before otherUser loaded
-  const screenShareEventHandled = useRef(false)
+  const pendingOffer = useRef(null)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -45,26 +45,78 @@ export default function VideoCall() {
     ],
   }
 
+  // ── Reliable remote video setter ────────────────────────────────────────────
+  const setRemoteStream = useCallback((stream) => {
+    remoteStreamRef.current = stream
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = stream
+      remoteVideoRef.current.play().catch(() => {})
+    }
+    setCallActive(true)
+  }, [])
+
+  // Attach stream if ref gets assigned after stream already exists (React timing)
+  const remoteVideoCallbackRef = useCallback((node) => {
+    remoteVideoRef.current = node
+    if (node && remoteStreamRef.current) {
+      node.srcObject = remoteStreamRef.current
+      node.play().catch(() => {})
+    }
+  }, [])
+
+  // ── Create peer connection helper ────────────────────────────────────────────
+  const createPeerConnection = useCallback((socket, toUserId) => {
+    const pc = new RTCPeerConnection(ICE_SERVERS)
+
+    pc.ontrack = (event) => {
+      console.log('📹 ontrack fired:', event.track.kind, 'streams:', event.streams.length)
+      const stream = event.streams[0]
+      if (stream) {
+        console.log('✅ Setting remote stream')
+        setRemoteStream(stream)
+      } else {
+        // No stream in event — build one manually
+        if (!remoteStreamRef.current) {
+          remoteStreamRef.current = new MediaStream()
+        }
+        remoteStreamRef.current.addTrack(event.track)
+        setRemoteStream(remoteStreamRef.current)
+      }
+    }
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('iceCandidate', {
+          roomId,
+          candidate: event.candidate,
+          fromUserId: user._id,
+          toUserId,
+        })
+      }
+    }
+
+    pc.onconnectionstatechange = () => {
+      console.log('🔌 Connection state:', pc.connectionState)
+    }
+
+    pc.oniceconnectionstatechange = () => {
+      console.log('🧊 ICE state:', pc.iceConnectionState)
+    }
+
+    return pc
+  }, [roomId, user, setRemoteStream])
+
+  // ── Fetch room data ──────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchRoomData = async () => {
       try {
         setLoading(true)
         const res = await roomAPI.getById(roomId)
         const roomData = res.data.data?.room
-        
         setRoom(roomData)
-        
-        // Determine the other user
-        const userId = user._id
-        const student1Id = roomData.student1?._id || roomData.student1
-        
-        if (String(userId) === String(student1Id)) {
-          setOtherUser(roomData.student2)
-        } else {
-          setOtherUser(roomData.student1)
-        }
-        
-        // Request notification permission
+        const uid = user._id
+        const s1 = roomData.student1?._id || roomData.student1
+        setOtherUser(String(uid) === String(s1) ? roomData.student2 : roomData.student1)
         requestNotificationPermission()
       } catch (error) {
         console.error('Failed to fetch room data:', error)
@@ -72,826 +124,481 @@ export default function VideoCall() {
         setLoading(false)
       }
     }
-
-    if (user) {
-      fetchRoomData()
-    }
+    if (user) fetchRoomData()
   }, [roomId, user])
 
-  // Auto-start call if coming from accept
+  // ── Auto-start if coming from accept ────────────────────────────────────────
   useEffect(() => {
     if (autoStart && otherUser && !hasAutoStarted.current && !loading) {
       hasAutoStarted.current = true
-      console.log('🎥 Auto-starting call...')
-      setTimeout(() => {
-        startCall()
-      }, 500)
+      setTimeout(() => startCall(), 500)
     }
   }, [autoStart, otherUser, loading])
 
-  // ── Early offer capture: store offer that arrives before component is ready ──
+  // ── Early offer capture ──────────────────────────────────────────────────────
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
-
     const captureOffer = (data) => {
-      // If otherUser isn't set yet, store the offer for later processing
       if (!otherUser) {
-        console.log('📦 Offer arrived early, storing for later')
+        console.log('📦 Storing early offer')
         pendingOffer.current = data
       }
     }
-
     socket.on('offer', captureOffer)
     return () => socket.off('offer', captureOffer)
-  }, []) // runs once on mount — intentionally no deps
+  }, [])
 
-  // ── Process pending offer once otherUser is available ──
+  // ── Process pending offer once otherUser loads ───────────────────────────────
   useEffect(() => {
-    if (otherUser && pendingOffer.current) {
-      console.log('🔄 Processing stored pending offer now that otherUser is ready')
+    if (otherUser && pendingOffer.current && !peerConnectionRef.current) {
       const data = pendingOffer.current
       pendingOffer.current = null
-      // Trigger the handleOffer logic by re-emitting locally via the socket
-      // Actually just call the handler directly — we do this via a small helper
-      processPendingOffer(data)
+      handleOffer(data)
     }
   }, [otherUser])
 
-  const processPendingOffer = async (data) => {
+  // ── Core offer handler (used by both socket event and pending offer) ─────────
+  const handleOffer = useCallback(async (data) => {
     const socket = getSocket()
-    if (!socket || !otherUser) return
+    if (!socket) return
+    if (peerConnectionRef.current) {
+      console.log('📨 Peer connection already exists, skipping duplicate offer')
+      return
+    }
     try {
-      console.log('📨 Processing pending offer from:', data.fromUserId)
+      console.log('📨 Handling offer from:', data.fromUserId)
+
       if (!localStreamRef.current) {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         localStreamRef.current = stream
         if (localVideoRef.current) localVideoRef.current.srcObject = stream
       }
-      const peerConnection = new RTCPeerConnection(ICE_SERVERS)
-      peerConnectionRef.current = peerConnection
-      localStreamRef.current.getTracks().forEach(track => peerConnection.addTrack(track, localStreamRef.current))
-      peerConnection.ontrack = (event) => {
-        if (remoteVideoRef.current && event.streams[0]) remoteVideoRef.current.srcObject = event.streams[0]
+
+      const toUserId = data.fromUserId
+      const pc = createPeerConnection(socket, toUserId)
+      peerConnectionRef.current = pc
+
+      localStreamRef.current.getTracks().forEach(track => {
+        pc.addTrack(track, localStreamRef.current)
+      })
+
+      await pc.setRemoteDescription(new RTCSessionDescription(data.offer))
+
+      // Flush pending ICE candidates
+      for (const c of pendingCandidates.current) {
+        await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {})
       }
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) socket.emit('iceCandidate', { roomId, candidate: event.candidate, fromUserId: user._id, toUserId: otherUser._id })
-      }
-      peerConnection.onconnectionstatechange = () => console.log('🔌 Connection state:', peerConnection.connectionState)
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
-      if (pendingCandidates.current.length > 0) {
-        for (const c of pendingCandidates.current) await peerConnection.addIceCandidate(new RTCIceCandidate(c))
-        pendingCandidates.current = []
-      }
-      const answer = await peerConnection.createAnswer()
-      await peerConnection.setLocalDescription(answer)
-      socket.emit('answer', { roomId, answer, fromUserId: user._id, toUserId: otherUser._id })
-      console.log('📤 Answer sent for pending offer')
-      setCallActive(true)
+      pendingCandidates.current = []
+
+      const answer = await pc.createAnswer()
+      await pc.setLocalDescription(answer)
+
+      socket.emit('answer', {
+        roomId,
+        answer,
+        fromUserId: user._id,
+        toUserId,
+      })
+      console.log('📤 Answer sent')
       setIncomingCall(false)
     } catch (err) {
-      console.error('❌ Error processing pending offer:', err)
+      console.error('❌ Error handling offer:', err)
     }
-  }
+  }, [roomId, user, createPeerConnection])
 
+  // ── Socket event listeners ───────────────────────────────────────────────────
   useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
 
-    console.log('🔌 Setting up socket listeners for room:', roomId)
-
-    // Join the room for socket communication
     joinRoom(roomId, user._id)
 
-    const handleIncomingCall = (data) => {
-      console.log('📞 Incoming call:', data)
-      
-      // Only show incoming call popup if we're not already in a call
-      // This prevents User 1 from getting a popup when User 2 accepts
+    const onIncomingCall = (data) => {
       if (!peerConnectionRef.current) {
         setIncomingCall(true)
-        
-        // Show notification
         showCallNotification(otherUser?.name || 'Someone')
         playNotificationSound()
-      } else {
-        console.log('📞 Already in call, ignoring incoming call event')
       }
     }
 
-    const handleOffer = async (data) => {
+    const onOffer = (data) => handleOffer(data)
+
+    const onAnswer = async (data) => {
       try {
-        console.log('📨 Received offer from:', data.fromUserId)
-
-        // Skip if already handled by processPendingOffer
+        console.log('📨 Received answer')
         if (peerConnectionRef.current) {
-          console.log('📨 Peer connection already exists, skipping duplicate offer')
-          return
-        }
-
-        // Get user media first
-        if (!localStreamRef.current) {
-          console.log('🎥 Getting user media for answering...')
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-          })
-          localStreamRef.current = stream
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream
-          }
-        }
-
-        // Create peer connection
-        const peerConnection = new RTCPeerConnection(ICE_SERVERS)
-        peerConnectionRef.current = peerConnection
-
-        // Add local tracks
-        localStreamRef.current.getTracks().forEach((track) => {
-          console.log('➕ Adding local track:', track.kind)
-          peerConnection.addTrack(track, localStreamRef.current)
-        })
-
-        // Handle remote tracks
-        peerConnection.ontrack = (event) => {
-          console.log('📹 Received remote track:', event.track.kind, event.streams.length)
-          if (remoteVideoRef.current && event.streams[0]) {
-            console.log('✅ Setting remote stream')
-            remoteVideoRef.current.srcObject = event.streams[0]
-          }
-        }
-
-        // Handle ICE candidates
-        peerConnection.onicecandidate = (event) => {
-          if (event.candidate) {
-            console.log('🧊 Sending ICE candidate')
-            socket.emit('iceCandidate', {
-              roomId,
-              candidate: event.candidate,
-              fromUserId: user._id,
-              toUserId: otherUser._id
-            })
-          }
-        }
-
-        peerConnection.onconnectionstatechange = () => {
-          console.log('🔌 Connection state:', peerConnection.connectionState)
-          if (peerConnection.connectionState === 'connected') {
-            console.log('✅ Peer connection established!')
-          }
-        }
-
-        peerConnection.oniceconnectionstatechange = () => {
-          console.log('🧊 ICE connection state:', peerConnection.iceConnectionState)
-        }
-
-        // Set remote description
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
-        console.log('✅ Remote description set')
-
-        // Process any pending ICE candidates
-        if (pendingCandidates.current.length > 0) {
-          console.log(`📦 Processing ${pendingCandidates.current.length} pending ICE candidates`)
-          for (const candidate of pendingCandidates.current) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
+          await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer))
+          for (const c of pendingCandidates.current) {
+            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(c)).catch(() => {})
           }
           pendingCandidates.current = []
         }
-
-        // Create and send answer
-        const answer = await peerConnection.createAnswer()
-        await peerConnection.setLocalDescription(answer)
-        console.log('✅ Answer created')
-
-        socket.emit('answer', {
-          roomId,
-          answer,
-          fromUserId: user._id,
-          toUserId: otherUser._id
-        })
-        console.log('📤 Answer sent')
-
-        setCallActive(true)
-        setIncomingCall(false)
-      } catch (error) {
-        console.error('❌ Error handling offer:', error)
+      } catch (err) {
+        console.error('❌ Error handling answer:', err)
       }
     }
 
-    const handleAnswer = async (data) => {
+    const onIceCandidate = async (data) => {
       try {
-        console.log('📨 Received answer from:', data.fromUserId)
-        if (peerConnectionRef.current) {
-          await peerConnectionRef.current.setRemoteDescription(
-            new RTCSessionDescription(data.answer)
-          )
-          console.log('✅ Remote description set from answer')
-
-          // Process any pending ICE candidates
-          if (pendingCandidates.current.length > 0) {
-            console.log(`📦 Processing ${pendingCandidates.current.length} pending ICE candidates`)
-            for (const candidate of pendingCandidates.current) {
-              await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
-            }
-            pendingCandidates.current = []
-          }
-        }
-      } catch (error) {
-        console.error('❌ Error handling answer:', error)
-      }
-    }
-
-    const handleIceCandidate = async (data) => {
-      try {
-        console.log('🧊 Received ICE candidate from:', data.fromUserId)
-        if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+        if (peerConnectionRef.current?.remoteDescription) {
           await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate))
-          console.log('✅ ICE candidate added')
         } else {
-          console.log('📦 Queuing ICE candidate (no remote description yet)')
           pendingCandidates.current.push(data.candidate)
         }
-      } catch (error) {
-        console.error('❌ Error adding ICE candidate:', error)
+      } catch (err) {
+        console.error('❌ ICE error:', err)
       }
     }
 
-    const handleCallEnded = () => {
-      console.log('📞 Call ended by remote user')
-      cleanup()
-    }
+    const onCallEnded = () => cleanup()
 
-    const handleScreenShareStarted = (data) => {
-      console.log('🖥️ Remote user started screen sharing:', data)
-      
-      // Prevent duplicate handling
-      if (screenShareEventHandled.current) {
-        console.log('⚠️ Screen share event already handled, ignoring duplicate')
-        return
-      }
-      
-      screenShareEventHandled.current = true
-      setRemoteScreenSharing(true)
-      
-      // Reset flag after 2 seconds to allow future screen shares
-      setTimeout(() => {
-        screenShareEventHandled.current = false
-      }, 2000)
-    }
+    const onScreenShareStarted = () => setRemoteScreenSharing(true)
+    const onScreenShareStopped = () => setRemoteScreenSharing(false)
 
-    const handleScreenShareStopped = (data) => {
-      console.log('🖥️ Remote user stopped screen sharing:', data)
-      screenShareEventHandled.current = false
-      setRemoteScreenSharing(false)
-    }
-
-    socket.on('incomingCall', handleIncomingCall)
-    socket.on('offer', handleOffer)
-    socket.on('answer', handleAnswer)
-    socket.on('iceCandidate', handleIceCandidate)
-    socket.on('callEnded', handleCallEnded)
-    socket.on('screenShareStarted', handleScreenShareStarted)
-    socket.on('screenShareStopped', handleScreenShareStopped)
+    socket.on('incomingCall', onIncomingCall)
+    socket.on('offer', onOffer)
+    socket.on('answer', onAnswer)
+    socket.on('iceCandidate', onIceCandidate)
+    socket.on('callEnded', onCallEnded)
+    socket.on('screenShareStarted', onScreenShareStarted)
+    socket.on('screenShareStopped', onScreenShareStopped)
 
     return () => {
-      console.log('🧹 Cleaning up socket listeners')
-      socket.off('incomingCall', handleIncomingCall)
-      socket.off('offer', handleOffer)
-      socket.off('answer', handleAnswer)
-      socket.off('iceCandidate', handleIceCandidate)
-      socket.off('callEnded', handleCallEnded)
-      socket.off('screenShareStarted', handleScreenShareStarted)
-      socket.off('screenShareStopped', handleScreenShareStopped)
+      socket.off('incomingCall', onIncomingCall)
+      socket.off('offer', onOffer)
+      socket.off('answer', onAnswer)
+      socket.off('iceCandidate', onIceCandidate)
+      socket.off('callEnded', onCallEnded)
+      socket.off('screenShareStarted', onScreenShareStarted)
+      socket.off('screenShareStopped', onScreenShareStopped)
     }
-  }, [roomId, user, otherUser])
+  }, [roomId, user, otherUser, handleOffer])
 
+  // ── Cleanup ──────────────────────────────────────────────────────────────────
   const cleanup = () => {
-    console.log('🧹 Cleaning up media streams and peer connection...')
-    
-    // Reset screen share flags
-    screenShareEventHandled.current = false
-    
-    // Stop screen sharing if active
-    if (screenSharing && localVideoRef.current?.srcObject) {
-      localVideoRef.current.srcObject.getTracks().forEach((track) => track.stop())
-    }
-    
-    // Stop original stream if exists
     if (originalStreamRef.current) {
-      originalStreamRef.current.getTracks().forEach((track) => track.stop())
+      originalStreamRef.current.getTracks().forEach(t => t.stop())
       originalStreamRef.current = null
     }
-    
-    // Close peer connection
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close()
       peerConnectionRef.current = null
     }
-    
-    // Stop local stream
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((track) => track.stop())
+      localStreamRef.current.getTracks().forEach(t => t.stop())
       localStreamRef.current = null
     }
-    
-    // Clear video elements
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = null
-    }
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = null
-    }
-    
+    if (localVideoRef.current) localVideoRef.current.srcObject = null
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
+    remoteStreamRef.current = null
     setCallActive(false)
     setScreenSharing(false)
     setRemoteScreenSharing(false)
     pendingCandidates.current = []
   }
 
+  // ── Start call (caller side) ─────────────────────────────────────────────────
   const startCall = async () => {
     try {
       console.log('🎥 Starting call...')
-      
-      // Get user media
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      })
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       localStreamRef.current = stream
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream
 
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream
-      }
-
-      // Create peer connection
-      const peerConnection = new RTCPeerConnection(ICE_SERVERS)
-      peerConnectionRef.current = peerConnection
-
-      // Add local tracks
-      stream.getTracks().forEach((track) => {
-        console.log('➕ Adding local track:', track.kind)
-        peerConnection.addTrack(track, stream)
-      })
-
-      // Handle remote tracks
-      peerConnection.ontrack = (event) => {
-        console.log('📹 Received remote track:', event.track.kind, event.streams.length)
-        if (remoteVideoRef.current && event.streams[0]) {
-          console.log('✅ Setting remote stream')
-          remoteVideoRef.current.srcObject = event.streams[0]
-        }
-      }
-
-      // Handle ICE candidates
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          console.log('🧊 Sending ICE candidate')
-          const socket = getSocket()
-          socket.emit('iceCandidate', {
-            roomId,
-            candidate: event.candidate,
-            fromUserId: user._id,
-            toUserId: otherUser._id
-          })
-        }
-      }
-
-      peerConnection.onconnectionstatechange = () => {
-        console.log('🔌 Connection state:', peerConnection.connectionState)
-        if (peerConnection.connectionState === 'connected') {
-          console.log('✅ Peer connection established!')
-        }
-      }
-
-      peerConnection.oniceconnectionstatechange = () => {
-        console.log('🧊 ICE connection state:', peerConnection.iceConnectionState)
-      }
-
-      // Create and send offer
-      const offer = await peerConnection.createOffer()
-      await peerConnection.setLocalDescription(offer)
-      console.log('✅ Offer created')
-      
       const socket = getSocket()
+      const pc = createPeerConnection(socket, otherUser._id)
+      peerConnectionRef.current = pc
 
-      // ── Send initiateCall FIRST so recipient gets notified before the offer ──
-      socket.emit('initiateCall', {
-        roomId,
-        fromUserId: user._id,
-        toUserId: otherUser._id
-      })
+      stream.getTracks().forEach(track => pc.addTrack(track, stream))
 
-      // Small delay so the recipient's IncomingCallModal can render and
-      // navigate to the video-call page before the WebRTC offer arrives
+      const offer = await pc.createOffer()
+      await pc.setLocalDescription(offer)
+
+      // Send incomingCall notification FIRST, then wait, then send offer
+      socket.emit('initiateCall', { roomId, fromUserId: user._id, toUserId: otherUser._id })
       await new Promise(r => setTimeout(r, 1200))
-
-      socket.emit('offer', {
-        roomId,
-        offer,
-        fromUserId: user._id,
-        toUserId: otherUser._id
-      })
+      socket.emit('offer', { roomId, offer, fromUserId: user._id, toUserId: otherUser._id })
       console.log('📤 Offer sent')
-
-      setCallActive(true)
-      setIncomingCall(false)
-    } catch (error) {
-      console.error('❌ Error starting call:', error)
+    } catch (err) {
+      console.error('❌ Error starting call:', err)
       alert('Failed to access camera/microphone. Please check permissions.')
     }
   }
 
-  const acceptIncomingCall = () => {
-    // Just start the call - the offer will be handled by the socket listener
-    startCall()
-  }
+  const acceptIncomingCall = () => startCall()
 
   const rejectIncomingCall = () => {
     setIncomingCall(false)
     const socket = getSocket()
-    socket.emit('callRejected', {
-      roomId,
-      fromUserId: user._id,
-      toUserId: otherUser._id
-    })
+    socket?.emit('callRejected', { roomId, fromUserId: user._id, toUserId: otherUser?._id })
   }
 
   const endCurrentCall = () => {
     const socket = getSocket()
-    socket.emit('callEnded', {
-      roomId,
-      fromUserId: user._id,
-      toUserId: otherUser?._id
-    })
-    
+    socket?.emit('callEnded', { roomId, fromUserId: user._id, toUserId: otherUser?._id })
     cleanup()
-    
-    // Show feedback modal instead of navigating immediately
     setShowFeedbackModal(true)
   }
 
   const toggleMic = () => {
     if (localStreamRef.current) {
-      localStreamRef.current.getAudioTracks().forEach((track) => {
-        track.enabled = !track.enabled
-      })
-      setMicEnabled(!micEnabled)
+      localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = !t.enabled })
+      setMicEnabled(p => !p)
     }
   }
 
   const toggleVideo = () => {
     if (localStreamRef.current) {
-      localStreamRef.current.getVideoTracks().forEach((track) => {
-        track.enabled = !track.enabled
-      })
-      setVideoEnabled(!videoEnabled)
+      localStreamRef.current.getVideoTracks().forEach(t => { t.enabled = !t.enabled })
+      setVideoEnabled(p => !p)
     }
   }
 
   const startScreenShare = async () => {
+    if (screenSharing) return
     try {
-      // Prevent multiple simultaneous screen share attempts
-      if (screenSharing) {
-        console.log('⚠️ Already screen sharing, ignoring request')
-        return
-      }
-      
-      console.log('🖥️ Starting screen share...')
-      
-      // Show warning about screen sharing
-      const userConfirmed = window.confirm(
-        'Screen Sharing Tip:\n\n' +
-        'If you select "Entire Screen", the video call window will appear in your shared screen, creating a mirror effect.\n\n' +
-        'To avoid this:\n' +
-        '• Select a specific "Window" or "Chrome Tab" instead\n' +
-        '• Or minimize this video call window before sharing\n\n' +
-        'Continue with screen sharing?'
+      const confirmed = window.confirm(
+        'Tip: Select a Window or Chrome Tab to avoid mirror effect.\n\nContinue?'
       )
-      
-      if (!userConfirmed) {
-        return
-      }
-      
-      // Get screen stream with specific constraints to avoid issues
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          cursor: 'always',
-          displaySurface: 'monitor', // Prefer entire monitor
-        },
-        audio: false,
-        preferCurrentTab: false, // Don't prefer current tab
-      })
+      if (!confirmed) return
 
-      // Save original stream
-      if (!originalStreamRef.current) {
-        originalStreamRef.current = localStreamRef.current
-      }
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false })
+      if (!originalStreamRef.current) originalStreamRef.current = localStreamRef.current
 
-      // Replace video track in peer connection
       const screenTrack = screenStream.getVideoTracks()[0]
-      
-      // Check if we already have a peer connection
-      if (!peerConnectionRef.current) {
-        console.log('⚠️ No peer connection available for screen sharing')
-        screenTrack.stop()
-        return
-      }
-      
-      const sender = peerConnectionRef.current
-        .getSenders()
-        .find((s) => s.track?.kind === 'video')
+      const sender = peerConnectionRef.current?.getSenders().find(s => s.track?.kind === 'video')
+      if (sender) await sender.replaceTrack(screenTrack)
 
-      if (sender) {
-        await sender.replaceTrack(screenTrack)
-        console.log('✅ Screen track replaced in peer connection')
-      }
-
-      // Update local video to show screen
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = screenStream
-      }
-
-      // Update local stream ref
+      if (localVideoRef.current) localVideoRef.current.srcObject = screenStream
       localStreamRef.current = screenStream
-
       setScreenSharing(true)
 
-      // Handle when user stops sharing via browser UI
-      screenTrack.onended = () => {
-        console.log('🖥️ Screen sharing stopped by user')
-        stopScreenShare()
-      }
+      screenTrack.onended = () => stopScreenShare()
 
-      // Notify other user - only emit once
       const socket = getSocket()
-      console.log('🖥️ Emitting screenShareStarted event')
-      socket.emit('screenShareStarted', {
-        roomId,
-        fromUserId: user._id,
-        toUserId: otherUser._id,
-      })
-      console.log('✅ screenShareStarted event emitted')
-    } catch (error) {
-      console.error('❌ Error starting screen share:', error)
-      if (error.name === 'NotAllowedError') {
-        console.log('Screen share cancelled by user')
-      } else {
-        alert('Failed to start screen sharing. Please try again.')
-      }
+      socket?.emit('screenShareStarted', { roomId, fromUserId: user._id, toUserId: otherUser?._id })
+    } catch (err) {
+      if (err.name !== 'NotAllowedError') alert('Failed to start screen sharing.')
     }
   }
 
   const stopScreenShare = async () => {
     try {
-      console.log('🖥️ Stopping screen share...')
-
-      // Stop screen stream
       if (localVideoRef.current?.srcObject && screenSharing) {
-        localVideoRef.current.srcObject.getTracks().forEach((track) => track.stop())
+        localVideoRef.current.srcObject.getTracks().forEach(t => t.stop())
       }
-
-      // Restore original camera stream
       if (originalStreamRef.current) {
         const videoTrack = originalStreamRef.current.getVideoTracks()[0]
-        const sender = peerConnectionRef.current
-          ?.getSenders()
-          .find((s) => s.track?.kind === 'video')
-
-        if (sender && videoTrack) {
-          await sender.replaceTrack(videoTrack)
-          console.log('✅ Camera track restored in peer connection')
-        }
-
-        // Update local video to show camera
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = originalStreamRef.current
-        }
-        
+        const sender = peerConnectionRef.current?.getSenders().find(s => s.track?.kind === 'video')
+        if (sender && videoTrack) await sender.replaceTrack(videoTrack)
+        if (localVideoRef.current) localVideoRef.current.srcObject = originalStreamRef.current
         localStreamRef.current = originalStreamRef.current
         originalStreamRef.current = null
       }
-
       setScreenSharing(false)
-
-      // Notify other user
       const socket = getSocket()
-      socket.emit('screenShareStopped', {
-        roomId,
-        fromUserId: user._id,
-        toUserId: otherUser._id,
-      })
-    } catch (error) {
-      console.error('❌ Error stopping screen share:', error)
+      socket?.emit('screenShareStopped', { roomId, fromUserId: user._id, toUserId: otherUser?._id })
+    } catch (err) {
+      console.error('❌ stopScreenShare error:', err)
     }
   }
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      // Enter fullscreen
       document.documentElement.requestFullscreen()
       setIsFullscreen(true)
     } else {
-      // Exit fullscreen
       document.exitFullscreen()
       setIsFullscreen(false)
     }
   }
 
-  // Listen for fullscreen changes
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
-    }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
-    }
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white">Loading...</p>
+      <div style={{ height: '100vh', background: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, border: '4px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Loading...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
-      {/* Call End Feedback Modal */}
+    <div style={{ height: '100vh', background: '#0a0a0f', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+
+      {/* Feedback Modal */}
       <CallEndFeedbackModal
         isOpen={showFeedbackModal}
-        onClose={() => {
-          setShowFeedbackModal(false)
-          navigate(`/chat/${roomId}`)
-        }}
+        onClose={() => { setShowFeedbackModal(false); navigate(`/chat/${roomId}`) }}
         roomId={roomId}
         otherUser={otherUser}
       />
 
-      {/* Header */}
-      <div className="bg-gray-900 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(`/chat/${roomId}`)}
-            className="p-2 hover:bg-gray-800 rounded-lg transition text-white"
-          >
-            <ArrowLeft size={20} />
+      {/* ── Top header ── */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={() => navigate(`/chat/${roomId}`)}
+            style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <ArrowLeft size={18} />
           </button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-              {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* otherUser avatar */}
+            <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '2px solid rgba(255,255,255,0.3)' }}>
+              {otherUser?.profileImage
+                ? <img src={otherUser.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ color: 'white', fontWeight: 700, fontSize: 16 }}>{otherUser?.name?.charAt(0).toUpperCase() || 'U'}</span>}
             </div>
             <div>
-              <h2 className="font-bold text-lg text-white">{otherUser?.name || 'Unknown User'}</h2>
-              <p className="text-sm text-gray-400">{room?.topic}</p>
+              <p style={{ color: 'white', fontWeight: 700, fontSize: 15, margin: 0 }}>{otherUser?.name || 'Unknown'}</p>
+              <p style={{ color: callActive ? '#34d399' : 'rgba(255,255,255,0.5)', fontSize: 11, margin: 0 }}>
+                {callActive ? '● Connected' : '● Waiting...'}
+              </p>
             </div>
           </div>
         </div>
+        {/* Fullscreen button */}
+        <button onClick={toggleFullscreen}
+          style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+        </button>
       </div>
 
-      {incomingCall && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50"
-        >
-          <div className="bg-gray-800 rounded-lg p-8 text-center">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">
-              {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
+      {/* ── Main video area ── */}
+      <div style={{ flex: 1, position: 'relative', background: '#111' }}>
+
+        {/* Remote video — full area */}
+        <video
+          ref={remoteVideoCallbackRef}
+          autoPlay
+          playsInline
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+
+        {/* Placeholder when remote not connected */}
+        {!callActive && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,10,20,0.95)', gap: 16 }}>
+            <div style={{ width: 90, height: 90, borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '3px solid rgba(99,102,241,0.5)', boxShadow: '0 0 30px rgba(99,102,241,0.4)' }}>
+              {otherUser?.profileImage
+                ? <img src={otherUser.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ color: 'white', fontWeight: 700, fontSize: 36 }}>{otherUser?.name?.charAt(0).toUpperCase() || 'U'}</span>}
             </div>
-            <h2 className="text-white text-2xl font-bold mb-2">{otherUser?.name || 'Unknown User'}</h2>
-            <p className="text-gray-400 mb-6">Incoming video call...</p>
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={acceptIncomingCall}
-                className="flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition"
-              >
-                <Phone size={20} />
-                Accept
-              </button>
-              <button
-                onClick={rejectIncomingCall}
-                className="flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
-              >
-                <PhoneOff size={20} />
-                Reject
-              </button>
-            </div>
+            <p style={{ color: 'white', fontSize: 20, fontWeight: 600, margin: 0 }}>{otherUser?.name || 'Unknown'}</p>
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, margin: 0 }}>
+              {autoStart ? 'Connecting...' : 'Press Start Call'}
+            </p>
           </div>
-        </motion.div>
-      )}
+        )}
 
-      <div className="flex-1 relative">
-        {/* Remote Video - Full Screen */}
-        <div className="absolute inset-0 bg-gray-900">
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className="w-full h-full object-cover"
-          />
-          {!callActive && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-              <div className="text-center">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-3xl mx-auto mb-4">
-                  {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <p className="text-white text-xl">{otherUser?.name || 'Unknown User'}</p>
-              </div>
-            </div>
-          )}
-          {/* Screen Sharing Indicator for Remote User - Only show if remote is sharing */}
-          {remoteScreenSharing && callActive && otherUser && (
-            <div 
-              key="remote-screen-indicator"
-              className="absolute top-4 left-4 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-10"
-            >
-              <Monitor size={20} />
-              <span className="font-medium">{otherUser.name} is sharing screen</span>
-            </div>
-          )}
-        </div>
+        {/* Screen share indicator */}
+        {remoteScreenSharing && callActive && (
+          <div style={{ position: 'absolute', top: 64, left: 16, background: '#3b82f6', color: 'white', padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, zIndex: 10 }}>
+            <Monitor size={14} />
+            {otherUser?.name} is sharing screen
+          </div>
+        )}
 
-        {/* Local Video - Small Corner */}
-        <div className="absolute top-4 right-4 w-48 h-36 bg-gray-900 rounded-lg overflow-hidden shadow-2xl border-2 border-gray-700 z-10">
+        {/* ── Local video — bottom right corner ── */}
+        <div style={{ position: 'absolute', bottom: 100, right: 16, width: 160, height: 120, borderRadius: 14, overflow: 'hidden', border: '2px solid rgba(255,255,255,0.3)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)', zIndex: 20, background: '#222' }}>
           <video
             ref={localVideoRef}
             autoPlay
             playsInline
             muted
-            className="w-full h-full object-cover"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
           />
-          {/* Screen Sharing Indicator for Local User - Only show if you are sharing */}
+          {!videoEnabled && (
+            <div style={{ position: 'absolute', inset: 0, background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <VideoOff size={28} color="rgba(255,255,255,0.4)" />
+            </div>
+          )}
           {screenSharing && (
-            <div 
-              key="local-screen-indicator"
-              className="absolute bottom-2 left-2 right-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center justify-center gap-1"
-            >
-              <Monitor size={14} />
-              <span>Sharing Screen</span>
+            <div style={{ position: 'absolute', bottom: 4, left: 4, right: 4, background: '#3b82f6', borderRadius: 4, padding: '2px 6px', fontSize: 10, color: 'white', textAlign: 'center' }}>
+              Sharing Screen
             </div>
           )}
         </div>
+
+        {/* Incoming call overlay */}
+        {incomingCall && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+            <div style={{ textAlign: 'center', padding: 32 }}>
+              <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 32, color: 'white', fontWeight: 700 }}>
+                {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <p style={{ color: 'white', fontSize: 22, fontWeight: 700, marginBottom: 6 }}>{otherUser?.name}</p>
+              <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 24 }}>Incoming call...</p>
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+                <button onClick={acceptIncomingCall}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 28px', background: '#22c55e', border: 'none', borderRadius: 50, color: 'white', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
+                  <Phone size={20} /> Accept
+                </button>
+                <button onClick={rejectIncomingCall}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 28px', background: '#ef4444', border: 'none', borderRadius: 50, color: 'white', fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
+                  <PhoneOff size={20} /> Reject
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
 
-      {/* Controls */}
-      <div className="pb-8 flex justify-center gap-4">
+      {/* ── Bottom controls ── */}
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 30, padding: '16px 24px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}>
+
         {!callActive && !autoStart ? (
-          <button
+          /* Start Call button */
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
             onClick={startCall}
-            className="flex items-center gap-2 px-8 py-4 bg-green-500 hover:bg-green-600 text-white rounded-full transition shadow-lg text-lg font-medium"
-          >
-            <Phone size={24} />
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 32px', background: 'linear-gradient(135deg,#22c55e,#16a34a)', border: 'none', borderRadius: 50, color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 20px rgba(34,197,94,0.4)' }}>
+            <Phone size={22} />
             Start Call
-          </button>
-        ) : callActive ? (
+          </motion.button>
+        ) : (
+          /* In-call controls */
           <>
-            <button
+            {/* Mic */}
+            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
               onClick={toggleMic}
-              className={`p-4 rounded-full transition shadow-lg ${
-                micEnabled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-500 hover:bg-red-600'
-              } text-white`}
               title={micEnabled ? 'Mute' : 'Unmute'}
-            >
-              {micEnabled ? <Mic size={24} /> : <MicOff size={24} />}
-            </button>
-            <button
+              style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: micEnabled ? 'rgba(255,255,255,0.15)' : '#ef4444', color: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>
+              {micEnabled ? <Mic size={22} /> : <MicOff size={22} />}
+            </motion.button>
+
+            {/* Camera */}
+            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
               onClick={toggleVideo}
-              className={`p-4 rounded-full transition shadow-lg ${
-                videoEnabled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-red-500 hover:bg-red-600'
-              } text-white`}
               title={videoEnabled ? 'Turn off camera' : 'Turn on camera'}
-            >
-              {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
-            </button>
-            <button
+              style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: videoEnabled ? 'rgba(255,255,255,0.15)' : '#ef4444', color: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>
+              {videoEnabled ? <Video size={22} /> : <VideoOff size={22} />}
+            </motion.button>
+
+            {/* Screen share */}
+            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
               onClick={screenSharing ? stopScreenShare : startScreenShare}
-              className={`p-4 rounded-full transition shadow-lg ${
-                screenSharing ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
-              } text-white`}
               title={screenSharing ? 'Stop sharing' : 'Share screen'}
-            >
-              {screenSharing ? <MonitorOff size={24} /> : <Monitor size={24} />}
-            </button>
-            <button
-              onClick={toggleFullscreen}
-              className="p-4 rounded-full transition shadow-lg bg-gray-700 hover:bg-gray-600 text-white"
-              title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-            >
-              {isFullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
-            </button>
-            <button
+              style={{ width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: screenSharing ? '#3b82f6' : 'rgba(255,255,255,0.15)', color: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.4)' }}>
+              {screenSharing ? <MonitorOff size={22} /> : <Monitor size={22} />}
+            </motion.button>
+
+            {/* End Call */}
+            <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
               onClick={endCurrentCall}
-              className="flex items-center gap-2 px-8 py-4 bg-red-500 hover:bg-red-600 text-white rounded-full transition shadow-lg"
-            >
-              <PhoneOff size={24} />
+              title="End Call"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 28px', height: 56, borderRadius: 50, border: 'none', cursor: 'pointer', background: '#ef4444', color: 'white', fontSize: 15, fontWeight: 700, boxShadow: '0 4px 16px rgba(239,68,68,0.45)' }}>
+              <PhoneOff size={20} />
               End Call
-            </button>
+            </motion.button>
           </>
-        ) : null}
+        )}
       </div>
     </div>
   )

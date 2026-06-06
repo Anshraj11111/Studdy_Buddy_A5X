@@ -9,6 +9,11 @@ export const initSocket = (token, userId, userName = '', userImage = '') => {
 
   socket = io(SOCKET_URL, {
     auth: { token, userId, userName, userImage },
+    // Prefer WebSocket — no HTTP body size limit, avoids 413 on WebRTC SDP payloads
+    // Fall back to polling only if WebSocket is completely unavailable
+    transports: ['websocket', 'polling'],
+    upgrade: true,
+    rememberUpgrade: true,   // once upgraded to WS, stay on WS
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
