@@ -20,15 +20,10 @@ export const requestNotificationPermission = async () => {
 // Show notification
 export const showNotification = (title, options = {}) => {
   if (Notification.permission === 'granted') {
-    const notification = new Notification(title, {
-      icon: '/logo.png',
-      badge: '/logo.png',
-      ...options,
-    })
-
-    // Auto close after 5 seconds
+    // Strip icon/badge to avoid 404 on missing logo.png
+    const { icon, badge, ...safeOptions } = options
+    const notification = new Notification(title, safeOptions)
     setTimeout(() => notification.close(), 5000)
-
     return notification
   }
 }
@@ -48,6 +43,7 @@ export const showCallNotification = (callerName) => {
     body: 'Click to answer',
     tag: 'call',
     requireInteraction: true,
+    // No icon — logo.png doesn't exist in public folder
   })
 }
 
