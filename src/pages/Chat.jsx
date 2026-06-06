@@ -16,7 +16,7 @@ export default function Chat() {
   const [content, setContent] = useState('')
   const [typing, setTyping] = useState(false)
   const [typingUsers, setTypingUsers] = useState([])
-  const [loading, setLoading] = useState(true)
+    const [blockedWarning, setBlockedWarning] = useState('')
   const [onlineUsers, setOnlineUsers] = useState(new Set())
   const messagesEndRef = useRef(null)
   const typingTimeoutRef = useRef(null)
@@ -68,6 +68,11 @@ export default function Chat() {
       setMessages(prev => prev.map(m => m._id === data.tempId ? { ...data, temp: false } : m))
     }
 
+    const handleBlocked = (data) => {
+      setBlockedWarning(data.reason || 'Message blocked: inappropriate content.')
+      setTimeout(() => setBlockedWarning(''), 4000)
+    }
+
     const handleTyping = (data) => {
       if (data.userId !== user._id) {
         setTypingUsers(prev => [...new Set([...prev, data.userId])])
@@ -77,12 +82,14 @@ export default function Chat() {
 
     socket.on('messageReceived', handleMessage)
     socket.on('messageConfirmed', handleConfirmed)
+    socket.on('messageBLocked', handleBlocked)
     socket.on('userTyping', handleTyping)
     socket.on('roomJoined', (data) => { if (data.messages?.length > 0) setMessages(data.messages) })
 
     return () => {
       socket.off('messageReceived', handleMessage)
       socket.off('messageConfirmed', handleConfirmed)
+      socket.off('messageBLocked', handleBlocked)
       socket.off('userTyping', handleTyping)
       socket.off('roomJoined')
       leaveRoom(roomId)
@@ -315,6 +322,22 @@ export default function Chat() {
 
       {/* ── Input area ── */}
       <div style={{ position: 'relative', zIndex: 20, flexShrink: 0, background: 'rgba(10,8,30,0.95)', borderTop: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
+        {/* Blocked message warning */}
+        {blockedWarning && (
+          <div style={{
+            padding: '8px 16px',
+            background: 'rgba(239,68,68,0.15)',
+            borderTop: '1px solid rgba(239,68,68,0.3)',
+            color: '#f87171',
+            fontSize: 12,
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            🚫 {blockedWarning}
+          </div>
+        )}
         <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 16px' }}>
           <input
             type="text"
