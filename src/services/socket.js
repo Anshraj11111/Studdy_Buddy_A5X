@@ -9,15 +9,13 @@ export const initSocket = (token, userId, userName = '', userImage = '') => {
 
   socket = io(SOCKET_URL, {
     auth: { token, userId, userName, userImage },
-    // Prefer WebSocket — no HTTP body size limit, avoids 413 on WebRTC SDP payloads
-    // Fall back to polling only if WebSocket is completely unavailable
-    transports: ['websocket', 'polling'],
-    upgrade: true,
-    rememberUpgrade: true,   // once upgraded to WS, stay on WS
+    // Force WebSocket only — Render free tier doesn't support sticky sessions
+    // needed for polling fallback. WebSocket is a single persistent connection.
+    transports: ['websocket'],
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
-    reconnectionAttempts: 5,
+    reconnectionAttempts: 10,
   })
 
   socket.on('connect', () => {
