@@ -30,6 +30,7 @@ export default function VideoCall() {
   const hasAutoStarted = useRef(false)
   const originalStreamRef = useRef(null)
   const pendingCandidates = useRef([])
+  const pendingOffer = useRef(null)   // store offer that arrived before otherUser loaded
   const screenShareEventHandled = useRef(false)
   const [showFeedbackModal, setShowFeedbackModal] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -88,9 +89,72 @@ export default function VideoCall() {
     }
   }, [autoStart, otherUser, loading])
 
+  // ── Early offer capture: store offer that arrives before component is ready ──
   useEffect(() => {
     const socket = getSocket()
+    if (!socket) return
+
+    const captureOffer = (data) => {
+      // If otherUser isn't set yet, store the offer for later processing
+      if (!otherUser) {
+        console.log('📦 Offer arrived early, storing for later')
+        pendingOffer.current = data
+      }
+    }
+
+    socket.on('offer', captureOffer)
+    return () => socket.off('offer', captureOffer)
+  }, []) // runs once on mount — intentionally no deps
+
+  // ── Process pending offer once otherUser is available ──
+  useEffect(() => {
+    if (otherUser && pendingOffer.current) {
+      console.log('🔄 Processing stored pending offer now that otherUser is ready')
+      const data = pendingOffer.current
+      pendingOffer.current = null
+      // Trigger the handleOffer logic by re-emitting locally via the socket
+      // Actually just call the handler directly — we do this via a small helper
+      processPendingOffer(data)
+    }
+  }, [otherUser])
+
+  const processPendingOffer = async (data) => {
+    const socket = getSocket()
     if (!socket || !otherUser) return
+    try {
+      console.log('📨 Processing pending offer from:', data.fromUserId)
+      if (!localStreamRef.current) {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        localStreamRef.current = stream
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream
+      }
+      const peerConnection = new RTCPeerConnection(ICE_SERVERS)
+      peerConnectionRef.current = peerConnection
+      localStreamRef.current.getTracks().forEach(track => peerConnection.addTrack(track, localStreamRef.current))
+      peerConnection.ontrack = (event) => {
+        if (remoteVideoRef.current && event.streams[0]) remoteVideoRef.current.srcObject = event.streams[0]
+      }
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) socket.emit('iceCandidate', { roomId, candidate: event.candidate, fromUserId: user._id, toUserId: otherUser._id })
+      }
+      peerConnection.onconnectionstatechange = () => console.log('🔌 Connection state:', peerConnection.connectionState)
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer))
+      if (pendingCandidates.current.length > 0) {
+        for (const c of pendingCandidates.current) await peerConnection.addIceCandidate(new RTCIceCandidate(c))
+        pendingCandidates.current = []
+      }
+      const answer = await peerConnection.createAnswer()
+      await peerConnection.setLocalDescription(answer)
+      socket.emit('answer', { roomId, answer, fromUserId: user._id, toUserId: otherUser._id })
+      console.log('📤 Answer sent for pending offer')
+      setCallActive(true)
+      setIncomingCall(false)
+    } catch (err) {
+      console.error('❌ Error processing pending offer:', err)
+    }
+  }
+
+  useEffect(() => {
 
     console.log('🔌 Setting up socket listeners for room:', roomId)
 
@@ -116,7 +180,13 @@ export default function VideoCall() {
     const handleOffer = async (data) => {
       try {
         console.log('📨 Received offer from:', data.fromUserId)
-        
+
+        // Skip if already handled by processPendingOffer
+        if (peerConnectionRef.current) {
+          console.log('📨 Peer connection already exists, skipping duplicate offer')
+          return
+        }
+
         // Get user media first
         if (!localStreamRef.current) {
           console.log('🎥 Getting user media for answering...')
@@ -401,6 +471,18 @@ export default function VideoCall() {
       console.log('✅ Offer created')
       
       const socket = getSocket()
+
+      // ── Send initiateCall FIRST so recipient gets notified before the offer ──
+      socket.emit('initiateCall', {
+        roomId,
+        fromUserId: user._id,
+        toUserId: otherUser._id
+      })
+
+      // Small delay so the recipient's IncomingCallModal can render and
+      // navigate to the video-call page before the WebRTC offer arrives
+      await new Promise(r => setTimeout(r, 1200))
+
       socket.emit('offer', {
         roomId,
         offer,
@@ -408,12 +490,6 @@ export default function VideoCall() {
         toUserId: otherUser._id
       })
       console.log('📤 Offer sent')
-
-      socket.emit('initiateCall', {
-        roomId,
-        fromUserId: user._id,
-        toUserId: otherUser._id
-      })
 
       setCallActive(true)
       setIncomingCall(false)
