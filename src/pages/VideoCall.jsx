@@ -103,6 +103,7 @@ export default function VideoCall() {
   // ── Apply remote stream to <video> ────────────────────────────────────────
   const applyRemoteStream = (stream) => {
     remoteStreamRef.current = stream
+    // Set immediately if element exists
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = stream
       remoteVideoRef.current.play().catch(() => {})
@@ -110,8 +111,15 @@ export default function VideoCall() {
     setCallActive(true)
   }
 
-  // Callback ref so the video element always gets the stream even after
-  // a React re-render swaps the DOM node
+  // Re-apply remote stream whenever callActive becomes true
+  // (the video element may have been hidden/shown by a re-render)
+  useEffect(() => {
+    if (callActive && remoteStreamRef.current && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStreamRef.current
+      remoteVideoRef.current.play().catch(() => {})
+    }
+  }, [callActive])
+
   const remoteVideoCallbackRef = (node) => {
     remoteVideoRef.current = node
     if (node && remoteStreamRef.current) {
@@ -542,7 +550,7 @@ export default function VideoCall() {
       />
 
       {/* ═══════════════════════════════════════════════════════════════
-          REMOTE VIDEO — fills the entire screen
+          REMOTE VIDEO — fills the entire screen (always in DOM)
       ═══════════════════════════════════════════════════════════════ */}
       <video
         ref={remoteVideoCallbackRef}
@@ -553,6 +561,8 @@ export default function VideoCall() {
           width: '100%', height: '100%',
           objectFit: 'cover',
           background: '#0a0a0f',
+          zIndex: 1,
+          // Always rendered — stream attaches even before overlay disappears
         }}
       />
 
