@@ -9,13 +9,15 @@ export const initSocket = (token, userId, userName = '', userImage = '') => {
 
   socket = io(SOCKET_URL, {
     auth: { token, userId, userName, userImage },
-    // Force WebSocket only — Render free tier doesn't support sticky sessions
-    // needed for polling fallback. WebSocket is a single persistent connection.
-    transports: ['websocket'],
+    // Try WebSocket first, fall back to polling if needed
+    // Render free tier supports WebSocket but may need polling as initial handshake
+    transports: ['websocket', 'polling'],
+    upgrade: true,
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
     reconnectionAttempts: 10,
+    timeout: 20000,
   })
 
   socket.on('connect', () => {
