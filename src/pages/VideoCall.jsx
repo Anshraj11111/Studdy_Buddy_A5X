@@ -103,7 +103,6 @@ export default function VideoCall() {
   // ── Apply remote stream to <video> ────────────────────────────────────────
   const applyRemoteStream = (stream) => {
     remoteStreamRef.current = stream
-    // Set immediately if element exists
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = stream
       remoteVideoRef.current.play().catch(() => {})
@@ -111,13 +110,21 @@ export default function VideoCall() {
     setCallActive(true)
   }
 
-  // Re-apply remote stream whenever callActive becomes true
-  // (the video element may have been hidden/shown by a re-render)
+  // Aggressively re-apply remote stream — poll every 500ms until it shows
+  // This handles React re-render timing issues with the video element
   useEffect(() => {
-    if (callActive && remoteStreamRef.current && remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStreamRef.current
-      remoteVideoRef.current.play().catch(() => {})
-    }
+    if (!callActive) return
+    const interval = setInterval(() => {
+      if (remoteStreamRef.current && remoteVideoRef.current) {
+        if (remoteVideoRef.current.srcObject !== remoteStreamRef.current) {
+          remoteVideoRef.current.srcObject = remoteStreamRef.current
+          remoteVideoRef.current.play().catch(() => {})
+        }
+      }
+    }, 300)
+    // Stop polling after 15 seconds (connection should be stable by then)
+    const timeout = setTimeout(() => clearInterval(interval), 15000)
+    return () => { clearInterval(interval); clearTimeout(timeout) }
   }, [callActive])
 
   const remoteVideoCallbackRef = (node) => {
