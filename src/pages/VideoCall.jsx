@@ -25,9 +25,13 @@ const DEFAULT_ICE_SERVERS = {
       credential: 'openrelayproject',
     },
     {
-      urls: 'turn:numb.viagenie.ca',
-      username: 'webrtc@live.com',
-      credential: 'muazkh',
+      urls: [
+        'turn:global.turn.twilio.com:3478?transport=udp',
+        'turn:global.turn.twilio.com:3478?transport=tcp',
+        'turn:global.turn.twilio.com:443?transport=tcp',
+      ],
+      username: 'f4b4035eaa76f4a55de5f4351567129a4a2b6d3d790a7d1ef7994718bf9867d7',
+      credential: 'w1uxM55V9yVoqyVFjt+mxDBV0F87W7NdwinR5Ke2eXg=',
     },
   ],
   iceCandidatePoolSize: 10,
