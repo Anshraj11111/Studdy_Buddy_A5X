@@ -4,13 +4,26 @@ import axios from "axios";
 const BASE = "https://studdy-buddy-backend-a5x.onrender.com";
 const envUrl = import.meta.env.VITE_API_URL;
 
-// Keep-alive ping — Render free tier sleeps after ~5 min of inactivity
-// Ping every 4 minutes to prevent cold starts
-const pingBackend = () => fetch(`${BASE}/health`).catch(() => {});
-pingBackend(); // ping immediately on app load
-setTimeout(pingBackend, 15 * 1000); // ping again after 15s (warm up)
-setTimeout(pingBackend, 45 * 1000); // ping once more at 45s
-setInterval(pingBackend, 4 * 60 * 1000); // then every 4 minutes
+// Ensure URL always ends with /api
+const API_BASE_URL = (() => {
+  const url = envUrl || `${BASE}/api`;
+  if (url.endsWith('/api')) return url;
+  if (url.endsWith('/')) return url + 'api';
+  return url + '/api';
+})();
+
+// Log the URL being used so you can verify in the console
+console.log('🌐 API base URL:', API_BASE_URL);
+
+// Keep-alive ping — only ping Render if we're actually using it
+const isLocalDev = API_BASE_URL.includes('localhost');
+if (!isLocalDev) {
+  const pingBackend = () => fetch(`${BASE}/health`).catch(() => {});
+  pingBackend();
+  setTimeout(pingBackend, 15 * 1000);
+  setTimeout(pingBackend, 45 * 1000);
+  setInterval(pingBackend, 4 * 60 * 1000);
+}
 
 // Simple in-memory cache for GET requests (5 min TTL)
 const cache = new Map();
@@ -24,21 +37,11 @@ const getCached = (key) => {
 const setCache = (key, data) => cache.set(key, { data, ts: Date.now() });
 export const clearCache = () => cache.clear();
 
-// Ensure URL always ends with /api
-const API_BASE_URL = (() => {
-  const url = envUrl || `${BASE}/api`;
-  // If env var was set without /api, add it
-  if (url.endsWith('/api')) return url;
-  if (url.endsWith('/')) return url + 'api';
-  return url + '/api';
-})();
-
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-  timeout: 60000, // 60s — handles Render cold start (~30-50s)
+  headers: { "Content-Type": "application/json" },
+  // Use longer timeout for production (Render cold start), shorter for local
+  timeout: isLocalDev ? 15000 : 60000,
 });
 
 // Attach JWT token

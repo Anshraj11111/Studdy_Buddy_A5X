@@ -56,8 +56,8 @@ export const playNotificationSound = () => {
   try {
     const audio = new Audio('/notification.mp3')
     audio.volume = 0.5
-    audio.play().catch(err => console.log('Could not play sound:', err))
+    audio.play().catch(() => {}) // silently ignore if file missing or autoplay blocked
   } catch (error) {
-    console.log('Sound not available')
+    // Sound not available — non-fatal
   }
 }
