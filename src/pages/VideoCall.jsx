@@ -140,13 +140,15 @@ export default function VideoCall() {
     const pc = new RTCPeerConnection(iceServersRef.current)
 
     pc.ontrack = (e) => {
-      console.log('📹 ontrack:', e.track.kind)
+      console.log('📹 ontrack fired:', e.track.kind, '| streams:', e.streams.length, '| stream active:', e.streams[0]?.active)
       const stream = e.streams[0]
       if (stream) {
+        console.log('📹 Applying stream with', stream.getTracks().length, 'tracks')
         applyRemoteStream(stream)
       } else {
         if (!remoteStreamRef.current) remoteStreamRef.current = new MediaStream()
         remoteStreamRef.current.addTrack(e.track)
+        console.log('📹 Built stream manually, tracks:', remoteStreamRef.current.getTracks().length)
         applyRemoteStream(remoteStreamRef.current)
       }
     }
@@ -162,8 +164,15 @@ export default function VideoCall() {
       }
     }
 
-    pc.onconnectionstatechange = () => console.log('🔌 PC:', pc.connectionState)
-    pc.oniceconnectionstatechange = () => console.log('🧊 ICE:', pc.iceConnectionState)
+    pc.onconnectionstatechange = () => {
+      console.log('🔌 PC state:', pc.connectionState)
+      if (pc.connectionState === 'connected') {
+        console.log('✅ PC CONNECTED — checking stream:', remoteStreamRef.current?.getTracks().length, 'tracks')
+      }
+    }
+    pc.oniceconnectionstatechange = () => {
+      console.log('🧊 ICE state:', pc.iceConnectionState)
+    }
 
     return pc
   }
