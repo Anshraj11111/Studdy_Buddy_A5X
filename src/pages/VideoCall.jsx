@@ -24,8 +24,7 @@ const DEFAULT_ICE_SERVERS = {
       credential: '3a7ymuMhHgFio/OH',
     },
   ],
-  iceCandidatePoolSize: 10,
-  // No iceTransportPolicy — let browser choose direct or relay automatically
+  iceCandidatePoolSize: 0, // don't pre-gather, start after setLocalDescription
 }
 
 export default function VideoCall() {
