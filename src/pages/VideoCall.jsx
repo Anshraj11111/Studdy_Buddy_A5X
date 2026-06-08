@@ -13,25 +13,16 @@ const DEFAULT_ICE_SERVERS = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:global.stun.twilio.com:3478' },
+    // Metered TURN — working authenticated credentials
     {
       urls: [
-        'turn:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:80?transport=tcp',
-        'turn:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:443?transport=tcp',
-        'turns:openrelay.metered.ca:443',
+        'turn:global.relay.metered.ca:80',
+        'turn:global.relay.metered.ca:80?transport=tcp',
+        'turn:global.relay.metered.ca:443',
+        'turns:global.relay.metered.ca:443?transport=tcp',
       ],
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-    {
-      urls: [
-        'turn:global.turn.twilio.com:3478?transport=udp',
-        'turn:global.turn.twilio.com:3478?transport=tcp',
-        'turn:global.turn.twilio.com:443?transport=tcp',
-      ],
-      username: 'f4b4035eaa76f4a55de5f4351567129a4a2b6d3d790a7d1ef7994718bf9867d7',
-      credential: 'w1uxM55V9yVoqyVFjt+mxDBV0F87W7NdwinR5Ke2eXg=',
+      username: 'dd9dff66bc88d50dc88d1cc3',
+      credential: '3a7ymuMhHgFio/OH',
     },
   ],
   iceCandidatePoolSize: 10,
