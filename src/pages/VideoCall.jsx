@@ -167,9 +167,22 @@ export default function VideoCall() {
       if (pc.connectionState === 'connected') {
         console.log('✅ PC CONNECTED — checking stream:', remoteStreamRef.current?.getTracks().length, 'tracks')
       }
+      // Auto-restart ICE on disconnect (handles TURN relay drops)
+      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        console.log('🔄 PC disconnected/failed — attempting ICE restart...')
+        if (pc.restartIce) {
+          pc.restartIce()
+        }
+      }
     }
     pc.oniceconnectionstatechange = () => {
       console.log('🧊 ICE state:', pc.iceConnectionState)
+      if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+        console.log('🔄 ICE disconnected — attempting restart...')
+        if (pc.restartIce) {
+          pc.restartIce()
+        }
+      }
     }
 
     return pc
