@@ -9,8 +9,7 @@ export const initSocket = (token, userId, userName = '', userImage = '') => {
 
   socket = io(SOCKET_URL, {
     auth: { token, userId, userName, userImage },
-    // Try WebSocket first, fall back to polling if needed
-    // Render free tier supports WebSocket but may need polling as initial handshake
+    // Try WebSocket first, fall back to polling if WebSocket is blocked by firewall
     transports: ['websocket', 'polling'],
     upgrade: true,
     reconnection: true,
