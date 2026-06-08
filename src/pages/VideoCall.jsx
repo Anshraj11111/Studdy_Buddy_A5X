@@ -151,12 +151,15 @@ export default function VideoCall() {
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        socket.emit('iceCandidate', {
-          roomId: roomIdRef.current,
-          candidate: e.candidate,
-          fromUserId: userRef.current._id,
-          toUserId,
-        })
+        const activeSocket = getSocket() // always use current socket, not stale closure
+        if (activeSocket) {
+          activeSocket.emit('iceCandidate', {
+            roomId: roomIdRef.current,
+            candidate: e.candidate,
+            fromUserId: userRef.current._id,
+            toUserId,
+          })
+        }
       }
     }
 
