@@ -12,7 +12,6 @@ const DEFAULT_ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:global.stun.twilio.com:3478' },
     // Metered TURN — working authenticated credentials
     {
       urls: [
@@ -26,7 +25,7 @@ const DEFAULT_ICE_SERVERS = {
     },
   ],
   iceCandidatePoolSize: 10,
-  iceTransportPolicy: 'all',
+  // No iceTransportPolicy — let browser choose direct or relay automatically
 }
 
 export default function VideoCall() {
