@@ -211,7 +211,7 @@ export default function Chat() {
 
           {/* Right: call buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <Link to={`/video-call/${roomId}?audio=true`}>
+            <Link to={`/video-call/${roomId}`}>
               <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                 <Phone size={14} />
