@@ -28,6 +28,7 @@ const Mentors = lazy(() => import('./pages/Mentors'))
 const AIBot = lazy(() => import('./pages/AIBot'))
 const Settings = lazy(() => import('./pages/Settings'))
 const AdminPanel = lazy(() => import('./pages/AdminPanel'))
+const Rewards = lazy(() => import('./pages/Rewards'))
 
 // Minimal page-level skeleton shown while a lazy chunk loads
 function PageLoader() {
@@ -112,6 +113,7 @@ function AppShell() {
           <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
 
           {/* Admin — standalone, no navbar */}
           <Route path="/admin" element={<AdminPanel />} />

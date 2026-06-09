@@ -54,12 +54,14 @@ export default function Navbar({ onMenuClick }) {
         { to: '/chats', label: 'Chats' },
         { to: '/resources', label: 'Resources' },
         { to: '/communities', label: 'Communities' },
+        { to: '/rewards', label: '⚡ Rewards' },
       ]
     : [
         { to: '/mentor-dashboard', label: 'Dashboard' },
         { to: '/chats', label: 'Chats' },
         { to: '/resources', label: 'Resources' },
         { to: '/communities', label: 'Communities' },
+        { to: '/rewards', label: '⚡ Rewards' },
       ]
 
   const isActive = (path) => location.pathname === path

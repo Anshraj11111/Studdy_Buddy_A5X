@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
@@ -8,11 +8,13 @@ import { showCallNotification, playNotificationSound, requestNotificationPermiss
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, ArrowLeft, Monitor, MonitorOff, Maximize, Minimize } from 'lucide-react'
 import CallEndFeedbackModal from '../components/CallEndFeedbackModal'
 
-const DEFAULT_ICE_SERVERS = {
+// ─── ICE config — loaded from backend on mount, this is the fallback ────────
+const FALLBACK_ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    // Metered TURN — working authenticated credentials
+    { urls: 'stun:stun2.l.google.com:19302' },
+    // Metered static fallback
     {
       urls: [
         'turn:global.relay.metered.ca:80',
@@ -24,260 +26,233 @@ const DEFAULT_ICE_SERVERS = {
       credential: '3a7ymuMhHgFio/OH',
     },
   ],
-  iceCandidatePoolSize: 0, // don't pre-gather, start after setLocalDescription
+  iceCandidatePoolSize: 10,
+  iceTransportPolicy: 'all',
 }
 
 export default function VideoCall() {
-  const { roomId } = useParams()
-  const [searchParams] = useSearchParams()
-  const autoStart = searchParams.get('autoStart') === 'true'  // true = callee
-  const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { roomId }      = useParams()
+  const [searchParams]  = useSearchParams()
+  const isCallee        = searchParams.get('autoStart') === 'true'
+  const navigate        = useNavigate()
+  const { user }        = useAuthStore()
 
   // ── UI state ──────────────────────────────────────────────────────────────
-  const [otherUser, setOtherUser]           = useState(null)
-  const [loading, setLoading]               = useState(true)
-  const [callActive, setCallActive]         = useState(false)
-  const [callStarted, setCallStarted]       = useState(false) // caller pressed Start Call
-  const [answerSent, setAnswerSent]         = useState(false) // callee sent answer, waiting for remote video
-  const [incomingCall, setIncomingCall]     = useState(false)
-  const [micEnabled, setMicEnabled]         = useState(true)
-  const [videoEnabled, setVideoEnabled]     = useState(true)
-  const [screenSharing, setScreenSharing]   = useState(false)
-  const [remoteScreenSharing, setRemoteScreenSharing] = useState(false)
-  const [showFeedbackModal, setShowFeedbackModal]     = useState(false)
-  const [isFullscreen, setIsFullscreen]     = useState(false)
+  const [otherUser,          setOtherUser]         = useState(null)
+  const [loading,            setLoading]           = useState(true)
+  const [status,             setStatus]            = useState('idle') // idle | warming | calling | ringing | connecting | connected
+  const [micEnabled,         setMicEnabled]        = useState(true)
+  const [videoEnabled,       setVideoEnabled]      = useState(true)
+  const [screenSharing,      setScreenSharing]     = useState(false)
+  const [remoteScreenShare,  setRemoteScreenShare] = useState(false)
+  const [incomingCall,       setIncomingCall]      = useState(false)
+  const [showFeedback,       setShowFeedback]      = useState(false)
+  const [isFullscreen,       setIsFullscreen]      = useState(false)
 
-  // ── Stable refs (never cause re-renders, safe to use in closures) ─────────
-  const localVideoRef    = useRef(null)
-  const remoteVideoRef   = useRef(null)
-  const pcRef            = useRef(null)
-  const localStreamRef   = useRef(null)
-  const remoteStreamRef  = useRef(null)
-  const originalStreamRef= useRef(null)
-  const pendingCandidates= useRef([])
-  const pendingOfferRef  = useRef(null)
-  const hasInitRef       = useRef(false)
-  const calleeReadySentRef= useRef(false) // guard: only send calleeReady once
-  const offerSentRef     = useRef(false)  // guard: caller only sends offer once
-  const iceServersRef    = useRef(DEFAULT_ICE_SERVERS) // fetched from backend on mount
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const localVideoRef  = useRef(null)
+  const remoteVideoRef = useRef(null)
 
-  // Refs that mirror the latest state values — lets socket callbacks always
-  // read fresh data without ever being re-registered
-  const roomIdRef   = useRef(roomId)
-  const userRef     = useRef(user)
-  const otherUserRef= useRef(null)
-  const autoStartRef= useRef(autoStart)
+  // ── WebRTC refs ───────────────────────────────────────────────────────────
+  const pcRef              = useRef(null)
+  const localStreamRef     = useRef(null)
+  const origStreamRef      = useRef(null)   // before screen share
+  const pendingCandidates  = useRef([])
+  const pendingOffer       = useRef(null)   // offer that arrived before otherUser loaded
 
-  // ── Fetch ICE servers from backend on mount ───────────────────────────────
+  // ── One-shot guards ───────────────────────────────────────────────────────
+  const calleeReadySent = useRef(false)
+  const offerSent       = useRef(false)
+  const callEndedSent   = useRef(false)
+
+  // ── Stable mirrors of state (safe to read inside socket closures) ─────────
+  const roomIdRef    = useRef(roomId)
+  const userRef      = useRef(user)
+  const otherUserRef = useRef(null)
+  const isCalleeRef  = useRef(isCallee)
+  const iceConfigRef = useRef(FALLBACK_ICE)
+
+  useEffect(() => { roomIdRef.current   = roomId  }, [roomId])
+  useEffect(() => { userRef.current     = user    }, [user])
+  useEffect(() => { otherUserRef.current = otherUser }, [otherUser])
+  useEffect(() => { isCalleeRef.current = isCallee }, [isCallee])
+
+  // ── Fetch fresh ICE servers from backend — wait up to 3s ────────────────
+  const iceReadyRef = useRef(false)
   useEffect(() => {
-    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
-    fetch(`${SOCKET_URL}/api/ice-servers`)
+    const base = import.meta.env.VITE_SOCKET_URL || 'https://studdy-buddy-backend-a5x.onrender.com'
+    fetch(`${base}/api/ice-servers`)
       .then(r => r.json())
-      .then(data => {
-        if (data.iceServers?.length) {
-          iceServersRef.current = {
-            iceServers: data.iceServers,
+      .then(d => {
+        if (d.iceServers?.length) {
+          iceConfigRef.current = {
+            iceServers: d.iceServers,
             iceCandidatePoolSize: 10,
             iceTransportPolicy: 'all',
           }
-          console.log('✅ ICE servers loaded from backend:', data.iceServers.length, 'entries')
+          console.log('✅ ICE servers from backend:', d.iceServers.length, 'servers')
         }
       })
-      .catch(() => console.log('⚠️ Using default ICE servers'))
+      .catch(() => console.log('⚠️ Using fallback ICE servers'))
+      .finally(() => { iceReadyRef.current = true })
   }, [])
-  useEffect(() => { roomIdRef.current   = roomId   }, [roomId])
-  useEffect(() => { userRef.current     = user     }, [user])
-  useEffect(() => { otherUserRef.current= otherUser }, [otherUser])
-  useEffect(() => { autoStartRef.current= autoStart }, [autoStart])
 
-  // ── Apply remote stream to <video> ────────────────────────────────────────
-  const applyRemoteStream = (stream) => {
-    remoteStreamRef.current = stream
-    const attach = () => {
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = null  // force reset first
-        remoteVideoRef.current.srcObject = stream
-        remoteVideoRef.current.load()
-        // Safari requires user interaction for unmuted autoplay
-        // Try muted first, then unmuted
-        remoteVideoRef.current.muted = false
-        const playPromise = remoteVideoRef.current.play()
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            // If autoplay fails (Safari), try muted
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.muted = true
-              remoteVideoRef.current.play().catch(() => {})
-            }
-          })
-        }
-        console.log('📺 Stream attached, tracks:', stream.getTracks().map(t => `${t.kind}:${t.readyState}`))
-      }
-    }
-    attach()
-    setTimeout(attach, 200)
-    setTimeout(attach, 800)
-    setTimeout(attach, 2000)
-    setCallActive(true)
-  }
-
-  // Keep re-applying stream every 500ms for 20s to handle re-render timing
-  useEffect(() => {
-    if (!callActive) return
-    const apply = () => {
-      if (remoteStreamRef.current && remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStreamRef.current
-        remoteVideoRef.current.play().catch(() => {})
-      }
-    }
-    apply()
-    const interval = setInterval(apply, 500)
-    const timeout = setTimeout(() => clearInterval(interval), 20000)
-    return () => { clearInterval(interval); clearTimeout(timeout) }
-  }, [callActive])
-
-  const remoteVideoCallbackRef = (node) => {
-    remoteVideoRef.current = node
-    if (node && remoteStreamRef.current) {
-      node.srcObject = remoteStreamRef.current
-      node.play().catch(() => {})
-    }
-  }
-
-  // ── Build an RTCPeerConnection ────────────────────────────────────────────
-  const buildPC = (socket, toUserId) => {
-    const pc = new RTCPeerConnection(iceServersRef.current)
-
-    pc.ontrack = (e) => {
-      console.log('📹 ontrack fired:', e.track.kind, '| streams:', e.streams.length, '| stream active:', e.streams[0]?.active, '| tracks:', e.streams[0]?.getTracks().map(t => `${t.kind}:${t.enabled}:${t.readyState}`))
-      const stream = e.streams[0]
-      if (stream) {
-        console.log('📹 Applying stream with', stream.getTracks().length, 'tracks')
-        applyRemoteStream(stream)
-      } else {
-        if (!remoteStreamRef.current) remoteStreamRef.current = new MediaStream()
-        remoteStreamRef.current.addTrack(e.track)
-        console.log('📹 Built stream manually, tracks:', remoteStreamRef.current.getTracks().length)
-        applyRemoteStream(remoteStreamRef.current)
-      }
-    }
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        const activeSocket = getSocket() // always use current socket, not stale closure
-        if (activeSocket) {
-          activeSocket.emit('iceCandidate', {
-            roomId: roomIdRef.current,
-            candidate: e.candidate,
-            fromUserId: userRef.current._id,
-            toUserId,
-          })
-        }
-      }
-    }
-
-    pc.onconnectionstatechange = () => {
-      console.log('🔌 PC state:', pc.connectionState)
-      if (pc.connectionState === 'connected') {
-        console.log('✅ PC CONNECTED — checking stream:', remoteStreamRef.current?.getTracks().length, 'tracks')
-      }
-      // Auto-restart ICE on disconnect (handles TURN relay drops)
-      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-        console.log('🔄 PC disconnected/failed — attempting ICE restart...')
-        if (pc.restartIce) {
-          pc.restartIce()
-        }
-      }
-    }
-    pc.oniceconnectionstatechange = () => {
-      console.log('🧊 ICE state:', pc.iceConnectionState)
-      if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
-        console.log('🔄 ICE disconnected — attempting restart...')
-        if (pc.restartIce) {
-          pc.restartIce()
-        }
-      }
-    }
-
-    return pc
-  }
-
-  // ── Get/init local camera stream ──────────────────────────────────────────
-  const getLocalStream = async () => {
+  // ── Get local camera / mic ────────────────────────────────────────────────
+  const getLocalStream = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current
     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     localStreamRef.current = stream
     if (localVideoRef.current) localVideoRef.current.srcObject = stream
     return stream
-  }
+  }, [])
 
-  // ── handleOffer ref — always points to latest version ─────────────────────
-  const handleOfferRef = useRef(null)
+  // ── Attach remote stream to <video> element ───────────────────────────────
+  const attachRemoteStream = useCallback((stream) => {
+    if (!stream) return
+    const vid = remoteVideoRef.current
+    if (!vid) return
+    if (vid.srcObject === stream) return   // already attached
 
-  // ── Handle an incoming offer (callee) ────────────────────────────────────
-  const handleOffer = async (data) => {
+    // Set srcObject first, then update status (which makes video visible),
+    // then play — order matters: play() must be called when element is visible
+    vid.srcObject = stream
+    console.log('📺 Remote stream set, tracks:', stream.getTracks().map(t => t.kind + ':' + t.readyState))
+
+    // setStatus('connected') makes the video display:block, then we play
+    setStatus('connected')
+  }, [])
+
+  // ── Play remote video once it becomes visible (after status = connected) ──
+  useEffect(() => {
+    if (status !== 'connected') return
+    const vid = remoteVideoRef.current
+    if (!vid || !vid.srcObject) return
+    vid.play().catch(() => {
+      // Autoplay blocked — try muted (user can unmute manually)
+      vid.muted = true
+      vid.play().catch(err => console.warn('Remote video play failed:', err.message))
+    })
+  }, [status])
+
+  // ── Build RTCPeerConnection ───────────────────────────────────────────────
+  const buildPC = useCallback((toUserId) => {
+    const pc = new RTCPeerConnection(iceConfigRef.current)
+
+    pc.ontrack = (e) => {
+      console.log('📹 ontrack:', e.track.kind, 'streams:', e.streams.length)
+      const stream = e.streams[0] || new MediaStream([e.track])
+      attachRemoteStream(stream)
+    }
+
+    pc.onicecandidate = (e) => {
+      if (!e.candidate) return
+      const sock = getSocket()
+      if (!sock) return
+      sock.emit('iceCandidate', {
+        roomId:     roomIdRef.current,
+        candidate:  e.candidate,
+        fromUserId: userRef.current?._id,
+        toUserId,
+      })
+    }
+
+    pc.onconnectionstatechange = () => {
+      console.log('🔌 PC:', pc.connectionState)
+      if (pc.connectionState === 'connected') {
+        // Re-check stream attachment — ontrack may have fired before video was visible
+        const vid = remoteVideoRef.current
+        if (vid?.srcObject) {
+          setStatus('connected') // triggers the play useEffect
+        }
+      }
+      if (['disconnected', 'failed'].includes(pc.connectionState)) {
+        pc.restartIce?.()
+      }
+    }
+
+    pc.oniceconnectionstatechange = () => {
+      console.log('🧊 ICE:', pc.iceConnectionState)
+      if (['disconnected', 'failed'].includes(pc.iceConnectionState)) {
+        pc.restartIce?.()
+      }
+    }
+
+    return pc
+  }, [attachRemoteStream])
+
+  // ── Flush queued ICE candidates after remoteDescription is set ────────────
+  const flushCandidates = useCallback(async (pc) => {
+    for (const c of pendingCandidates.current) {
+      await pc.addIceCandidate(new RTCIceCandidate(c)).catch(e => console.warn('ICE flush warn:', e.message))
+    }
+    pendingCandidates.current = []
+  }, [])
+
+  // ── CALLEE: handle incoming offer ─────────────────────────────────────────
+  const handleOffer = useCallback(async (data) => {
+    if (pcRef.current) { console.warn('⚠️ Duplicate offer — skipping'); return }
     const socket = getSocket()
-    if (!socket) { console.error('❌ handleOffer: no socket'); return }
-    if (pcRef.current) { console.log('⚠️ Duplicate offer ignored'); return }
-    if (!userRef.current) { console.error('❌ handleOffer: user not loaded yet'); return }
+    if (!socket || !userRef.current) { console.error('❌ handleOffer: no socket or user'); return }
 
     try {
-      console.log('📨 handleOffer from:', data.fromUserId, '| my id:', userRef.current._id)
-      const stream = await getLocalStream()
-      const toUserId = data.fromUserId
-      const pc = buildPC(socket, toUserId)
-      pcRef.current = pc
+      console.log('📨 handleOffer from:', data.fromUserId)
 
-      stream.getTracks().forEach(t => {
-        pc.addTrack(t, stream)
-        console.log('➕ added track:', t.kind)
-      })
+      // Wait for ICE servers to be fetched (max 3s) before building PC
+      if (!iceReadyRef.current) {
+        await new Promise(resolve => {
+          const check = setInterval(() => {
+            if (iceReadyRef.current) { clearInterval(check); resolve() }
+          }, 100)
+          setTimeout(() => { clearInterval(check); resolve() }, 3000)
+        })
+      }
+
+      const stream   = await getLocalStream()
+      const toUserId = data.fromUserId
+      const pc       = buildPC(toUserId)
+      pcRef.current  = pc
+
+      stream.getTracks().forEach(t => pc.addTrack(t, stream))
 
       await pc.setRemoteDescription(new RTCSessionDescription(data.offer))
-      console.log('✅ remoteDescription set')
-
-      // flush queued ICE candidates
-      for (const c of pendingCandidates.current)
-        await pc.addIceCandidate(new RTCIceCandidate(c)).catch(console.warn)
-      pendingCandidates.current = []
+      await flushCandidates(pc)
 
       const answer = await pc.createAnswer()
       await pc.setLocalDescription(answer)
+
       socket.emit('answer', {
-        roomId: roomIdRef.current,
+        roomId:     roomIdRef.current,
         answer,
         fromUserId: userRef.current._id,
         toUserId,
       })
-      console.log('📤 Answer emitted to', toUserId)
-      setIncomingCall(false)
-      setAnswerSent(true)
+      console.log('📤 Answer sent to', toUserId)
+      setStatus('connecting')
     } catch (err) {
-      console.error('❌ handleOffer error:', err.name, err.message, err)
+      console.error('❌ handleOffer error:', err.name, err.message)
     }
-  }
-  // Keep ref current on every render
-  handleOfferRef.current = handleOffer
+  }, [buildPC, flushCandidates, getLocalStream])
 
-  // ── Register socket listeners — re-attach on every reconnect ────────────
+  // Keep a ref so socket listeners always call the latest version
+  const handleOfferRef = useRef(handleOffer)
+  useEffect(() => { handleOfferRef.current = handleOffer }, [handleOffer])
+
+  // ── Socket listeners ───────────────────────────────────────────────────────
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
 
-    const onIncomingCall = (data) => {
-      if (!pcRef.current) {
-        setIncomingCall(true)
-        showCallNotification(otherUserRef.current?.name || 'Someone')
-        playNotificationSound()
-      }
+    const onIncomingCall = () => {
+      if (pcRef.current) return  // already in a call
+      setIncomingCall(true)
+      showCallNotification(otherUserRef.current?.name || 'Someone')
+      playNotificationSound()
     }
 
     const onOffer = (data) => {
-      console.log('📥 offer received')
+      console.log('📥 offer received, otherUser ready:', !!otherUserRef.current)
       if (!otherUserRef.current) {
-        console.log('📦 otherUser not ready, queuing offer')
-        pendingOfferRef.current = data
+        pendingOffer.current = data
         return
       }
       handleOfferRef.current(data)
@@ -285,12 +260,12 @@ export default function VideoCall() {
 
     const onAnswer = async (data) => {
       console.log('📥 answer received')
-      if (!pcRef.current) return
+      const pc = pcRef.current
+      if (!pc) return
       try {
-        await pcRef.current.setRemoteDescription(new RTCSessionDescription(data.answer))
-        for (const c of pendingCandidates.current)
-          await pcRef.current.addIceCandidate(new RTCIceCandidate(c)).catch(() => {})
-        pendingCandidates.current = []
+        await pc.setRemoteDescription(new RTCSessionDescription(data.answer))
+        await flushCandidates(pc)
+        setStatus('connecting')
       } catch (err) {
         console.error('❌ onAnswer error:', err)
       }
@@ -298,18 +273,42 @@ export default function VideoCall() {
 
     const onIceCandidate = async (data) => {
       if (!data.candidate) return
-      if (pcRef.current?.remoteDescription) {
-        await pcRef.current.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(console.error)
+      const pc = pcRef.current
+      if (!pc) return
+      if (pc.remoteDescription) {
+        await pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(e => console.warn('ICE add warn:', e.message))
       } else {
         pendingCandidates.current.push(data.candidate)
       }
     }
 
-    const onCallEnded       = () => cleanup()
-    const onScreenShareOn   = () => setRemoteScreenSharing(true)
-    const onScreenShareOff  = () => setRemoteScreenSharing(false)
+    const onCallEnded       = () => doCleanup()
+    const onScreenShareOn   = () => setRemoteScreenShare(true)
+    const onScreenShareOff  = () => setRemoteScreenShare(false)
 
-    const detach = () => {
+    const attach = () => {
+      socket.off('incomingCall',       onIncomingCall)
+      socket.off('offer',              onOffer)
+      socket.off('answer',             onAnswer)
+      socket.off('iceCandidate',       onIceCandidate)
+      socket.off('callEnded',          onCallEnded)
+      socket.off('screenShareStarted', onScreenShareOn)
+      socket.off('screenShareStopped', onScreenShareOff)
+
+      socket.on('incomingCall',        onIncomingCall)
+      socket.on('offer',               onOffer)
+      socket.on('answer',              onAnswer)
+      socket.on('iceCandidate',        onIceCandidate)
+      socket.on('callEnded',           onCallEnded)
+      socket.on('screenShareStarted',  onScreenShareOn)
+      socket.on('screenShareStopped',  onScreenShareOff)
+    }
+
+    attach()
+    socket.on('connect', attach)
+
+    return () => {
+      socket.off('connect', attach)
       socket.off('incomingCall',       onIncomingCall)
       socket.off('offer',              onOffer)
       socket.off('answer',             onAnswer)
@@ -318,280 +317,273 @@ export default function VideoCall() {
       socket.off('screenShareStarted', onScreenShareOn)
       socket.off('screenShareStopped', onScreenShareOff)
     }
+  }, [flushCandidates]) // eslint-disable-line
 
-    const attach = () => {
-      detach() // always remove first to prevent duplicates
-      socket.on('incomingCall',       onIncomingCall)
-      socket.on('offer',              onOffer)
-      socket.on('answer',             onAnswer)
-      socket.on('iceCandidate',       onIceCandidate)
-      socket.on('callEnded',          onCallEnded)
-      socket.on('screenShareStarted', onScreenShareOn)
-      socket.on('screenShareStopped', onScreenShareOff)
-    }
-
-    // Attach immediately + re-attach after every reconnect
-    attach()
-    socket.on('connect', attach)
-
-    return () => {
-      socket.off('connect', attach)
-      detach()
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Fetch room + join socket room ─────────────────────────────────────────
+  // ── Join room socket ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return
     const socket = getSocket()
-    // Only emit joinRoom once per mount — re-join on socket reconnect is handled by the connect handler below
-    if (socket) {
-      socket.emit('joinRoom', { roomId, userId: user._id })
-      // Re-join after a reconnect (one listener, cleaned up on unmount)
-      const onReconnect = () => socket.emit('joinRoom', { roomId, userId: user._id })
-      socket.on('connect', onReconnect)
-      return () => socket.off('connect', onReconnect)
-    }
-  }, [roomId, user]) // eslint-disable-line
+    if (!socket) return
+    socket.emit('joinRoom', { roomId, userId: user._id })
+    const onReconnect = () => socket.emit('joinRoom', { roomId, userId: user._id })
+    socket.on('connect', onReconnect)
+    return () => socket.off('connect', onReconnect)
+  }, [roomId, user])
 
-  // ── Fetch room data ───────────────────────────────────────────────────────
+  // ── Fetch room data ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user) return
-    const fetchRoom = async (retries = 3) => {
-      for (let attempt = 1; attempt <= retries; attempt++) {
+    ;(async () => {
+      for (let i = 1; i <= 3; i++) {
         try {
-          setLoading(true)
-          const res = await roomAPI.getById(roomId)
-          const roomData = res.data.data?.room
-          const uid = user._id
-          const s1  = roomData.student1?._id || roomData.student1
-          const other = String(uid) === String(s1) ? roomData.student2 : roomData.student1
+          const res  = await roomAPI.getById(roomId)
+          const room = res.data.data?.room
+          const uid  = user._id
+          const s1   = room.student1?._id || room.student1
+          const other = String(uid) === String(s1) ? room.student2 : room.student1
           setOtherUser(other)
           requestNotificationPermission()
           setLoading(false)
-          return // success — exit loop
+          return
         } catch (err) {
-          console.error(`Fetch room attempt ${attempt}/${retries} failed:`, err.message)
-          if (attempt < retries) {
-            await new Promise(r => setTimeout(r, 1000 * attempt))
-          } else {
-            setLoading(false) // let the page render even if fetch fails
-          }
+          console.error(`Fetch room attempt ${i}/3:`, err.message)
+          if (i < 3) await new Promise(r => setTimeout(r, 1000 * i))
+          else setLoading(false)
         }
       }
-    }
-    fetchRoom()
+    })()
   }, [roomId, user])
 
-  // ── Once otherUser loads: flush pending offer / pre-warm camera ──────────
+  // ── Once otherUser loads: pre-warm camera + flush pending offer ───────────
   useEffect(() => {
     if (!otherUser) return
 
-    // Always pre-warm camera as soon as we know who we're calling
-    // This ensures permission is granted before offer/startCall
-    if (!hasInitRef.current) {
-      hasInitRef.current = true
-      getLocalStream().then(() => {
-        // Tell the caller we're ready to receive the offer — only once
-        if (autoStartRef.current && userRef.current && otherUserRef.current && !calleeReadySentRef.current) {
-          calleeReadySentRef.current = true
-          getSocket()?.emit('calleeReady', {
-            roomId: roomIdRef.current,
-            fromUserId: userRef.current._id,
-            toUserId: otherUserRef.current._id,
-          })
-          console.log('📞 calleeReady emitted')
+    // Pre-warm camera
+    setStatus('warming')
+    getLocalStream()
+      .then(() => {
+        // Callee: signal readiness to caller (only once)
+        if (isCalleeRef.current && !calleeReadySent.current) {
+          calleeReadySent.current = true
+          const socket = getSocket()
+          if (socket && userRef.current && otherUserRef.current) {
+            socket.emit('calleeReady', {
+              roomId:     roomIdRef.current,
+              fromUserId: userRef.current._id,
+              toUserId:   otherUserRef.current._id,
+            })
+            console.log('📞 calleeReady emitted')
+            setStatus('ringing')
+          }
+        } else if (!isCalleeRef.current) {
+          setStatus('idle') // caller waits for "Start Call" button
         }
-      }).catch(err => {
-        console.warn('Camera pre-warm failed:', err.message)
-      })
-    }
 
-    // Flush any offer that arrived before otherUser was ready
-    if (pendingOfferRef.current && !pcRef.current) {
-      const data = pendingOfferRef.current
-      pendingOfferRef.current = null
-      handleOfferRef.current(data)
-    }
-  }, [otherUser]) // eslint-disable-line
+        // Flush any offer that arrived before otherUser was ready
+        if (pendingOffer.current && !pcRef.current) {
+          const data = pendingOffer.current
+          pendingOffer.current = null
+          handleOfferRef.current(data)
+        }
+      })
+      .catch(err => {
+        console.warn('Camera pre-warm failed:', err.message)
+        setLoading(false)
+      })
+  }, [otherUser, getLocalStream])
 
   // ── Cleanup ───────────────────────────────────────────────────────────────
-  const cleanup = () => {
-    originalStreamRef.current?.getTracks().forEach(t => t.stop())
-    originalStreamRef.current = null
-    pcRef.current?.close()
-    pcRef.current = null
+  const doCleanup = useCallback(() => {
+    origStreamRef.current?.getTracks().forEach(t => t.stop())
+    origStreamRef.current = null
+
+    if (pcRef.current) { pcRef.current.close(); pcRef.current = null }
+
     localStreamRef.current?.getTracks().forEach(t => t.stop())
     localStreamRef.current = null
+
     if (localVideoRef.current)  localVideoRef.current.srcObject  = null
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
-    remoteStreamRef.current = null
-    pendingCandidates.current = []
-    calleeReadySentRef.current = false
-    offerSentRef.current = false
-    setCallActive(false)
-    setCallStarted(false)
-    setAnswerSent(false)
-    setScreenSharing(false)
-    setRemoteScreenSharing(false)
-  }
 
-  // ── Start call (CALLER) ───────────────────────────────────────────────────
-  const startCall = async () => {
-    if (pcRef.current) return
-    if (offerSentRef.current) return  // prevent duplicate offers
+    pendingCandidates.current = []
+    calleeReadySent.current   = false
+    offerSent.current         = false
+    callEndedSent.current     = false
+
+    setStatus('idle')
+    setScreenSharing(false)
+    setRemoteScreenShare(false)
+    setIncomingCall(false)
+  }, [])
+
+  // ── CALLER: start call ────────────────────────────────────────────────────
+  const startCall = useCallback(async () => {
+    if (pcRef.current || offerSent.current) return
     const socket = getSocket()
-    if (!socket || !otherUser) return
+    if (!socket || !otherUser || !user) return
+
     try {
-      console.log('🎥 Starting call...')
-      setCallStarted(true) // show "Calling..." state immediately
+      setStatus('calling')
+
+      // Wait for ICE servers to be fetched (max 3s)
+      if (!iceReadyRef.current) {
+        await new Promise(resolve => {
+          const check = setInterval(() => {
+            if (iceReadyRef.current) { clearInterval(check); resolve() }
+          }, 100)
+          setTimeout(() => { clearInterval(check); resolve() }, 3000)
+        })
+      }
 
       const stream = await getLocalStream()
-      const pc = buildPC(socket, otherUser._id)
+      const pc     = buildPC(otherUser._id)
       pcRef.current = pc
       stream.getTracks().forEach(t => pc.addTrack(t, stream))
 
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
 
+      // Tell callee there's an incoming call
       socket.emit('initiateCall', { roomId, fromUserId: user._id, toUserId: otherUser._id })
 
-      // Wait for callee to signal they're ready (up to 15 seconds)
-      await new Promise((resolve) => {
-        const timeout = setTimeout(resolve, 15000) // fallback after 15s
-        const onReady = () => {
-          clearTimeout(timeout)
-          socket.off('calleeReady', onReady)
-          resolve()
-        }
-        socket.once('calleeReady', onReady)
+      // Wait for calleeReady (up to 20s), then send offer
+      await new Promise(resolve => {
+        const timer = setTimeout(resolve, 20000)
+        socket.once('calleeReady', () => { clearTimeout(timer); resolve() })
       })
 
-      if (offerSentRef.current) {
-        console.log('⚠️ Offer already sent (duplicate calleeReady race), skipping')
-        return
-      }
-      offerSentRef.current = true
+      if (offerSent.current) return   // race guard
+      offerSent.current = true
       socket.emit('offer', { roomId, offer, fromUserId: user._id, toUserId: otherUser._id })
       console.log('📤 Offer sent to', otherUser._id)
+      setStatus('ringing')
     } catch (err) {
       console.error('❌ startCall error:', err)
-      setCallStarted(false)
+      doCleanup()
       alert('Failed to access camera/microphone.')
     }
-  }
+  }, [otherUser, user, roomId, buildPC, getLocalStream, doCleanup])
 
-  // ── Accept in-page incoming call (CALLEE) ─────────────────────────────────
-  const acceptIncomingCall = async () => {
+  // ── CALLEE: accept in-page call ───────────────────────────────────────────
+  const acceptCall = useCallback(async () => {
     setIncomingCall(false)
     try {
       await getLocalStream()
-      // Tell the caller we're ready before processing any queued offer — only once
-      if (userRef.current && otherUserRef.current && !calleeReadySentRef.current) {
-        calleeReadySentRef.current = true
-        getSocket()?.emit('calleeReady', {
-          roomId: roomIdRef.current,
-          fromUserId: userRef.current._id,
-          toUserId: otherUserRef.current._id,
-        })
-        console.log('📞 calleeReady emitted (acceptIncomingCall)')
+      if (!calleeReadySent.current) {
+        calleeReadySent.current = true
+        const socket = getSocket()
+        if (socket && userRef.current && otherUserRef.current) {
+          socket.emit('calleeReady', {
+            roomId:     roomIdRef.current,
+            fromUserId: userRef.current._id,
+            toUserId:   otherUserRef.current._id,
+          })
+        }
       }
-      if (pendingOfferRef.current && !pcRef.current) {
-        const data = pendingOfferRef.current
-        pendingOfferRef.current = null
+      if (pendingOffer.current && !pcRef.current) {
+        const data = pendingOffer.current
+        pendingOffer.current = null
         handleOfferRef.current(data)
       }
     } catch (err) {
-      console.error('❌ acceptIncomingCall error:', err)
+      console.error('❌ acceptCall error:', err)
       alert('Failed to access camera/microphone.')
     }
-  }
+  }, [getLocalStream])
 
-  const rejectIncomingCall = () => {
+  const rejectCall = useCallback(() => {
     setIncomingCall(false)
-    getSocket()?.emit('callRejected', { roomId, fromUserId: user._id, toUserId: otherUser?._id })
-  }
+    getSocket()?.emit('callRejected', { roomId, fromUserId: user?._id, toUserId: otherUser?._id })
+  }, [roomId, user, otherUser])
 
-  const endCurrentCall = () => {
-    getSocket()?.emit('callEnded', { roomId, fromUserId: user._id, toUserId: otherUser?._id })
-    cleanup()
-    setShowFeedbackModal(true)
-  }
+  const endCall = useCallback(() => {
+    if (!callEndedSent.current) {
+      callEndedSent.current = true
+      getSocket()?.emit('callEnded', { roomId, fromUserId: user?._id, toUserId: otherUser?._id })
+    }
+    doCleanup()
+    setShowFeedback(true)
+  }, [roomId, user, otherUser, doCleanup])
 
+  // ── Mic / Video toggles ───────────────────────────────────────────────────
   const toggleMic = () => {
     localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !t.enabled })
     setMicEnabled(p => !p)
   }
-
   const toggleVideo = () => {
     localStreamRef.current?.getVideoTracks().forEach(t => { t.enabled = !t.enabled })
     setVideoEnabled(p => !p)
   }
 
+  // ── Screen share ──────────────────────────────────────────────────────────
   const startScreenShare = async () => {
     if (screenSharing) return
     try {
-      const ok = window.confirm('Tip: Select a Window or Tab to avoid mirror effect.\n\nContinue?')
+      const ok = window.confirm('Select a Window or Tab to share.\n\nContinue?')
       if (!ok) return
       const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false })
-      if (!originalStreamRef.current) originalStreamRef.current = localStreamRef.current
+      if (!origStreamRef.current) origStreamRef.current = localStreamRef.current
       const screenTrack = screenStream.getVideoTracks()[0]
       const sender = pcRef.current?.getSenders().find(s => s.track?.kind === 'video')
       if (sender) await sender.replaceTrack(screenTrack)
       if (localVideoRef.current) localVideoRef.current.srcObject = screenStream
       localStreamRef.current = screenStream
       setScreenSharing(true)
-      screenTrack.onended = () => stopScreenShare()
-      getSocket()?.emit('screenShareStarted', { roomId, fromUserId: user._id, toUserId: otherUser?._id })
+      screenTrack.onended = stopScreenShare
+      getSocket()?.emit('screenShareStarted', { roomId, fromUserId: user?._id, toUserId: otherUser?._id })
     } catch (err) {
-      if (err.name !== 'NotAllowedError') alert('Failed to start screen sharing.')
+      if (err.name !== 'NotAllowedError') alert('Screen share failed.')
     }
   }
 
   const stopScreenShare = async () => {
     try {
-      if (localVideoRef.current?.srcObject && screenSharing)
-        localVideoRef.current.srcObject.getTracks().forEach(t => t.stop())
-      if (originalStreamRef.current) {
-        const videoTrack = originalStreamRef.current.getVideoTracks()[0]
+      localVideoRef.current?.srcObject?.getTracks().forEach(t => t.stop())
+      if (origStreamRef.current) {
+        const videoTrack = origStreamRef.current.getVideoTracks()[0]
         const sender = pcRef.current?.getSenders().find(s => s.track?.kind === 'video')
         if (sender && videoTrack) await sender.replaceTrack(videoTrack)
-        if (localVideoRef.current) localVideoRef.current.srcObject = originalStreamRef.current
-        localStreamRef.current = originalStreamRef.current
-        originalStreamRef.current = null
+        if (localVideoRef.current) localVideoRef.current.srcObject = origStreamRef.current
+        localStreamRef.current = origStreamRef.current
+        origStreamRef.current  = null
       }
       setScreenSharing(false)
-      getSocket()?.emit('screenShareStopped', { roomId, fromUserId: user._id, toUserId: otherUser?._id })
+      getSocket()?.emit('screenShareStopped', { roomId, fromUserId: user?._id, toUserId: otherUser?._id })
     } catch (err) {
-      console.error('❌ stopScreenShare error:', err)
+      console.error('stopScreenShare error:', err)
     }
   }
 
+  // ── Fullscreen ────────────────────────────────────────────────────────────
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
+      document.documentElement.requestFullscreen?.()
       setIsFullscreen(true)
     } else {
-      document.exitFullscreen()
+      document.exitFullscreen?.()
       setIsFullscreen(false)
     }
   }
-
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
 
-  // ── Decide what the bottom bar shows ──────────────────────────────────────
-  const showInCallControls = callActive
-  const showCallerDialing  = !callActive && callStarted && !autoStart
-  // Callee: show full controls once they've sent answer (even before video arrives)
-  const showCalleeWaiting  = !callActive && autoStart && !answerSent
-  const showCalleeConnecting = !callActive && autoStart && answerSent
-  const showStartCall      = !callActive && !callStarted && !autoStart
+  // ── Derived display flags ─────────────────────────────────────────────────
+  const isConnected   = status === 'connected'
+  const showStartBtn  = !isConnected && !isCallee && status === 'idle'
+  const showEndBtn    = isConnected || ['calling','ringing','connecting'].includes(status)
+  const statusLabel   = {
+    idle:       'Ready to call',
+    warming:    'Starting camera...',
+    calling:    'Calling...',
+    ringing:    isCallee ? 'Connecting...' : 'Ringing...',
+    connecting: 'Connecting...',
+    connected:  '● Connected',
+  }[status] ?? ''
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Loading screen ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div style={{ height: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -603,44 +595,42 @@ export default function VideoCall() {
     )
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div style={{ height: '100vh', background: '#0a0a0f', overflow: 'hidden', position: 'relative' }}>
 
       <CallEndFeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={() => { setShowFeedbackModal(false); navigate(`/chat/${roomId}`) }}
+        isOpen={showFeedback}
+        onClose={() => { setShowFeedback(false); navigate(`/chat/${roomId}`) }}
         roomId={roomId}
         otherUser={otherUser}
       />
 
-      {/* ═══════════════════════════════════════════════════════════════
-          REMOTE VIDEO — fills the entire screen (always in DOM)
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* ── REMOTE VIDEO — full screen ──────────────────────────────────── */}
       <video
-        ref={remoteVideoCallbackRef}
+        ref={remoteVideoRef}
         autoPlay
         playsInline
-        muted={false}
-        webkit-playsinline="true"
         style={{
           position: 'absolute', inset: 0,
           width: '100%', height: '100%',
           objectFit: 'cover',
           background: '#0a0a0f',
           zIndex: 1,
+          display: isConnected ? 'block' : 'none',
         }}
       />
 
-      {/* Pre-call / waiting overlay — shown when remote video isn't active */}
-      {!callActive && (
+      {/* ── PRE-CALL OVERLAY ────────────────────────────────────────────── */}
+      {!isConnected && (
         <div style={{
-          position: 'absolute', inset: 0,
+          position: 'absolute', inset: 0, zIndex: 2,
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(10,10,20,0.92)', gap: 16, zIndex: 2,
+          background: 'rgba(10,10,20,0.95)', gap: 16,
         }}>
           <motion.div
-            animate={(callStarted || autoStart) ? { scale: [1, 1.06, 1] } : {}}
+            animate={['calling','ringing','connecting'].includes(status) ? { scale: [1, 1.06, 1] } : {}}
             transition={{ repeat: Infinity, duration: 2 }}
             style={{
               width: 100, height: 100, borderRadius: '50%', overflow: 'hidden',
@@ -651,77 +641,50 @@ export default function VideoCall() {
             }}>
             {otherUser?.profileImage
               ? <img src={otherUser.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ color: 'white', fontWeight: 700, fontSize: 40 }}>{otherUser?.name?.charAt(0).toUpperCase() || 'U'}</span>}
+              : <span style={{ color: 'white', fontWeight: 700, fontSize: 40 }}>{otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}</span>}
           </motion.div>
           <p style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0 }}>{otherUser?.name || 'Unknown'}</p>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14, margin: 0 }}>
-            {callStarted ? 'Ringing...' : answerSent ? 'Connecting...' : autoStart ? 'Waiting for caller...' : 'Ready to call'}
-          </p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: 0 }}>{statusLabel}</p>
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════
-          LOCAL VIDEO — top-left corner, always visible
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* ── LOCAL VIDEO — top-left ───────────────────────────────────────── */}
       <div style={{
-        position: 'absolute',
-        top: 70, left: 16,          // just below the header
+        position: 'absolute', top: 70, left: 16,
         width: 140, height: 105,
-        borderRadius: 12,
-        overflow: 'hidden',
+        borderRadius: 12, overflow: 'hidden',
         border: '2px solid rgba(255,255,255,0.25)',
         boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
-        zIndex: 20,
-        background: '#1a1a2e',
+        zIndex: 20, background: '#1a1a2e',
       }}>
         <video
           ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
+          autoPlay playsInline muted
           style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
         />
-        {/* Camera-off overlay */}
         {!videoEnabled && (
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: '#1a1a2e',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
+          <div style={{ position: 'absolute', inset: 0, background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <VideoOff size={26} color="rgba(255,255,255,0.4)" />
           </div>
         )}
-        {/* "You" label */}
         <div style={{
           position: 'absolute', bottom: 4, left: 0, right: 0,
           textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.7)',
-          fontWeight: 600, letterSpacing: 0.5,
-          background: 'linear-gradient(transparent, rgba(0,0,0,0.5))',
-          paddingBottom: 2,
+          fontWeight: 600, background: 'linear-gradient(transparent,rgba(0,0,0,0.5))', paddingBottom: 2,
         }}>
           {screenSharing ? '📺 Sharing' : 'You'}
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          HEADER — name + status + back + fullscreen
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30,
         padding: '10px 16px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.75), transparent)',
+        background: 'linear-gradient(to bottom,rgba(0,0,0,0.75),transparent)',
       }}>
-        {/* Left: back button + other user info */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={() => navigate(`/chat/${roomId}`)}
-            style={{
-              width: 34, height: 34, borderRadius: 9,
-              background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
-              color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', flexShrink: 0,
-            }}>
+          <button onClick={() => navigate(`/chat/${roomId}`)} style={btnStyle}>
             <ArrowLeft size={17} />
           </button>
           <div style={{
@@ -732,54 +695,37 @@ export default function VideoCall() {
           }}>
             {otherUser?.profileImage
               ? <img src={otherUser.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>{otherUser?.name?.charAt(0).toUpperCase() || 'U'}</span>}
+              : <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>{otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}</span>}
           </div>
           <div>
             <p style={{ color: 'white', fontWeight: 700, fontSize: 14, margin: 0 }}>{otherUser?.name || 'Unknown'}</p>
-            <p style={{ fontSize: 11, margin: 0, color: callActive ? '#34d399' : 'rgba(255,255,255,0.5)' }}>
-              {callActive ? '● Connected' : callStarted ? '● Calling...' : answerSent ? '● Connecting...' : autoStart ? '● Waiting...' : '● Ready'}
-            </p>
+            <p style={{ fontSize: 11, margin: 0, color: isConnected ? '#34d399' : 'rgba(255,255,255,0.5)' }}>{statusLabel}</p>
           </div>
         </div>
-
-        {/* Right: fullscreen toggle */}
-        <button
-          onClick={toggleFullscreen}
-          style={{
-            width: 34, height: 34, borderRadius: 9,
-            background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
-            color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-          }}>
+        <button onClick={toggleFullscreen} style={btnStyle}>
           {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
         </button>
       </div>
 
-      {/* Remote screen-share badge */}
-      {remoteScreenSharing && callActive && (
+      {/* ── REMOTE SCREEN SHARE BADGE ────────────────────────────────────── */}
+      {remoteScreenShare && isConnected && (
         <div style={{
           position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)',
-          background: '#3b82f6', color: 'white',
-          padding: '5px 14px', borderRadius: 8,
-          fontSize: 12, fontWeight: 600,
-          display: 'flex', alignItems: 'center', gap: 6, zIndex: 25,
+          background: '#3b82f6', color: 'white', padding: '5px 14px', borderRadius: 8,
+          fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, zIndex: 25,
         }}>
           <Monitor size={13} /> {otherUser?.name} is sharing screen
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════
-          IN-PAGE INCOMING CALL OVERLAY
-          (shown when someone calls while both are already on this page)
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* ── INCOMING CALL OVERLAY (in-page) ──────────────────────────────── */}
       {incomingCall && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           style={{
-            position: 'absolute', inset: 0,
+            position: 'absolute', inset: 0, zIndex: 60,
             background: 'rgba(0,0,0,0.88)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 60,
           }}>
           <div style={{ textAlign: 'center', padding: 32 }}>
             <motion.div
@@ -789,33 +735,16 @@ export default function VideoCall() {
                 background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 margin: '0 auto 18px', fontSize: 36, color: 'white', fontWeight: 700,
-                border: '3px solid rgba(99,102,241,0.5)',
               }}>
-              {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
+              {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
             </motion.div>
             <p style={{ color: 'white', fontSize: 22, fontWeight: 700, marginBottom: 6 }}>{otherUser?.name}</p>
             <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 28, fontSize: 14 }}>Incoming video call...</p>
             <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-              <button
-                onClick={acceptIncomingCall}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '13px 30px', background: '#22c55e',
-                  border: 'none', borderRadius: 50,
-                  color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                  boxShadow: '0 4px 16px rgba(34,197,94,0.4)',
-                }}>
+              <button onClick={acceptCall} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 30px', background: '#22c55e', border: 'none', borderRadius: 50, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                 <Phone size={20} /> Accept
               </button>
-              <button
-                onClick={rejectIncomingCall}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '13px 30px', background: '#ef4444',
-                  border: 'none', borderRadius: 50,
-                  color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                  boxShadow: '0 4px 16px rgba(239,68,68,0.4)',
-                }}>
+              <button onClick={rejectCall} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 30px', background: '#ef4444', border: 'none', borderRadius: 50, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                 <PhoneOff size={20} /> Reject
               </button>
             </div>
@@ -823,140 +752,56 @@ export default function VideoCall() {
         </motion.div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════
-          BOTTOM CONTROLS
-      ═══════════════════════════════════════════════════════════════ */}
+      {/* ── BOTTOM CONTROLS ───────────────────────────────────────────────── */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 30,
         padding: '20px 24px 28px',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
-        background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)',
+        background: 'linear-gradient(to top,rgba(0,0,0,0.85),transparent)',
       }}>
+        {/* Mic + Video always visible once camera is warm */}
+        {(isConnected || ['calling','ringing','connecting'].includes(status)) && (
+          <>
+            <CtrlBtn onClick={toggleMic} danger={!micEnabled}>
+              {micEnabled ? <Mic size={22} /> : <MicOff size={22} />}
+            </CtrlBtn>
+            <CtrlBtn onClick={toggleVideo} danger={!videoEnabled}>
+              {videoEnabled ? <Video size={22} /> : <VideoOff size={22} />}
+            </CtrlBtn>
+            {isConnected && (
+              <CtrlBtn onClick={screenSharing ? stopScreenShare : startScreenShare} accent={screenSharing}>
+                {screenSharing ? <MonitorOff size={22} /> : <Monitor size={22} />}
+              </CtrlBtn>
+            )}
+          </>
+        )}
 
-        {/* ── Caller: before call ── */}
-        {showStartCall && (
-          <motion.button
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-            onClick={startCall}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              padding: '15px 36px',
-              background: 'linear-gradient(135deg,#22c55e,#16a34a)',
-              border: 'none', borderRadius: 50,
-              color: 'white', fontSize: 16, fontWeight: 700,
-              cursor: 'pointer', boxShadow: '0 4px 24px rgba(34,197,94,0.45)',
-            }}>
+        {/* Start Call — caller only, when idle */}
+        {showStartBtn && (
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={startCall}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '15px 36px', background: 'linear-gradient(135deg,#22c55e,#16a34a)', border: 'none', borderRadius: 50, color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 24px rgba(34,197,94,0.45)' }}>
             <Phone size={22} /> Start Call
           </motion.button>
         )}
 
-        {/* ── Caller: ringing ── */}
-        {showCallerDialing && (
-          <>
-            <CtrlBtn onClick={toggleMic} active={micEnabled} danger={!micEnabled}>
-              {micEnabled ? <Mic size={22} /> : <MicOff size={22} />}
-            </CtrlBtn>
-            <CtrlBtn onClick={toggleVideo} active={videoEnabled} danger={!videoEnabled}>
-              {videoEnabled ? <Video size={22} /> : <VideoOff size={22} />}
-            </CtrlBtn>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={endCurrentCall}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '0 28px', height: 56, borderRadius: 50,
-                border: 'none', cursor: 'pointer',
-                background: '#ef4444', color: 'white',
-                fontSize: 15, fontWeight: 700,
-                boxShadow: '0 4px 16px rgba(239,68,68,0.45)',
-              }}>
-              <PhoneOff size={20} /> Cancel
-            </motion.button>
-          </>
-        )}
-
-        {/* ── Callee: waiting for offer ── */}
-        {showCalleeWaiting && (
-          <>
-            <CtrlBtn onClick={toggleMic} active={micEnabled} danger={!micEnabled}>
-              {micEnabled ? <Mic size={22} /> : <MicOff size={22} />}
-            </CtrlBtn>
-            <CtrlBtn onClick={toggleVideo} active={videoEnabled} danger={!videoEnabled}>
-              {videoEnabled ? <Video size={22} /> : <VideoOff size={22} />}
-            </CtrlBtn>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              onClick={() => { cleanup(); navigate(`/chat/${roomId}`) }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '0 28px', height: 56, borderRadius: 50,
-                border: 'none', cursor: 'pointer',
-                background: '#ef4444', color: 'white',
-                fontSize: 15, fontWeight: 700,
-                boxShadow: '0 4px 16px rgba(239,68,68,0.45)',
-              }}>
-              <PhoneOff size={20} /> Leave
-            </motion.button>
-          </>
-        )}
-
-        {/* ── Callee: answer sent, waiting for remote video ── */}
-        {showCalleeConnecting && (
-          <>
-            <CtrlBtn onClick={toggleMic} active={micEnabled} danger={!micEnabled} title={micEnabled ? 'Mute' : 'Unmute'}>
-              {micEnabled ? <Mic size={22} /> : <MicOff size={22} />}
-            </CtrlBtn>
-            <CtrlBtn onClick={toggleVideo} active={videoEnabled} danger={!videoEnabled} title={videoEnabled ? 'Camera off' : 'Camera on'}>
-              {videoEnabled ? <Video size={22} /> : <VideoOff size={22} />}
-            </CtrlBtn>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={endCurrentCall}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '0 28px', height: 56, borderRadius: 50,
-                border: 'none', cursor: 'pointer',
-                background: '#ef4444', color: 'white',
-                fontSize: 15, fontWeight: 700,
-                boxShadow: '0 4px 16px rgba(239,68,68,0.45)',
-              }}>
-              <PhoneOff size={20} /> End Call
-            </motion.button>
-          </>
-        )}
-
-        {/* ── In-call ── */}
-        {showInCallControls && (
-          <>
-            <CtrlBtn onClick={toggleMic} active={micEnabled} danger={!micEnabled} title={micEnabled ? 'Mute' : 'Unmute'}>
-              {micEnabled ? <Mic size={22} /> : <MicOff size={22} />}
-            </CtrlBtn>
-            <CtrlBtn onClick={toggleVideo} active={videoEnabled} danger={!videoEnabled} title={videoEnabled ? 'Camera off' : 'Camera on'}>
-              {videoEnabled ? <Video size={22} /> : <VideoOff size={22} />}
-            </CtrlBtn>
-            <CtrlBtn onClick={screenSharing ? stopScreenShare : startScreenShare} active={!screenSharing} accent={screenSharing} title={screenSharing ? 'Stop sharing' : 'Share screen'}>
-              {screenSharing ? <MonitorOff size={22} /> : <Monitor size={22} />}
-            </CtrlBtn>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={endCurrentCall}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '0 28px', height: 56, borderRadius: 50,
-                border: 'none', cursor: 'pointer',
-                background: '#ef4444', color: 'white',
-                fontSize: 15, fontWeight: 700,
-                boxShadow: '0 4px 16px rgba(239,68,68,0.45)',
-              }}>
-              <PhoneOff size={20} /> End Call
-            </motion.button>
-          </>
+        {/* End / Leave button */}
+        {(showEndBtn || isCallee) && (
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={endCall}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 28px', height: 56, borderRadius: 50, border: 'none', cursor: 'pointer', background: '#ef4444', color: 'white', fontSize: 15, fontWeight: 700, boxShadow: '0 4px 16px rgba(239,68,68,0.45)' }}>
+            <PhoneOff size={20} /> {isConnected ? 'End Call' : 'Leave'}
+          </motion.button>
         )}
       </div>
     </div>
   )
 }
 
-// Small reusable control button
-function CtrlBtn({ children, onClick, active, danger, accent, title }) {
+// ── Reusable control button ───────────────────────────────────────────────────
+function CtrlBtn({ children, onClick, danger, accent }) {
   return (
     <motion.button
       whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
       onClick={onClick}
-      title={title}
       style={{
         width: 56, height: 56, borderRadius: '50%',
         border: 'none', cursor: 'pointer',
@@ -969,4 +814,12 @@ function CtrlBtn({ children, onClick, active, danger, accent, title }) {
       {children}
     </motion.button>
   )
+}
+
+// ── Small icon button (header) ────────────────────────────────────────────────
+const btnStyle = {
+  width: 34, height: 34, borderRadius: 9,
+  background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+  color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  cursor: 'pointer', flexShrink: 0,
 }

@@ -20,7 +20,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
     { icon: Activity,        label: 'My Activity',  path: '/doubts' },
     { icon: Bookmark,        label: 'Bookmarks',    path: '/resources' },
     { icon: FolderOpen,      label: 'My Projects',  path: '/communities' },
-    { icon: Star,            label: 'XP & Rewards', path: '/dashboard#xp' },
+    { icon: Star,            label: 'XP & Rewards', path: '/rewards' },
     { icon: Settings,        label: 'Settings',     path: '/settings' },
   ]
 

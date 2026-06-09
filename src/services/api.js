@@ -266,3 +266,9 @@ export const adminAPI = {
 export const aiAPI = {
   chat: (message, history = []) => api.post('/ai/chat', { message, history }),
 };
+
+/* ---------------- REWARDS / XP ---------------- */
+export const rewardsAPI = {
+  getMe:          () => api.get('/rewards/me'),
+  getLeaderboard: () => api.get('/rewards/leaderboard'),
+};
