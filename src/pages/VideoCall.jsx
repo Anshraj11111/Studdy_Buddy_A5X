@@ -135,7 +135,7 @@ export default function VideoCall() {
     const pc = new RTCPeerConnection(iceServersRef.current)
 
     pc.ontrack = (e) => {
-      console.log('📹 ontrack fired:', e.track.kind, '| streams:', e.streams.length, '| stream active:', e.streams[0]?.active)
+      console.log('📹 ontrack fired:', e.track.kind, '| streams:', e.streams.length, '| stream active:', e.streams[0]?.active, '| tracks:', e.streams[0]?.getTracks().map(t => `${t.kind}:${t.enabled}:${t.readyState}`))
       const stream = e.streams[0]
       if (stream) {
         console.log('📹 Applying stream with', stream.getTracks().length, 'tracks')
