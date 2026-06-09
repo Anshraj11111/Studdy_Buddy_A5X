@@ -97,13 +97,26 @@ export default function VideoCall() {
         remoteVideoRef.current.srcObject = null  // force reset first
         remoteVideoRef.current.srcObject = stream
         remoteVideoRef.current.load()
-        remoteVideoRef.current.play().catch(() => {})
+        // Safari requires user interaction for unmuted autoplay
+        // Try muted first, then unmuted
+        remoteVideoRef.current.muted = false
+        const playPromise = remoteVideoRef.current.play()
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            // If autoplay fails (Safari), try muted
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.muted = true
+              remoteVideoRef.current.play().catch(() => {})
+            }
+          })
+        }
+        console.log('📺 Stream attached, tracks:', stream.getTracks().map(t => `${t.kind}:${t.readyState}`))
       }
     }
     attach()
-    setTimeout(attach, 100)
-    setTimeout(attach, 500)
-    setTimeout(attach, 1500)
+    setTimeout(attach, 200)
+    setTimeout(attach, 800)
+    setTimeout(attach, 2000)
     setCallActive(true)
   }
 
@@ -583,13 +596,14 @@ export default function VideoCall() {
         ref={remoteVideoCallbackRef}
         autoPlay
         playsInline
+        muted={false}
+        webkit-playsinline="true"
         style={{
           position: 'absolute', inset: 0,
           width: '100%', height: '100%',
           objectFit: 'cover',
           background: '#0a0a0f',
           zIndex: 1,
-          // Always rendered — stream attaches even before overlay disappears
         }}
       />
 
