@@ -58,6 +58,8 @@ export default function VideoCall() {
   const pendingCandidates= useRef([])
   const pendingOfferRef  = useRef(null)
   const hasInitRef       = useRef(false)
+  const calleeReadySentRef= useRef(false) // guard: only send calleeReady once
+  const offerSentRef     = useRef(false)  // guard: caller only sends offer once
   const iceServersRef    = useRef(DEFAULT_ICE_SERVERS) // fetched from backend on mount
 
   // Refs that mirror the latest state values — lets socket callbacks always
@@ -341,8 +343,20 @@ export default function VideoCall() {
   // ── Fetch room + join socket room ─────────────────────────────────────────
   useEffect(() => {
     if (!user) return
-    getSocket()?.emit('joinRoom', { roomId, userId: user._id })
+    const socket = getSocket()
+    // Only emit joinRoom once per mount — re-join on socket reconnect is handled by the connect handler below
+    if (socket) {
+      socket.emit('joinRoom', { roomId, userId: user._id })
+      // Re-join after a reconnect (one listener, cleaned up on unmount)
+      const onReconnect = () => socket.emit('joinRoom', { roomId, userId: user._id })
+      socket.on('connect', onReconnect)
+      return () => socket.off('connect', onReconnect)
+    }
+  }, [roomId, user]) // eslint-disable-line
 
+  // ── Fetch room data ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return
     const fetchRoom = async (retries = 3) => {
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
@@ -378,8 +392,9 @@ export default function VideoCall() {
     if (!hasInitRef.current) {
       hasInitRef.current = true
       getLocalStream().then(() => {
-        // Tell the caller we're ready to receive the offer
-        if (autoStartRef.current && userRef.current && otherUserRef.current) {
+        // Tell the caller we're ready to receive the offer — only once
+        if (autoStartRef.current && userRef.current && otherUserRef.current && !calleeReadySentRef.current) {
+          calleeReadySentRef.current = true
           getSocket()?.emit('calleeReady', {
             roomId: roomIdRef.current,
             fromUserId: userRef.current._id,
@@ -412,6 +427,8 @@ export default function VideoCall() {
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
     remoteStreamRef.current = null
     pendingCandidates.current = []
+    calleeReadySentRef.current = false
+    offerSentRef.current = false
     setCallActive(false)
     setCallStarted(false)
     setAnswerSent(false)
@@ -422,6 +439,7 @@ export default function VideoCall() {
   // ── Start call (CALLER) ───────────────────────────────────────────────────
   const startCall = async () => {
     if (pcRef.current) return
+    if (offerSentRef.current) return  // prevent duplicate offers
     const socket = getSocket()
     if (!socket || !otherUser) return
     try {
@@ -449,6 +467,11 @@ export default function VideoCall() {
         socket.once('calleeReady', onReady)
       })
 
+      if (offerSentRef.current) {
+        console.log('⚠️ Offer already sent (duplicate calleeReady race), skipping')
+        return
+      }
+      offerSentRef.current = true
       socket.emit('offer', { roomId, offer, fromUserId: user._id, toUserId: otherUser._id })
       console.log('📤 Offer sent to', otherUser._id)
     } catch (err) {
@@ -463,8 +486,9 @@ export default function VideoCall() {
     setIncomingCall(false)
     try {
       await getLocalStream()
-      // Tell the caller we're ready before processing any queued offer
-      if (userRef.current && otherUserRef.current) {
+      // Tell the caller we're ready before processing any queued offer — only once
+      if (userRef.current && otherUserRef.current && !calleeReadySentRef.current) {
+        calleeReadySentRef.current = true
         getSocket()?.emit('calleeReady', {
           roomId: roomIdRef.current,
           fromUserId: userRef.current._id,

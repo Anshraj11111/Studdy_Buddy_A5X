@@ -16,9 +16,10 @@ const API_BASE_URL = (() => {
 console.log('🌐 API base URL:', API_BASE_URL);
 
 // Keep-alive ping — only ping Render if we're actually using it
+// Uses /ping instead of /health to avoid ad-blocker false positives
 const isLocalDev = API_BASE_URL.includes('localhost');
 if (!isLocalDev) {
-  const pingBackend = () => fetch(`${BASE}/health`).catch(() => {});
+  const pingBackend = () => fetch(`${BASE}/ping`).catch(() => {});
   pingBackend();
   setTimeout(pingBackend, 15 * 1000);
   setTimeout(pingBackend, 45 * 1000);
