@@ -13,22 +13,19 @@ const FALLBACK_ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-    // Metered authenticated TURN
+    { urls: 'stun:stun.cloudflare.com:3478' },
+    // Cloudflare TURN fallback
     {
       urls: [
-        'turn:global.relay.metered.ca:80',
-        'turn:global.relay.metered.ca:80?transport=tcp',
-        'turn:global.relay.metered.ca:443',
-        'turns:global.relay.metered.ca:443?transport=tcp',
+        'turn:turn.cloudflare.com:3478',
+        'turn:turn.cloudflare.com:3478?transport=tcp',
+        'turns:turn.cloudflare.com:5349',
       ],
       username: 'dd9dff66bc88d50dc88d1cc3',
       credential: '3a7ymuMhHgFio/OH',
     },
   ],
-  iceCandidatePoolSize: 0,  // gather after setLocalDescription, not before
+  iceCandidatePoolSize: 0,
   iceTransportPolicy: 'all',
 }
 
