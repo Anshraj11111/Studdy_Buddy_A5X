@@ -9,12 +9,25 @@ import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, ArrowLeft, Monitor, Moni
 import CallEndFeedbackModal from '../components/CallEndFeedbackModal'
 
 // ─── ICE config — loaded from backend on mount, this is the fallback ────────
+// Multiple TURN providers for maximum reliability
 const FALLBACK_ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
-    // Metered static fallback
+    { urls: 'stun:stun3.l.google.com:19302' },
+    // OpenRelay — free, no auth needed, no rate limits
+    {
+      urls: [
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turns:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:80?transport=tcp',
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    // Metered authenticated (better bandwidth)
     {
       urls: [
         'turn:global.relay.metered.ca:80',
@@ -157,23 +170,37 @@ export default function VideoCall() {
     }
 
     pc.onconnectionstatechange = () => {
-      console.log('🔌 PC:', pc.connectionState)
+      console.log('🔌 PC state:', pc.connectionState)
       if (pc.connectionState === 'connected') {
-        // Re-check stream attachment — ontrack may have fired before video was visible
         const vid = remoteVideoRef.current
         if (vid?.srcObject) {
-          setStatus('connected') // triggers the play useEffect
+          setStatus('connected')
         }
       }
-      if (['disconnected', 'failed'].includes(pc.connectionState)) {
-        pc.restartIce?.()
+      if (pc.connectionState === 'failed') {
+        console.log('🔄 PC failed — attempting ICE restart')
+        try { pc.restartIce() } catch (e) { console.warn('restartIce failed:', e.message) }
+      }
+      if (pc.connectionState === 'disconnected') {
+        // Give it 3 seconds to recover before restarting
+        setTimeout(() => {
+          if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            console.log('🔄 PC still disconnected — restarting ICE')
+            try { pc.restartIce() } catch (e) { console.warn('restartIce failed:', e.message) }
+          }
+        }, 3000)
       }
     }
 
     pc.oniceconnectionstatechange = () => {
-      console.log('🧊 ICE:', pc.iceConnectionState)
-      if (['disconnected', 'failed'].includes(pc.iceConnectionState)) {
-        pc.restartIce?.()
+      console.log('🧊 ICE state:', pc.iceConnectionState)
+      if (pc.iceConnectionState === 'failed') {
+        console.log('🔄 ICE failed — restarting')
+        try { pc.restartIce() } catch (e) { console.warn('restartIce failed:', e.message) }
+      }
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        console.log('✅ ICE connected!')
+        setStatus('connecting') // will become 'connected' when ontrack fires
       }
     }
 
