@@ -9,25 +9,12 @@ import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, ArrowLeft, Monitor, Moni
 import CallEndFeedbackModal from '../components/CallEndFeedbackModal'
 
 // ─── ICE config — loaded from backend on mount, this is the fallback ────────
-// Multiple TURN providers for maximum reliability
+// Force relay mode — guarantees connection regardless of NAT type/network
 const FALLBACK_ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    // OpenRelay — free, no auth needed, no rate limits
-    {
-      urls: [
-        'turn:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:443',
-        'turns:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:80?transport=tcp',
-      ],
-      username: 'openrelayproject',
-      credential: 'openrelayproject',
-    },
-    // Metered authenticated (better bandwidth)
+    // Metered authenticated TURN — most reliable
     {
       urls: [
         'turn:global.relay.metered.ca:80',
@@ -40,7 +27,7 @@ const FALLBACK_ICE = {
     },
   ],
   iceCandidatePoolSize: 10,
-  iceTransportPolicy: 'all',
+  iceTransportPolicy: 'relay',  // Force TURN — no direct/srflx attempts, guaranteed connection
 }
 
 export default function VideoCall() {
@@ -101,7 +88,7 @@ export default function VideoCall() {
           iceConfigRef.current = {
             iceServers: d.iceServers,
             iceCandidatePoolSize: 10,
-            iceTransportPolicy: 'all',
+            iceTransportPolicy: 'relay',  // always force relay
           }
           console.log('✅ ICE servers from backend:', d.iceServers.length, 'servers')
         }
@@ -121,17 +108,15 @@ export default function VideoCall() {
 
   // ── Attach remote stream to <video> element ───────────────────────────────
   const attachRemoteStream = useCallback((stream) => {
-    if (!stream) return
+    if (!stream || !stream.getTracks().length) return
     const vid = remoteVideoRef.current
     if (!vid) return
-    if (vid.srcObject === stream) return   // already attached
 
-    // Set srcObject first, then update status (which makes video visible),
-    // then play — order matters: play() must be called when element is visible
+    // Always reassign — even if same stream, element might have been hidden/reset
     vid.srcObject = stream
     console.log('📺 Remote stream set, tracks:', stream.getTracks().map(t => t.kind + ':' + t.readyState))
 
-    // setStatus('connected') makes the video display:block, then we play
+    // Update status FIRST so video becomes display:block, then play in useEffect
     setStatus('connected')
   }, [])
 
