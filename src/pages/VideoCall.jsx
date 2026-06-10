@@ -9,12 +9,14 @@ import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, ArrowLeft, Monitor, Moni
 import CallEndFeedbackModal from '../components/CallEndFeedbackModal'
 
 // ─── ICE config — loaded from backend on mount, this is the fallback ────────
-// Force relay mode — guarantees connection regardless of NAT type/network
 const FALLBACK_ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    // Metered authenticated TURN — most reliable
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    // Metered authenticated TURN
     {
       urls: [
         'turn:global.relay.metered.ca:80',
@@ -26,8 +28,8 @@ const FALLBACK_ICE = {
       credential: '3a7ymuMhHgFio/OH',
     },
   ],
-  iceCandidatePoolSize: 10,
-  iceTransportPolicy: 'relay',  // Force TURN — no direct/srflx attempts, guaranteed connection
+  iceCandidatePoolSize: 0,  // gather after setLocalDescription, not before
+  iceTransportPolicy: 'all',
 }
 
 export default function VideoCall() {
@@ -87,8 +89,8 @@ export default function VideoCall() {
         if (d.iceServers?.length) {
           iceConfigRef.current = {
             iceServers: d.iceServers,
-            iceCandidatePoolSize: 10,
-            iceTransportPolicy: 'relay',  // always force relay
+            iceCandidatePoolSize: 0,
+            iceTransportPolicy: 'all',
           }
           console.log('✅ ICE servers from backend:', d.iceServers.length, 'servers')
         }
@@ -370,11 +372,27 @@ export default function VideoCall() {
   useEffect(() => {
     if (!otherUser) return
 
-    // Pre-warm camera
     setStatus('warming')
-    getLocalStream()
-      .then(() => {
-        // Callee: signal readiness to caller (only once)
+
+    // Helper: wait for ICE servers to be ready (max 5s)
+    const waitForIce = () => new Promise(resolve => {
+      if (iceReadyRef.current) return resolve()
+      const check = setInterval(() => {
+        if (iceReadyRef.current) { clearInterval(check); resolve() }
+      }, 100)
+      setTimeout(() => { clearInterval(check); resolve() }, 5000)
+    })
+
+    const init = async () => {
+      try {
+        // 1. Get camera first
+        await getLocalStream()
+
+        // 2. Wait for ICE servers — MUST happen before calleeReady or buildPC
+        await waitForIce()
+        console.log('✅ ICE ready, config:', iceConfigRef.current.iceTransportPolicy, iceConfigRef.current.iceServers.length, 'servers')
+
+        // 3. Callee: signal readiness (only once, after ICE is ready)
         if (isCalleeRef.current && !calleeReadySent.current) {
           calleeReadySent.current = true
           const socket = getSocket()
@@ -384,24 +402,26 @@ export default function VideoCall() {
               fromUserId: userRef.current._id,
               toUserId:   otherUserRef.current._id,
             })
-            console.log('📞 calleeReady emitted')
+            console.log('📞 calleeReady emitted (ICE ready)')
             setStatus('ringing')
           }
         } else if (!isCalleeRef.current) {
-          setStatus('idle') // caller waits for "Start Call" button
+          setStatus('idle')
         }
 
-        // Flush any offer that arrived before otherUser was ready
+        // 4. Flush any offer that arrived before otherUser + ICE were ready
         if (pendingOffer.current && !pcRef.current) {
           const data = pendingOffer.current
           pendingOffer.current = null
           handleOfferRef.current(data)
         }
-      })
-      .catch(err => {
-        console.warn('Camera pre-warm failed:', err.message)
+      } catch (err) {
+        console.warn('Init failed:', err.message)
         setLoading(false)
-      })
+      }
+    }
+
+    init()
   }, [otherUser, getLocalStream])
 
   // ── Cleanup ───────────────────────────────────────────────────────────────
@@ -437,15 +457,16 @@ export default function VideoCall() {
     try {
       setStatus('calling')
 
-      // Wait for ICE servers to be fetched (max 3s)
+      // 1. Wait for ICE servers (max 5s)
       if (!iceReadyRef.current) {
         await new Promise(resolve => {
           const check = setInterval(() => {
             if (iceReadyRef.current) { clearInterval(check); resolve() }
           }, 100)
-          setTimeout(() => { clearInterval(check); resolve() }, 3000)
+          setTimeout(() => { clearInterval(check); resolve() }, 5000)
         })
       }
+      console.log('✅ Caller ICE ready:', iceConfigRef.current.iceTransportPolicy, iceConfigRef.current.iceServers.length, 'servers')
 
       const stream = await getLocalStream()
       const pc     = buildPC(otherUser._id)
@@ -455,16 +476,16 @@ export default function VideoCall() {
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
 
-      // Tell callee there's an incoming call
+      // 2. Tell callee there's a call coming
       socket.emit('initiateCall', { roomId, fromUserId: user._id, toUserId: otherUser._id })
 
-      // Wait for calleeReady (up to 20s), then send offer
+      // 3. Wait for calleeReady (up to 30s) — callee must signal ICE is ready
       await new Promise(resolve => {
-        const timer = setTimeout(resolve, 20000)
+        const timer = setTimeout(resolve, 30000)
         socket.once('calleeReady', () => { clearTimeout(timer); resolve() })
       })
 
-      if (offerSent.current) return   // race guard
+      if (offerSent.current) return
       offerSent.current = true
       socket.emit('offer', { roomId, offer, fromUserId: user._id, toUserId: otherUser._id })
       console.log('📤 Offer sent to', otherUser._id)
