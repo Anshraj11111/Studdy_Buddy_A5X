@@ -13,20 +13,19 @@ const FALLBACK_ICE = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-    // Cloudflare TURN fallback
     {
       urls: [
-        'turn:turn.cloudflare.com:3478',
-        'turn:turn.cloudflare.com:3478?transport=tcp',
-        'turns:turn.cloudflare.com:5349',
+        'turn:in.relay.metered.ca:80',
+        'turn:in.relay.metered.ca:80?transport=tcp',
+        'turn:in.relay.metered.ca:443',
+        'turns:in.relay.metered.ca:443?transport=tcp',
       ],
       username: 'dd9dff66bc88d50dc88d1cc3',
       credential: '3a7ymuMhHgFio/OH',
     },
   ],
   iceCandidatePoolSize: 0,
-  iceTransportPolicy: 'all',
+  iceTransportPolicy: 'relay',  // force relay — skip virtual/local adapters
 }
 
 export default function VideoCall() {
@@ -87,7 +86,7 @@ export default function VideoCall() {
           iceConfigRef.current = {
             iceServers: d.iceServers,
             iceCandidatePoolSize: 0,
-            iceTransportPolicy: 'all',
+            iceTransportPolicy: 'relay',  // force relay only
           }
           console.log('✅ ICE servers from backend:', d.iceServers.length, 'servers')
         }
