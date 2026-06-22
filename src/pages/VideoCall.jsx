@@ -25,7 +25,7 @@ const FALLBACK_ICE = {
     },
   ],
   iceCandidatePoolSize: 0,
-  iceTransportPolicy: 'relay',  // force relay — skip virtual/local adapters
+  iceTransportPolicy: 'all',  // allow all — relay + direct — works on same machine
 }
 
 export default function VideoCall() {
@@ -89,7 +89,7 @@ export default function VideoCall() {
           iceConfigRef.current = {
             iceServers: d.iceServers,
             iceCandidatePoolSize: 0,
-            iceTransportPolicy: 'relay',  // force relay only
+            iceTransportPolicy: 'all',  // allow direct + relay
           }
           console.log('✅ ICE servers from backend:', d.iceServers.length, 'servers')
         }
@@ -120,19 +120,23 @@ export default function VideoCall() {
     vid.srcObject = stream
     console.log('📺 Remote stream set, tracks:', stream.getTracks().map(t => t.kind + ':' + t.readyState))
 
-    // For audio-only calls, status connected as soon as we have any track
+    // Play immediately — don't wait for status update
+    // This ensures audio plays even in audioOnly mode where video is hidden
+    vid.play().catch(() => {
+      console.warn('Immediate play failed — will retry on status change')
+    })
+
     setStatus('connected')
   }, [])
 
-  // ── Play remote video once it becomes visible (after status = connected) ──
+  // ── Play remote video/audio once connected ────────────────────────────────
   useEffect(() => {
     if (status !== 'connected') return
     const vid = remoteVideoRef.current
     if (!vid || !vid.srcObject) return
     vid.play().catch(() => {
-      // Autoplay blocked — try muted (user can unmute manually)
-      vid.muted = true
-      vid.play().catch(err => console.warn('Remote video play failed:', err.message))
+      vid.muted = false
+      vid.play().catch(err => console.warn('Remote play failed:', err.message))
     })
   }, [status])
 
@@ -672,7 +676,12 @@ export default function VideoCall() {
       )}
       {/* Hidden audio element for voice call — plays remote audio */}
       {audioOnly && (
-        <video ref={remoteVideoRef} autoPlay playsInline style={{ display: 'none' }} />
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+        />
       )}
 
       {/* ── VOICE CALL CONNECTED UI ─────────────────────────────────────── */}
@@ -767,7 +776,7 @@ export default function VideoCall() {
       </div>
       )}
       {/* Hidden video el for audioOnly — still needed for srcObject but not shown */}
-      {audioOnly && <video ref={localVideoRef} autoPlay playsInline muted style={{ display: 'none' }} />}
+      {audioOnly && <video ref={localVideoRef} autoPlay playsInline muted style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} />}
 
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <div style={{
