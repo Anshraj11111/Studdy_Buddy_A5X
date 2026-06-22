@@ -48,6 +48,7 @@ export default function VideoCall() {
   const [incomingCall,       setIncomingCall]      = useState(false)
   const [showFeedback,       setShowFeedback]      = useState(false)
   const [isFullscreen,       setIsFullscreen]      = useState(false)
+  const [autoplayBlocked,    setAutoplayBlocked]   = useState(false)
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
   const localVideoRef  = useRef(null)
@@ -138,13 +139,26 @@ export default function VideoCall() {
   // ── Play remote video/audio once connected ────────────────────────────────
   useEffect(() => {
     if (status !== 'connected') return
-    const vid = remoteVideoRef.current
-    if (!vid || !vid.srcObject) return
-    vid.play().catch(() => {
-      vid.muted = false
-      vid.play().catch(err => console.warn('Remote play failed:', err.message))
+    const el = remoteVideoRef.current
+    if (!el || !el.srcObject) return
+
+    // Try playing — if blocked by autoplay policy, show a tap-to-unmute button
+    el.play().then(() => {
+      console.log('✅ Remote audio/video playing')
+    }).catch(err => {
+      console.warn('Autoplay blocked:', err.message)
+      // Set a flag so UI can show "tap to hear" button
+      setAutoplayBlocked(true)
     })
   }, [status])
+
+  // ── Unlock audio on user tap (for autoplay-blocked browsers) ─────────────
+  const unlockAudio = useCallback(() => {
+    const el = remoteVideoRef.current
+    if (!el) return
+    el.play().catch(() => {})
+    setAutoplayBlocked(false)
+  }, [])
 
   // ── Build RTCPeerConnection ───────────────────────────────────────────────
   const buildPC = useCallback((toUserId) => {
@@ -857,6 +871,31 @@ export default function VideoCall() {
               </button>
             </div>
           </div>
+        </motion.div>
+      )}
+
+      {/* ── TAP TO HEAR — shown when autoplay blocked ──────────────────── */}
+      {autoplayBlocked && isConnected && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          style={{
+            position: 'absolute', bottom: 100, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 40,
+          }}
+        >
+          <button
+            onClick={unlockAudio}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '12px 24px', borderRadius: 50,
+              background: 'linear-gradient(135deg,#f59e0b,#d97706)',
+              border: 'none', color: 'white', fontSize: 15, fontWeight: 700,
+              cursor: 'pointer', boxShadow: '0 4px 20px rgba(245,158,11,0.5)',
+              animation: 'pulse 1.5s infinite',
+            }}
+          >
+            🔊 Tap to hear audio
+          </button>
         </motion.div>
       )}
 
