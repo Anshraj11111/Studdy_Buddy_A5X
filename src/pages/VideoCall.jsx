@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { roomAPI } from '../services/api'
 import { getSocket } from '../services/socket'
-import { showCallNotification, playNotificationSound, requestNotificationPermission } from '../utils/notifications'
+import { showCallNotification, playNotificationSound, requestNotificationPermission, stopCallingTone, stopRingtone } from '../utils/notifications'
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, ArrowLeft, Monitor, MonitorOff, Maximize, Minimize } from 'lucide-react'
 import CallEndFeedbackModal from '../components/CallEndFeedbackModal'
 
@@ -32,6 +32,8 @@ export default function VideoCall() {
   const { roomId }      = useParams()
   const [searchParams]  = useSearchParams()
   const isCallee        = searchParams.get('autoStart') === 'true'
+  const audioOnly       = searchParams.get('audioOnly') === 'true'  // voice call mode
+  const isCaller        = searchParams.get('caller') === 'true'     // caller navigated here
   const navigate        = useNavigate()
   const { user }        = useAuthStore()
 
@@ -62,6 +64,7 @@ export default function VideoCall() {
   const calleeReadySent = useRef(false)
   const offerSent       = useRef(false)
   const callEndedSent   = useRef(false)
+  const startCallRef    = useRef(null) // ref to startCall for use in init effect
 
   // ── Stable mirrors of state (safe to read inside socket closures) ─────────
   const roomIdRef    = useRef(roomId)
@@ -98,11 +101,15 @@ export default function VideoCall() {
   // ── Get local camera / mic ────────────────────────────────────────────────
   const getLocalStream = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    // audioOnly = voice call, no camera
+    const constraints = audioOnly
+      ? { video: false, audio: true }
+      : { video: true, audio: true }
+    const stream = await navigator.mediaDevices.getUserMedia(constraints)
     localStreamRef.current = stream
     if (localVideoRef.current) localVideoRef.current.srcObject = stream
     return stream
-  }, [])
+  }, [audioOnly])
 
   // ── Attach remote stream to <video> element ───────────────────────────────
   const attachRemoteStream = useCallback((stream) => {
@@ -110,11 +117,10 @@ export default function VideoCall() {
     const vid = remoteVideoRef.current
     if (!vid) return
 
-    // Always reassign — even if same stream, element might have been hidden/reset
     vid.srcObject = stream
     console.log('📺 Remote stream set, tracks:', stream.getTracks().map(t => t.kind + ':' + t.readyState))
 
-    // Update status FIRST so video becomes display:block, then play in useEffect
+    // For audio-only calls, status connected as soon as we have any track
     setStatus('connected')
   }, [])
 
@@ -155,10 +161,8 @@ export default function VideoCall() {
     pc.onconnectionstatechange = () => {
       console.log('🔌 PC state:', pc.connectionState)
       if (pc.connectionState === 'connected') {
-        const vid = remoteVideoRef.current
-        if (vid?.srcObject) {
-          setStatus('connected')
-        }
+        // Always set connected — both video and audio calls
+        setStatus('connected')
       }
       if (pc.connectionState === 'failed') {
         console.log('🔄 PC failed — attempting ICE restart')
@@ -381,10 +385,10 @@ export default function VideoCall() {
 
     const init = async () => {
       try {
-        // 1. Get camera first
+        // 1. Get camera/mic first
         await getLocalStream()
 
-        // 2. Wait for ICE servers — MUST happen before calleeReady or buildPC
+        // 2. Wait for ICE servers
         await waitForIce()
         console.log('✅ ICE ready, config:', iceConfigRef.current.iceTransportPolicy, iceConfigRef.current.iceServers.length, 'servers')
 
@@ -401,6 +405,11 @@ export default function VideoCall() {
             console.log('📞 calleeReady emitted (ICE ready)')
             setStatus('ringing')
           }
+        } else if (isCaller && !isCalleeRef.current) {
+          // Caller navigated here from Chat — auto start call immediately
+          setStatus('idle')
+          // Small delay to ensure socket is ready
+          setTimeout(() => startCallRef.current?.(), 300)
         } else if (!isCalleeRef.current) {
           setStatus('idle')
         }
@@ -418,7 +427,7 @@ export default function VideoCall() {
     }
 
     init()
-  }, [otherUser, getLocalStream])
+  }, [otherUser, getLocalStream, isCaller])
 
   // ── Cleanup ───────────────────────────────────────────────────────────────
   const doCleanup = useCallback(() => {
@@ -437,6 +446,9 @@ export default function VideoCall() {
     calleeReadySent.current   = false
     offerSent.current         = false
     callEndedSent.current     = false
+
+    stopCallingTone()
+    stopRingtone()
 
     setStatus('idle')
     setScreenSharing(false)
@@ -472,8 +484,11 @@ export default function VideoCall() {
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
 
-      // 2. Tell callee there's a call coming
-      socket.emit('initiateCall', { roomId, fromUserId: user._id, toUserId: otherUser._id })
+      // 2. Tell callee there's a call coming (only if NOT already sent from Chat.jsx)
+      // isCaller=true means Chat.jsx already sent initiateCall, don't duplicate
+      if (!isCaller) {
+        socket.emit('initiateCall', { roomId, fromUserId: user._id, toUserId: otherUser._id })
+      }
 
       // 3. Wait for calleeReady (up to 30s) — callee must signal ICE is ready
       await new Promise(resolve => {
@@ -485,13 +500,17 @@ export default function VideoCall() {
       offerSent.current = true
       socket.emit('offer', { roomId, offer, fromUserId: user._id, toUserId: otherUser._id })
       console.log('📤 Offer sent to', otherUser._id)
+      stopCallingTone()
       setStatus('ringing')
     } catch (err) {
       console.error('❌ startCall error:', err)
       doCleanup()
       alert('Failed to access camera/microphone.')
     }
-  }, [otherUser, user, roomId, buildPC, getLocalStream, doCleanup])
+  }, [otherUser, user, roomId, buildPC, getLocalStream, doCleanup, isCaller])
+
+  // Keep startCallRef updated so init effect can call it
+  useEffect(() => { startCallRef.current = startCall }, [startCall])
 
   // ── CALLEE: accept in-page call ───────────────────────────────────────────
   const acceptCall = useCallback(async () => {
@@ -605,10 +624,10 @@ export default function VideoCall() {
   const showEndBtn    = isConnected || ['calling','ringing','connecting'].includes(status)
   const statusLabel   = {
     idle:       'Ready to call',
-    warming:    'Starting camera...',
+    warming:    audioOnly ? 'Starting mic...' : 'Starting camera...',
     calling:    'Calling...',
     ringing:    isCallee ? 'Connecting...' : 'Ringing...',
-    connecting: 'Connecting...',
+    connecting: 'Connected',
     connected:  '● Connected',
   }[status] ?? ''
 
@@ -635,22 +654,63 @@ export default function VideoCall() {
         otherUser={otherUser}
       />
 
-      {/* ── REMOTE VIDEO — full screen ──────────────────────────────────── */}
-      <video
-        ref={remoteVideoRef}
-        autoPlay
-        playsInline
-        style={{
-          position: 'absolute', inset: 0,
-          width: '100%', height: '100%',
-          objectFit: 'cover',
-          background: '#0a0a0f',
-          zIndex: 1,
-          display: isConnected ? 'block' : 'none',
-        }}
-      />
+      {/* ── REMOTE VIDEO — full screen (video call only) ───────────────── */}
+      {!audioOnly && (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'cover',
+            background: '#0a0a0f',
+            zIndex: 1,
+            display: isConnected ? 'block' : 'none',
+          }}
+        />
+      )}
+      {/* Hidden audio element for voice call — plays remote audio */}
+      {audioOnly && (
+        <video ref={remoteVideoRef} autoPlay playsInline style={{ display: 'none' }} />
+      )}
 
-      {/* ── PRE-CALL OVERLAY ────────────────────────────────────────────── */}
+      {/* ── VOICE CALL CONNECTED UI ─────────────────────────────────────── */}
+      {audioOnly && isConnected && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 2,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(160deg,#0f0c24 0%,#1a1535 100%)',
+          gap: 20,
+        }}>
+          {/* Pulsing audio rings */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {[1,2,3].map(i => (
+              <motion.div key={i}
+                style={{ position: 'absolute', width: 100, height: 100, borderRadius: '50%', border: '2px solid rgba(99,102,241,0.4)' }}
+                animate={{ scale: [1, 1.5 + i * 0.3], opacity: [0.5, 0] }}
+                transition={{ duration: 2, repeat: Infinity, delay: i * 0.4, ease: 'easeOut' }}
+              />
+            ))}
+            <div style={{
+              width: 100, height: 100, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden', border: '3px solid rgba(99,102,241,0.5)',
+              boxShadow: '0 0 40px rgba(99,102,241,0.4)',
+            }}>
+              {otherUser?.profileImage
+                ? <img src={otherUser.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ color: 'white', fontWeight: 700, fontSize: 40 }}>{otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}</span>}
+            </div>
+          </div>
+          <p style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0 }}>{otherUser?.name}</p>
+          <p style={{ color: '#34d399', fontSize: 14, margin: 0, fontFamily: 'monospace' }}>● Voice call connected</p>
+        </div>
+      )}
+
+      {/* ── PRE-CALL OVERLAY (both voice and video) ──────────────────────── */}
       {!isConnected && (
         <div style={{
           position: 'absolute', inset: 0, zIndex: 2,
@@ -677,7 +737,8 @@ export default function VideoCall() {
         </div>
       )}
 
-      {/* ── LOCAL VIDEO — top-left ───────────────────────────────────────── */}
+      {/* ── LOCAL VIDEO — top-left (video call only) ─────────────────────── */}
+      {!audioOnly && (
       <div style={{
         position: 'absolute', top: 70, left: 16,
         width: 140, height: 105,
@@ -704,6 +765,9 @@ export default function VideoCall() {
           {screenSharing ? '📺 Sharing' : 'You'}
         </div>
       </div>
+      )}
+      {/* Hidden video el for audioOnly — still needed for srcObject but not shown */}
+      {audioOnly && <video ref={localVideoRef} autoPlay playsInline muted style={{ display: 'none' }} />}
 
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <div style={{
@@ -788,16 +852,37 @@ export default function VideoCall() {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
         background: 'linear-gradient(to top,rgba(0,0,0,0.85),transparent)',
       }}>
-        {/* Mic + Video always visible once camera is warm */}
+        {/* Mic + Video controls */}
         {(isConnected || ['calling','ringing','connecting'].includes(status)) && (
           <>
             <CtrlBtn onClick={toggleMic} danger={!micEnabled}>
               {micEnabled ? <Mic size={22} /> : <MicOff size={22} />}
             </CtrlBtn>
-            <CtrlBtn onClick={toggleVideo} danger={!videoEnabled}>
-              {videoEnabled ? <Video size={22} /> : <VideoOff size={22} />}
-            </CtrlBtn>
-            {isConnected && (
+            {/* Video toggle — only show for video calls */}
+            {!audioOnly && (
+              <CtrlBtn onClick={toggleVideo} danger={!videoEnabled}>
+                {videoEnabled ? <Video size={22} /> : <VideoOff size={22} />}
+              </CtrlBtn>
+            )}
+            {/* Upgrade to video call button — voice call only */}
+            {audioOnly && isConnected && (
+              <motion.button
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={() => navigate(`/video-call/${roomId}?caller=true`)}
+                title="Switch to video call"
+                style={{
+                  width: 52, height: 52, borderRadius: '50%',
+                  background: 'rgba(99,102,241,0.2)',
+                  border: '1px solid rgba(99,102,241,0.4)',
+                  color: '#a5b4fc', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <Video size={22} />
+              </motion.button>
+            )}
+            {/* Screen share — only for video calls */}
+            {!audioOnly && isConnected && (
               <CtrlBtn onClick={screenSharing ? stopScreenShare : startScreenShare} accent={screenSharing}>
                 {screenSharing ? <MonitorOff size={22} /> : <Monitor size={22} />}
               </CtrlBtn>

@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { roomAPI } from '../services/api'
 import { joinRoom, sendTyping, leaveRoom, getSocket, setupOnlineTracking } from '../services/socket'
-import { showMessageNotification, playNotificationSound, requestNotificationPermission } from '../utils/notifications'
-import { Send, Video, ArrowLeft, Loader2, Phone } from 'lucide-react'
+import { showMessageNotification, playNotificationSound, requestNotificationPermission, startCallingTone, stopCallingTone } from '../utils/notifications'
+import { Send, Video, ArrowLeft, Loader2, Phone, PhoneOff, X } from 'lucide-react'
 
 export default function Chat() {
   const { roomId } = useParams()
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const [room, setRoom] = useState(null)
   const [otherUser, setOtherUser] = useState(null)
@@ -19,6 +20,9 @@ export default function Chat() {
   const [loading, setLoading] = useState(true)
   const [blockedWarning, setBlockedWarning] = useState('')
   const [onlineUsers, setOnlineUsers] = useState(new Set())
+  // ── Calling state ──────────────────────────────────────────────────────────
+  const [callingState, setCallingState] = useState(null) // null | { type: 'audio'|'video', status: 'calling'|'rejected' }
+  const callingTimerRef = useRef(null)
   const messagesEndRef = useRef(null)
   const typingTimeoutRef = useRef(null)
 
@@ -87,12 +91,28 @@ export default function Chat() {
     socket.on('userTyping', handleTyping)
     socket.on('roomJoined', (data) => { if (data.messages?.length > 0) setMessages(data.messages) })
 
+    // ── Call rejected by other side ──────────────────────────────────────────
+    const handleCallRejected = () => {
+      stopCallingTone()
+      clearTimeout(callingTimerRef.current)
+      setCallingState({ ...callingState, status: 'rejected' })
+      setTimeout(() => setCallingState(null), 2500)
+    }
+    const handleCallAccepted = () => {
+      stopCallingTone()
+      clearTimeout(callingTimerRef.current)
+    }
+    socket.on('callRejected', handleCallRejected)
+    socket.on('callAccepted', handleCallAccepted)
+
     return () => {
       socket.off('messageReceived', handleMessage)
       socket.off('messageConfirmed', handleConfirmed)
       socket.off('messageBLocked', handleBlocked)
       socket.off('userTyping', handleTyping)
       socket.off('roomJoined')
+      socket.off('callRejected', handleCallRejected)
+      socket.off('callAccepted', handleCallAccepted)
       leaveRoom(roomId)
     }
   }, [roomId, user._id, otherUser])
@@ -128,6 +148,42 @@ export default function Chat() {
     if (!typing) { setTyping(true); sendTyping(roomId, user._id) }
     clearTimeout(typingTimeoutRef.current)
     typingTimeoutRef.current = setTimeout(() => setTyping(false), 3000)
+  }
+
+  // ── Initiate call ────────────────────────────────────────────────────────
+  const initiateCall = (callType) => {
+    const socket = getSocket()
+    if (!socket || !otherUser || !user) return
+
+    // Emit initiateCall FIRST so receiver gets the ring
+    socket.emit('initiateCall', {
+      roomId,
+      fromUserId: user._id,
+      toUserId: otherUser._id || otherUser,
+      callType,
+    })
+
+    startCallingTone()
+
+    // Navigate with caller=true so VideoCall page doesn't re-emit initiateCall
+    const audioParam = callType === 'audio' ? '&audioOnly=true' : ''
+    navigate(`/video-call/${roomId}?caller=true${audioParam}`)
+
+    callingTimerRef.current = setTimeout(() => {
+      stopCallingTone()
+    }, 30000)
+  }
+
+  const cancelCall = () => {
+    const socket = getSocket()
+    socket?.emit('callRejected', {
+      roomId,
+      fromUserId: user._id,
+      toUserId: otherUser?._id || otherUser,
+    })
+    stopCallingTone()
+    clearTimeout(callingTimerRef.current)
+    setCallingState(null)
   }
 
   if (loading) {
@@ -211,20 +267,18 @@ export default function Chat() {
 
           {/* Right: call buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <Link to={`/video-call/${roomId}`}>
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                <Phone size={14} />
-                <span>Call</span>
-              </motion.button>
-            </Link>
-            <Link to={`/video-call/${roomId}`}>
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 2px 10px rgba(5,150,105,0.4)', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                <Video size={14} />
-                <span>Video</span>
-              </motion.button>
-            </Link>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={() => initiateCall('audio')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              <Phone size={14} />
+              <span>Call</span>
+            </motion.button>
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={() => initiateCall('video')}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 2px 10px rgba(5,150,105,0.4)', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              <Video size={14} />
+              <span>Video</span>
+            </motion.button>
           </div>
         </div>
       </div>

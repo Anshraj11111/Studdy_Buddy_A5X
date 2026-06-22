@@ -20,7 +20,6 @@ export const requestNotificationPermission = async () => {
 // Show notification
 export const showNotification = (title, options = {}) => {
   if (Notification.permission === 'granted') {
-    // Strip icon/badge to avoid 404 on missing logo.png
     const { icon, badge, ...safeOptions } = options
     const notification = new Notification(title, safeOptions)
     setTimeout(() => notification.close(), 5000)
@@ -43,7 +42,6 @@ export const showCallNotification = (callerName) => {
     body: 'Click to answer',
     tag: 'call',
     requireInteraction: true,
-    // No icon — logo.png doesn't exist in public folder
   })
 }
 
@@ -52,8 +50,100 @@ export const playNotificationSound = () => {
   try {
     const audio = new Audio('/notification.mp3')
     audio.volume = 0.5
-    audio.play().catch(() => {}) // silently ignore if file missing or autoplay blocked
-  } catch (error) {
-    // Sound not available — non-fatal
+    audio.play().catch(() => {})
+  } catch (error) {}
+}
+
+// ── Ringtone for incoming calls (loops until stopped) ────────────────────────
+let _ringtoneAudio = null
+
+export const startRingtone = () => {
+  stopRingtone()
+  try {
+    // Generate a ringtone using Web Audio API — no external file needed
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    let stopped = false
+
+    const playBeep = (time) => {
+      if (stopped) return
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.setValueAtTime(880, time)
+      osc.frequency.setValueAtTime(660, time + 0.15)
+      gain.gain.setValueAtTime(0.3, time)
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4)
+      osc.start(time)
+      osc.stop(time + 0.4)
+    }
+
+    // Ring pattern: beep beep ... pause ... repeat
+    let t = ctx.currentTime
+    const scheduleRing = () => {
+      if (stopped) return
+      playBeep(t)
+      playBeep(t + 0.5)
+      t += 2.5
+      setTimeout(() => scheduleRing(), 2500)
+    }
+    scheduleRing()
+
+    _ringtoneAudio = { stop: () => { stopped = true; ctx.close() } }
+  } catch (e) {
+    // fallback: silent
+    _ringtoneAudio = { stop: () => {} }
   }
 }
+
+export const stopRingtone = () => {
+  if (_ringtoneAudio) {
+    _ringtoneAudio.stop()
+    _ringtoneAudio = null
+  }
+}
+
+// ── Outgoing call sound (single beep tone) ───────────────────────────────────
+let _callingAudio = null
+
+export const startCallingTone = () => {
+  stopCallingTone()
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    let stopped = false
+
+    const playTone = (time) => {
+      if (stopped) return
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 440
+      gain.gain.setValueAtTime(0.15, time)
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.8)
+      osc.start(time)
+      osc.stop(time + 0.8)
+    }
+
+    let t = ctx.currentTime
+    const schedule = () => {
+      if (stopped) return
+      playTone(t)
+      t += 2
+      setTimeout(() => schedule(), 2000)
+    }
+    schedule()
+
+    _callingAudio = { stop: () => { stopped = true; ctx.close() } }
+  } catch (e) {
+    _callingAudio = { stop: () => {} }
+  }
+}
+
+export const stopCallingTone = () => {
+  if (_callingAudio) {
+    _callingAudio.stop()
+    _callingAudio = null
+  }
+}
+

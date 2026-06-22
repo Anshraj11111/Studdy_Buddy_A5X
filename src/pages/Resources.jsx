@@ -33,7 +33,12 @@ function UploadModal({ onClose, onUploaded }) {
   const onFileChange = (e) => {
     const f = e.target.files[0]
     if (!f) return
-    if (f.size > 50 * 1024 * 1024) { setError('File must be under 50MB'); return }
+    const isVideo = f.type.startsWith('video/')
+    const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024 // 100MB video, 10MB others
+    if (f.size > maxSize) {
+      setError(isVideo ? 'Video must be under 100MB' : 'File must be under 10MB')
+      return
+    }
     setFile(f); setError('')
   }
 
@@ -84,7 +89,7 @@ function UploadModal({ onClose, onUploaded }) {
             ) : (
               <>
                 <Upload size={28} className="mx-auto mb-2" style={{ color: 'rgba(99,102,241,0.6)' }} />
-                <p className="text-sm" style={{ color: 'rgba(148,163,184,0.7)' }}>Click to select file <span style={{ color: 'rgba(148,163,184,0.4)' }}>(PDF, video, image — max 50MB)</span></p>
+                <p className="text-sm" style={{ color: 'rgba(148,163,184,0.7)' }}>Click to select file <span style={{ color: 'rgba(148,163,184,0.4)', fontWeight: 400 }}>(PDF/doc — max 10MB, video — max 100MB)</span></p>
               </>
             )}
           </div>
