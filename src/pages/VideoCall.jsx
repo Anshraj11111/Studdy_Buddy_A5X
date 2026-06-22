@@ -432,8 +432,10 @@ export default function VideoCall() {
         } else if (isCaller && !isCalleeRef.current) {
           // Caller navigated here from Chat — auto start call immediately
           setStatus('idle')
-          // Small delay to ensure socket is ready
-          setTimeout(() => startCallRef.current?.(), 300)
+          // Small delay to ensure socket is ready — but only call ONCE
+          if (!offerSent.current) {
+            setTimeout(() => startCallRef.current?.(), 300)
+          }
         } else if (!isCalleeRef.current) {
           setStatus('idle')
         }
@@ -500,6 +502,9 @@ export default function VideoCall() {
       }
       console.log('✅ Caller ICE ready:', iceConfigRef.current.iceTransportPolicy, iceConfigRef.current.iceServers.length, 'servers')
 
+      // Guard again after await — init effect may have called us again
+      if (pcRef.current || offerSent.current) return
+
       const stream = await getLocalStream()
       const pc     = buildPC(otherUser._id)
       pcRef.current = pc
@@ -509,17 +514,17 @@ export default function VideoCall() {
       await pc.setLocalDescription(offer)
 
       // 2. Tell callee there's a call coming (only if NOT already sent from Chat.jsx)
-      // isCaller=true means Chat.jsx already sent initiateCall, don't duplicate
       if (!isCaller) {
         socket.emit('initiateCall', { roomId, fromUserId: user._id, toUserId: otherUser._id })
       }
 
-      // 3. Wait for calleeReady (up to 30s) — callee must signal ICE is ready
+      // 3. Wait for calleeReady (up to 30s) — ONE TIME only
       await new Promise(resolve => {
         const timer = setTimeout(resolve, 30000)
         socket.once('calleeReady', () => { clearTimeout(timer); resolve() })
       })
 
+      // Final guard before sending offer
       if (offerSent.current) return
       offerSent.current = true
       socket.emit('offer', { roomId, offer, fromUserId: user._id, toUserId: otherUser._id })
