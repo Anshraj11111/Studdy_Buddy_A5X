@@ -101,9 +101,16 @@ export default function VideoCall() {
   // ── Get local camera / mic ────────────────────────────────────────────────
   const getLocalStream = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current
-    // audioOnly = voice call, no camera
+    // audioOnly = voice call — explicit constraints for mobile compatibility
     const constraints = audioOnly
-      ? { video: false, audio: true }
+      ? {
+          video: false,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        }
       : { video: true, audio: true }
     const stream = await navigator.mediaDevices.getUserMedia(constraints)
     localStreamRef.current = stream
@@ -111,7 +118,7 @@ export default function VideoCall() {
     return stream
   }, [audioOnly])
 
-  // ── Attach remote stream to <video> element ───────────────────────────────
+  // ── Attach remote stream to <video>/<audio> element ─────────────────────
   const attachRemoteStream = useCallback((stream) => {
     if (!stream || !stream.getTracks().length) return
     const vid = remoteVideoRef.current
@@ -120,10 +127,9 @@ export default function VideoCall() {
     vid.srcObject = stream
     console.log('📺 Remote stream set, tracks:', stream.getTracks().map(t => t.kind + ':' + t.readyState))
 
-    // Play immediately — don't wait for status update
-    // This ensures audio plays even in audioOnly mode where video is hidden
-    vid.play().catch(() => {
-      console.warn('Immediate play failed — will retry on status change')
+    // Play — works for both <video> and <audio> elements
+    vid.play().catch(err => {
+      console.warn('Remote play failed:', err.message)
     })
 
     setStatus('connected')
@@ -676,11 +682,11 @@ export default function VideoCall() {
       )}
       {/* Hidden audio element for voice call — plays remote audio */}
       {audioOnly && (
-        <video
+        <audio
           ref={remoteVideoRef}
           autoPlay
           playsInline
-          style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+          style={{ display: 'none' }}
         />
       )}
 
