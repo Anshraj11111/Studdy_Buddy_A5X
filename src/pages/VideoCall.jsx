@@ -312,6 +312,38 @@ export default function VideoCall() {
   const handleOfferRef = useRef(handleOffer)
   useEffect(() => { handleOfferRef.current = handleOffer }, [handleOffer])
 
+  // ── Cleanup ───────────────────────────────────────────────────────────────
+  const doCleanup = useCallback(() => {
+    console.log('🧹 Cleaning up call state...')
+    
+    origStreamRef.current?.getTracks().forEach(t => t.stop())
+    origStreamRef.current = null
+
+    if (pcRef.current) { pcRef.current.close(); pcRef.current = null }
+
+    localStreamRef.current?.getTracks().forEach(t => t.stop())
+    localStreamRef.current = null
+
+    if (localVideoRef.current)  localVideoRef.current.srcObject  = null
+    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
+
+    pendingCandidates.current = []
+    calleeReadySent.current   = false
+    offerSent.current         = false
+    callEndedSent.current     = false
+    isInitiating.current      = false // Reset initiating flag
+
+    stopCallingTone()
+    stopRingtone()
+
+    setStatus('idle')
+    setScreenSharing(false)
+    setRemoteScreenShare(false)
+    setIncomingCall(false)
+    
+    console.log('✅ Cleanup complete')
+  }, [])
+
   // ── Socket listeners ───────────────────────────────────────────────────────
   useEffect(() => {
     const socket = getSocket()
@@ -542,38 +574,6 @@ export default function VideoCall() {
 
     init()
   }, [otherUser, getLocalStream, isCaller])
-
-  // ── Cleanup ───────────────────────────────────────────────────────────────
-  const doCleanup = useCallback(() => {
-    console.log('🧹 Cleaning up call state...')
-    
-    origStreamRef.current?.getTracks().forEach(t => t.stop())
-    origStreamRef.current = null
-
-    if (pcRef.current) { pcRef.current.close(); pcRef.current = null }
-
-    localStreamRef.current?.getTracks().forEach(t => t.stop())
-    localStreamRef.current = null
-
-    if (localVideoRef.current)  localVideoRef.current.srcObject  = null
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
-
-    pendingCandidates.current = []
-    calleeReadySent.current   = false
-    offerSent.current         = false
-    callEndedSent.current     = false
-    isInitiating.current      = false // Reset initiating flag
-
-    stopCallingTone()
-    stopRingtone()
-
-    setStatus('idle')
-    setScreenSharing(false)
-    setRemoteScreenShare(false)
-    setIncomingCall(false)
-    
-    console.log('✅ Cleanup complete')
-  }, [])
 
   // ── CALLER: start call (BULLETPROOF VERSION v2.0) ────────────────────────
   const startCall = useCallback(async () => {

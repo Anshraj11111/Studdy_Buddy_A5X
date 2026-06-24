@@ -29,6 +29,7 @@ const AIBot = lazy(() => import('./pages/AIBot'))
 const Settings = lazy(() => import('./pages/Settings'))
 const AdminPanel = lazy(() => import('./pages/AdminPanel'))
 const Rewards = lazy(() => import('./pages/Rewards'))
+const GeneralGroup = lazy(() => import('./pages/GeneralGroup'))
 
 // Minimal page-level skeleton shown while a lazy chunk loads
 function PageLoader() {
@@ -63,7 +64,7 @@ function AppShell() {
 
   useEffect(() => {
     if (token && user) {
-      initSocket(token, user._id, user.name || '', user.profileImage || '')
+      initSocket(token, user._id, user.name || '', user.profileImage || '', user.role || '')
       fetchNotifications()
       onNotification((notif) => addNew(notif))
     } else {
@@ -114,6 +115,7 @@ function AppShell() {
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
+          <Route path="/general-group" element={<ProtectedRoute><GeneralGroup /></ProtectedRoute>} />
 
           {/* Admin — standalone, no navbar */}
           <Route path="/admin" element={<AdminPanel />} />

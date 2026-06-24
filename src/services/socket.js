@@ -4,11 +4,11 @@ const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
 
 let socket = null
 
-export const initSocket = (token, userId, userName = '', userImage = '') => {
+export const initSocket = (token, userId, userName = '', userImage = '', userRole = '') => {
   if (socket?.connected) return socket
 
   socket = io(SOCKET_URL, {
-    auth: { token, userId, userName, userImage },
+    auth: { token, userId, userName, userImage, userRole },
     // Try WebSocket first, fall back to polling if WebSocket is blocked by firewall
     transports: ['websocket', 'polling'],
     upgrade: true,

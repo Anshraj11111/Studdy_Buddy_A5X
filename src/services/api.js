@@ -262,6 +262,16 @@ export const adminAPI = {
   deleteUser: (id) => api.delete(`/admin/users/${id}`, { headers: adminHeaders() }),
 };
 
+/* ---------------- GENERAL GROUP ---------------- */
+export const generalGroupAPI = {
+  join:           () => api.post('/general-group/join'),
+  leave:          () => api.post('/general-group/leave'),
+  getStatus:      () => api.get('/general-group/status'),
+  getMessages:    (page = 1) => api.get(`/general-group/messages?page=${page}&limit=60`),
+  getMembers:     () => api.get('/general-group/members'),
+  deleteMessage:  (id) => api.delete(`/general-group/messages/${id}`),
+};
+
 /* ---------------- AI CHAT ---------------- */
 export const aiAPI = {
   chat: (message, history = []) => api.post('/ai/chat', { message, history }),
