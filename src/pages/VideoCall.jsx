@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { roomAPI } from '../services/api'
 import { getSocket } from '../services/socket'
-import { showCallNotification, playNotificationSound, requestNotificationPermission, stopCallingTone, stopRingtone } from '../utils/notifications'
+import { showCallNotification, playNotificationSound, requestNotificationPermission, stopCallingTone, stopRingtone, startCallingTone } from '../utils/notifications'
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, ArrowLeft, Monitor, MonitorOff, Maximize, Minimize } from 'lucide-react'
 import CallEndFeedbackModal from '../components/CallEndFeedbackModal'
 
@@ -324,6 +324,55 @@ export default function VideoCall() {
       playNotificationSound()
     }
 
+    const onCalleeReady = async (data) => {
+      console.log('✅ calleeReady received from', data.fromUserId)
+      
+      // If we're the caller from Chat.jsx, NOW send the offer
+      if (isCaller && !offerSent.current && !isInitiating.current) {
+        console.log('📤 Caller received calleeReady — sending offer now')
+        isInitiating.current = true
+        
+        try {
+          const socket = getSocket()
+          if (!socket || !userRef.current || !otherUserRef.current) {
+            console.error('❌ Missing socket/user/otherUser')
+            isInitiating.current = false
+            return
+          }
+          
+          // Build PC and send offer
+          const stream = await getLocalStream()
+          const pc = buildPC(otherUserRef.current._id || otherUserRef.current)
+          pcRef.current = pc
+          
+          stream.getTracks().forEach(t => pc.addTrack(t, stream))
+          
+          const offer = await pc.createOffer()
+          await pc.setLocalDescription(offer)
+          
+          offerSent.current = true
+          socket.emit('offer', { 
+            roomId: roomIdRef.current, 
+            offer, 
+            fromUserId: userRef.current._id, 
+            toUserId: otherUserRef.current._id || otherUserRef.current
+          })
+          
+          console.log('📤 Offer sent to', otherUserRef.current._id || otherUserRef.current)
+          stopCallingTone()
+          setStatus('ringing')
+          
+        } catch (err) {
+          console.error('❌ Error sending offer after calleeReady:', err)
+          offerSent.current = false
+          doCleanup()
+          alert('Failed to start call: ' + err.message)
+        } finally {
+          isInitiating.current = false
+        }
+      }
+    }
+
     const onOffer = (data) => {
       console.log('📥 offer received, otherUser ready:', !!otherUserRef.current)
       if (!otherUserRef.current) {
@@ -363,6 +412,7 @@ export default function VideoCall() {
 
     const attach = () => {
       socket.off('incomingCall',       onIncomingCall)
+      socket.off('calleeReady',        onCalleeReady)
       socket.off('offer',              onOffer)
       socket.off('answer',             onAnswer)
       socket.off('iceCandidate',       onIceCandidate)
@@ -371,6 +421,7 @@ export default function VideoCall() {
       socket.off('screenShareStopped', onScreenShareOff)
 
       socket.on('incomingCall',        onIncomingCall)
+      socket.on('calleeReady',         onCalleeReady)
       socket.on('offer',               onOffer)
       socket.on('answer',              onAnswer)
       socket.on('iceCandidate',        onIceCandidate)
@@ -385,6 +436,7 @@ export default function VideoCall() {
     return () => {
       socket.off('connect', attach)
       socket.off('incomingCall',       onIncomingCall)
+      socket.off('calleeReady',        onCalleeReady)
       socket.off('offer',              onOffer)
       socket.off('answer',             onAnswer)
       socket.off('iceCandidate',       onIceCandidate)
@@ -392,7 +444,7 @@ export default function VideoCall() {
       socket.off('screenShareStarted', onScreenShareOn)
       socket.off('screenShareStopped', onScreenShareOff)
     }
-  }, [flushCandidates]) // eslint-disable-line
+  }, [flushCandidates, buildPC, getLocalStream, doCleanup, isCaller]) // eslint-disable-line
 
   // ── Join room socket ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -466,16 +518,12 @@ export default function VideoCall() {
             console.log('📞 calleeReady emitted (ICE ready)')
             setStatus('ringing')
           }
-        } else if (isCaller && !isCalleeRef.current && !offerSent.current) {
-          // Caller navigated here from Chat — auto start call immediately (ONLY ONCE)
-          setStatus('idle')
-          console.log('🚀 Auto-starting call (caller from Chat.jsx)')
-          // Small delay to ensure everything is ready
-          setTimeout(() => {
-            if (!offerSent.current && !isInitiating.current) {
-              startCallRef.current?.()
-            }
-          }, 500)
+        } else if (isCaller && !isCalleeRef.current) {
+          // Caller navigated here from Chat — Chat.jsx already sent initiateCall
+          // Just set status to 'calling' and wait for calleeReady, then send offer
+          setStatus('calling')
+          console.log('� Caller from Chat.jsx — waiting for calleeReady')
+          startCallingTone()
         } else if (!isCalleeRef.current) {
           setStatus('idle')
         }
