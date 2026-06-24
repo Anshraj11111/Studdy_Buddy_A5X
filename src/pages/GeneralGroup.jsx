@@ -239,7 +239,7 @@ function MessageBubble({ msg, isOwn, isMentor, onDelete }) {
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 3 }}>
             <span style={{ fontSize: 10, color: isOwn ? 'rgba(255,255,255,0.5)' : 'rgba(148,163,184,0.4)' }}>
-              {fmt(msg.createdAt)}
+              {msg.temp ? '🕐' : fmt(msg.createdAt)}
             </span>
           </div>
           <AnimatePresence>
@@ -314,7 +314,30 @@ export default function GeneralGroup() {
     if (!socket || !isMember) return
     socket.emit('joinGeneralGroup')
 
-    const onMsg        = (msg) => setMessages(p => [...p, msg])
+    const onMsg = (msg) => {
+      setMessages(p => {
+        // avoid duplicate if already confirmed
+        if (p.find(m => m._id === msg._id)) return p
+        return [...p, msg]
+      })
+    }
+
+    // Replace temp message with confirmed DB version
+    const onConfirmed = (confirmed) => {
+      setMessages(p => p.map(m =>
+        m._id === confirmed.tempId
+          ? { ...confirmed, temp: false }
+          : m
+      ))
+    }
+
+    // Remove failed temp message
+    const onFailed = ({ tempId }) => {
+      setMessages(p => p.filter(m => m._id !== tempId))
+      setError('Message failed to send. Try again.')
+      setTimeout(() => setError(''), 3000)
+    }
+
     const onCount      = ({ count }) => setMemberCount(count)
     const onTyping     = ({ userId: uid, userName }) =>
       setTypingUsers(p => p.find(u => u.userId === uid) ? p : [...p, { userId: uid, userName }])
@@ -322,6 +345,8 @@ export default function GeneralGroup() {
     const onErr        = ({ message: m }) => { setError(m); setTimeout(() => setError(''), 3500) }
 
     socket.on('groupMessage',           onMsg)
+    socket.on('groupMessageConfirmed',  onConfirmed)
+    socket.on('groupMessageFailed',     onFailed)
     socket.on('groupMemberCount',       onCount)
     socket.on('groupUserTyping',        onTyping)
     socket.on('groupUserStoppedTyping', onStopTyping)
@@ -330,6 +355,8 @@ export default function GeneralGroup() {
     return () => {
       socket.emit('leaveGeneralGroup')
       socket.off('groupMessage',           onMsg)
+      socket.off('groupMessageConfirmed',  onConfirmed)
+      socket.off('groupMessageFailed',     onFailed)
       socket.off('groupMemberCount',       onCount)
       socket.off('groupUserTyping',        onTyping)
       socket.off('groupUserStoppedTyping', onStopTyping)
@@ -359,12 +386,39 @@ export default function GeneralGroup() {
     if (!input.trim() || sending) return
     const socket = getSocket()
     if (!socket) return
-    socket.emit('sendGroupMessage', { content: input.trim() })
-    setInput(''); setSending(false)
+
+    const trimmed = input.trim()
+    const tempId  = `temp_${Date.now()}_${Math.random()}`
+
+    // ── Optimistic: show immediately in UI ───────────────────────────────────
+    const optimisticMsg = {
+      _id:       tempId,
+      content:   trimmed,
+      createdAt: new Date().toISOString(),
+      temp:      true,
+      sender: {
+        _id:          user?._id,
+        name:         user?.name,
+        profileImage: user?.profileImage,
+        role:         user?.role,
+      },
+    }
+    setMessages(p => [...p, optimisticMsg])
+
+    // ── Send to server ───────────────────────────────────────────────────────
+    socket.emit('sendGroupMessage', { content: trimmed })
+
+    setInput('')
+    setShowEmoji(false)
     isTyping.current = false
     socket.emit('groupStopTyping')
-    inputRef.current?.focus()
-  }, [input, sending])
+
+    // Auto-resize textarea back
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+      inputRef.current.focus()
+    }
+  }, [input, sending, user])
 
   const handleInputChange = (e) => {
     setInput(e.target.value)
