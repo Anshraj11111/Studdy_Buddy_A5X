@@ -66,6 +66,7 @@ export default function VideoCall() {
   const offerSent       = useRef(false)
   const callEndedSent   = useRef(false)
   const startCallRef    = useRef(null) // ref to startCall for use in init effect
+  const isInitiating    = useRef(false) // NEW: Prevent concurrent startCall calls
 
   // ── Stable mirrors of state (safe to read inside socket closures) ─────────
   const roomIdRef    = useRef(roomId)
@@ -444,13 +445,16 @@ export default function VideoCall() {
             console.log('📞 calleeReady emitted (ICE ready)')
             setStatus('ringing')
           }
-        } else if (isCaller && !isCalleeRef.current) {
-          // Caller navigated here from Chat — auto start call immediately
+        } else if (isCaller && !isCalleeRef.current && !offerSent.current) {
+          // Caller navigated here from Chat — auto start call immediately (ONLY ONCE)
           setStatus('idle')
-          // Small delay to ensure socket is ready — but only call ONCE
-          if (!offerSent.current) {
-            setTimeout(() => startCallRef.current?.(), 300)
-          }
+          console.log('🚀 Auto-starting call (caller from Chat.jsx)')
+          // Small delay to ensure everything is ready
+          setTimeout(() => {
+            if (!offerSent.current && !isInitiating.current) {
+              startCallRef.current?.()
+            }
+          }, 500)
         } else if (!isCalleeRef.current) {
           setStatus('idle')
         }
@@ -472,6 +476,8 @@ export default function VideoCall() {
 
   // ── Cleanup ───────────────────────────────────────────────────────────────
   const doCleanup = useCallback(() => {
+    console.log('🧹 Cleaning up call state...')
+    
     origStreamRef.current?.getTracks().forEach(t => t.stop())
     origStreamRef.current = null
 
@@ -487,6 +493,7 @@ export default function VideoCall() {
     calleeReadySent.current   = false
     offerSent.current         = false
     callEndedSent.current     = false
+    isInitiating.current      = false // Reset initiating flag
 
     stopCallingTone()
     stopRingtone()
@@ -495,31 +502,41 @@ export default function VideoCall() {
     setScreenSharing(false)
     setRemoteScreenShare(false)
     setIncomingCall(false)
+    
+    console.log('✅ Cleanup complete')
   }, [])
 
   // ── CALLER: start call ────────────────────────────────────────────────────
   const startCall = useCallback(async () => {
+    // STRONGEST GUARD: Check if already initiating
+    if (isInitiating.current) {
+      console.log('⚠️ startCall BLOCKED: Already initiating')
+      return
+    }
+    
     // Strong guard at the very start
     if (pcRef.current || offerSent.current) {
-      console.log('⚠️ startCall blocked: already in progress')
+      console.log('⚠️ startCall BLOCKED: PC exists or offer sent')
       return
     }
     
     const socket = getSocket()
     if (!socket || !otherUser || !user) {
-      console.log('⚠️ startCall blocked: missing dependencies')
+      console.log('⚠️ startCall BLOCKED: Missing socket/otherUser/user')
       return
     }
 
-    // Mark offer as "in progress" immediately to prevent concurrent calls
-    offerSent.current = true
+    // LOCK: Mark as initiating FIRST to prevent any concurrent calls
+    isInitiating.current = true
+    console.log('🔒 Call initiation LOCKED')
 
     try {
       setStatus('calling')
-      console.log('📞 Starting call to', otherUser._id)
+      console.log('📞 Starting call to', otherUser.name, otherUser._id)
 
       // 1. Wait for ICE servers (max 5s)
       if (!iceReadyRef.current) {
+        console.log('⏳ Waiting for ICE servers...')
         await new Promise(resolve => {
           const check = setInterval(() => {
             if (iceReadyRef.current) { clearInterval(check); resolve() }
@@ -527,54 +544,103 @@ export default function VideoCall() {
           setTimeout(() => { clearInterval(check); resolve() }, 5000)
         })
       }
-      console.log('✅ Caller ICE ready:', iceConfigRef.current.iceTransportPolicy, iceConfigRef.current.iceServers.length, 'servers')
+      console.log('✅ ICE ready:', iceConfigRef.current.iceServers.length, 'servers')
 
-      // Check again - another call might have started during ICE wait
+      // Check again - another process might have created PC
       if (pcRef.current) {
-        console.log('⚠️ PC already exists, aborting')
+        console.log('⚠️ PC already exists after ICE wait, aborting')
+        isInitiating.current = false
         return
       }
 
+      // 2. Get local media stream
+      console.log('🎤 Getting local stream...')
       const stream = await getLocalStream()
-      const pc     = buildPC(otherUser._id)
-      pcRef.current = pc
-      stream.getTracks().forEach(t => pc.addTrack(t, stream))
+      console.log('✅ Got local stream:', stream.getTracks().map(t => t.kind))
 
+      // 3. Build PeerConnection
+      console.log('🔗 Building PeerConnection...')
+      const pc = buildPC(otherUser._id)
+      pcRef.current = pc
+      
+      // 4. Add tracks
+      stream.getTracks().forEach(t => {
+        console.log('➕ Adding track:', t.kind, t.enabled ? 'enabled' : 'disabled')
+        pc.addTrack(t, stream)
+      })
+
+      // 5. Create offer
+      console.log('📝 Creating offer...')
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
+      console.log('✅ Local description set')
 
-      // 2. Tell callee there's a call coming (only if NOT already sent from Chat.jsx)
+      // 6. Send initiateCall (only if NOT from Chat.jsx)
       if (!isCaller) {
-        console.log('📞 Sending initiateCall')
-        socket.emit('initiateCall', { roomId, fromUserId: user._id, toUserId: otherUser._id })
+        console.log('📞 Emitting initiateCall...')
+        socket.emit('initiateCall', { 
+          roomId, 
+          fromUserId: user._id, 
+          toUserId: otherUser._id,
+          callType: audioOnly ? 'audio' : 'video'
+        })
+      } else {
+        console.log('📞 Skipping initiateCall (already sent from Chat)')
       }
 
-      // 3. Wait for calleeReady (up to 30s)
-      console.log('⏳ Waiting for calleeReady...')
-      await new Promise(resolve => {
+      // 7. Wait for calleeReady
+      console.log('⏳ Waiting for calleeReady (30s timeout)...')
+      const calleeReady = await new Promise(resolve => {
         const timer = setTimeout(() => {
-          console.log('⏰ calleeReady timeout after 30s')
-          resolve()
+          console.log('⏰ calleeReady TIMEOUT after 30s')
+          resolve(false)
         }, 30000)
-        socket.once('calleeReady', () => { 
-          console.log('✅ calleeReady received')
+        socket.once('calleeReady', (data) => { 
+          console.log('✅ calleeReady received from', data.fromUserId)
           clearTimeout(timer)
-          resolve()
+          resolve(true)
         })
       })
 
-      // Send offer
+      if (!calleeReady) {
+        console.log('❌ Callee did not respond, aborting')
+        doCleanup()
+        isInitiating.current = false
+        alert('User did not respond to the call.')
+        return
+      }
+
+      // 8. Send offer (FINAL GUARD)
+      if (offerSent.current) {
+        console.log('⚠️ Offer already sent, skipping')
+        isInitiating.current = false
+        return
+      }
+
+      offerSent.current = true
       socket.emit('offer', { roomId, offer, fromUserId: user._id, toUserId: otherUser._id })
-      console.log('📤 Offer sent to', otherUser._id)
+      console.log('📤 Offer sent successfully to', otherUser._id)
+      
       stopCallingTone()
       setStatus('ringing')
+      
+      // UNLOCK after successful offer send
+      isInitiating.current = false
+      console.log('🔓 Call initiation UNLOCKED')
+      
     } catch (err) {
-      console.error('❌ startCall error:', err)
-      offerSent.current = false // Reset on error so user can retry
+      console.error('❌ startCall ERROR:', err.name, err.message)
+      isInitiating.current = false // UNLOCK on error
+      offerSent.current = false // Reset so user can retry
       doCleanup()
-      alert('Failed to access camera/microphone.')
+      
+      if (err.name === 'NotAllowedError') {
+        alert('Camera/microphone permission denied. Please allow access and try again.')
+      } else {
+        alert('Failed to start call: ' + err.message)
+      }
     }
-  }, [otherUser, user, roomId, buildPC, getLocalStream, doCleanup, isCaller])
+  }, [otherUser, user, roomId, buildPC, getLocalStream, doCleanup, isCaller, audioOnly])
 
   // Keep startCallRef updated so init effect can call it
   useEffect(() => { startCallRef.current = startCall }, [startCall])
