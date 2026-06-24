@@ -35,9 +35,13 @@ export default function IncomingCallModal() {
         const callerName = data.caller?.name || data.fromUser?.name || 'Someone'
         showCallNotification(callerName)
 
-        // Vibrate on mobile
-        if (navigator.vibrate) {
-          navigator.vibrate([300, 200, 300, 200, 300])
+        // Vibrate on mobile (only if supported and allowed)
+        try {
+          if (navigator.vibrate && typeof navigator.vibrate === 'function') {
+            navigator.vibrate([300, 200, 300, 200, 300])
+          }
+        } catch (err) {
+          // Vibration blocked by permissions policy or not supported - safely ignore
         }
 
         // Auto reject after 30s
