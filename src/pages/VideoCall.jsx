@@ -102,55 +102,21 @@ export default function VideoCall() {
   // ── Get local camera / mic ────────────────────────────────────────────────
   const getLocalStream = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current
-    
-    // Try advanced constraints first, fallback to basic if they fail
-    const advancedAudioConstraints = {
-      echoCancellation: { ideal: true },
-      noiseSuppression: { ideal: true },
-      autoGainControl: { ideal: true },
-      sampleRate: { ideal: 48000 },
-      channelCount: { ideal: 1 },
-    }
-    
-    const basicAudioConstraints = {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-    }
-    
+    // audioOnly = voice call — explicit constraints for mobile compatibility
     const constraints = audioOnly
       ? {
           video: false,
-          audio: advancedAudioConstraints
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
         }
-      : { 
-          video: { 
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: { ideal: 30 }
-          },
-          audio: advancedAudioConstraints
-        }
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      console.log('✅ Got stream with advanced audio constraints')
-      localStreamRef.current = stream
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream
-      return stream
-    } catch (err) {
-      console.warn('⚠️ Advanced constraints failed, trying basic:', err.message)
-      // Fallback to basic constraints
-      const basicConstraints = audioOnly
-        ? { video: false, audio: basicAudioConstraints }
-        : { video: true, audio: basicAudioConstraints }
-      
-      const stream = await navigator.mediaDevices.getUserMedia(basicConstraints)
-      console.log('✅ Got stream with basic audio constraints')
-      localStreamRef.current = stream
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream
-      return stream
-    }
+      : { video: true, audio: true }
+    const stream = await navigator.mediaDevices.getUserMedia(constraints)
+    localStreamRef.current = stream
+    if (localVideoRef.current) localVideoRef.current.srcObject = stream
+    return stream
   }, [audioOnly])
 
   // ── Attach remote stream to <video>/<audio> element ─────────────────────
@@ -533,12 +499,24 @@ export default function VideoCall() {
 
   // ── CALLER: start call ────────────────────────────────────────────────────
   const startCall = useCallback(async () => {
-    if (pcRef.current || offerSent.current) return
+    // Strong guard at the very start
+    if (pcRef.current || offerSent.current) {
+      console.log('⚠️ startCall blocked: already in progress')
+      return
+    }
+    
     const socket = getSocket()
-    if (!socket || !otherUser || !user) return
+    if (!socket || !otherUser || !user) {
+      console.log('⚠️ startCall blocked: missing dependencies')
+      return
+    }
+
+    // Mark offer as "in progress" immediately to prevent concurrent calls
+    offerSent.current = true
 
     try {
       setStatus('calling')
+      console.log('📞 Starting call to', otherUser._id)
 
       // 1. Wait for ICE servers (max 5s)
       if (!iceReadyRef.current) {
@@ -551,8 +529,11 @@ export default function VideoCall() {
       }
       console.log('✅ Caller ICE ready:', iceConfigRef.current.iceTransportPolicy, iceConfigRef.current.iceServers.length, 'servers')
 
-      // Guard again after await — init effect may have called us again
-      if (pcRef.current || offerSent.current) return
+      // Check again - another call might have started during ICE wait
+      if (pcRef.current) {
+        console.log('⚠️ PC already exists, aborting')
+        return
+      }
 
       const stream = await getLocalStream()
       const pc     = buildPC(otherUser._id)
@@ -564,24 +545,32 @@ export default function VideoCall() {
 
       // 2. Tell callee there's a call coming (only if NOT already sent from Chat.jsx)
       if (!isCaller) {
+        console.log('📞 Sending initiateCall')
         socket.emit('initiateCall', { roomId, fromUserId: user._id, toUserId: otherUser._id })
       }
 
-      // 3. Wait for calleeReady (up to 30s) — ONE TIME only
+      // 3. Wait for calleeReady (up to 30s)
+      console.log('⏳ Waiting for calleeReady...')
       await new Promise(resolve => {
-        const timer = setTimeout(resolve, 30000)
-        socket.once('calleeReady', () => { clearTimeout(timer); resolve() })
+        const timer = setTimeout(() => {
+          console.log('⏰ calleeReady timeout after 30s')
+          resolve()
+        }, 30000)
+        socket.once('calleeReady', () => { 
+          console.log('✅ calleeReady received')
+          clearTimeout(timer)
+          resolve()
+        })
       })
 
-      // Final guard before sending offer
-      if (offerSent.current) return
-      offerSent.current = true
+      // Send offer
       socket.emit('offer', { roomId, offer, fromUserId: user._id, toUserId: otherUser._id })
       console.log('📤 Offer sent to', otherUser._id)
       stopCallingTone()
       setStatus('ringing')
     } catch (err) {
       console.error('❌ startCall error:', err)
+      offerSent.current = false // Reset on error so user can retry
       doCleanup()
       alert('Failed to access camera/microphone.')
     }
