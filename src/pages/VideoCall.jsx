@@ -506,7 +506,7 @@ export default function VideoCall() {
     console.log('✅ Cleanup complete')
   }, [])
 
-  // ── CALLER: start call ────────────────────────────────────────────────────
+  // ── CALLER: start call (BULLETPROOF VERSION v2.0) ────────────────────────
   const startCall = useCallback(async () => {
     // STRONGEST GUARD: Check if already initiating
     if (isInitiating.current) {
