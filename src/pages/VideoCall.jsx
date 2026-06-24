@@ -102,20 +102,26 @@ export default function VideoCall() {
   // ── Get local camera / mic ────────────────────────────────────────────────
   const getLocalStream = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current
-    // audioOnly = voice call — explicit constraints for mobile compatibility
+    
+    // Try advanced constraints first, fallback to basic if they fail
+    const advancedAudioConstraints = {
+      echoCancellation: { ideal: true },
+      noiseSuppression: { ideal: true },
+      autoGainControl: { ideal: true },
+      sampleRate: { ideal: 48000 },
+      channelCount: { ideal: 1 },
+    }
+    
+    const basicAudioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    }
+    
     const constraints = audioOnly
       ? {
           video: false,
-          audio: {
-            echoCancellation: { ideal: true },
-            noiseSuppression: { ideal: true },
-            autoGainControl: { ideal: true },
-            // Additional professional-grade audio settings
-            sampleRate: 48000,
-            channelCount: 1, // Mono for voice calls (reduces bandwidth)
-            latency: 0.01,   // Low latency
-            voiceIsolation: { ideal: true }, // Modern browsers support this
-          }
+          audio: advancedAudioConstraints
         }
       : { 
           video: { 
@@ -123,19 +129,28 @@ export default function VideoCall() {
             height: { ideal: 720 },
             frameRate: { ideal: 30 }
           },
-          audio: {
-            echoCancellation: { ideal: true },
-            noiseSuppression: { ideal: true },
-            autoGainControl: { ideal: true },
-            sampleRate: 48000,
-            latency: 0.01,
-            voiceIsolation: { ideal: true },
-          }
+          audio: advancedAudioConstraints
         }
-    const stream = await navigator.mediaDevices.getUserMedia(constraints)
-    localStreamRef.current = stream
-    if (localVideoRef.current) localVideoRef.current.srcObject = stream
-    return stream
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      console.log('✅ Got stream with advanced audio constraints')
+      localStreamRef.current = stream
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream
+      return stream
+    } catch (err) {
+      console.warn('⚠️ Advanced constraints failed, trying basic:', err.message)
+      // Fallback to basic constraints
+      const basicConstraints = audioOnly
+        ? { video: false, audio: basicAudioConstraints }
+        : { video: true, audio: basicAudioConstraints }
+      
+      const stream = await navigator.mediaDevices.getUserMedia(basicConstraints)
+      console.log('✅ Got stream with basic audio constraints')
+      localStreamRef.current = stream
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream
+      return stream
+    }
   }, [audioOnly])
 
   // ── Attach remote stream to <video>/<audio> element ─────────────────────
