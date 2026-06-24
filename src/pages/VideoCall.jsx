@@ -199,21 +199,24 @@ export default function VideoCall() {
     }
 
     pc.onconnectionstatechange = () => {
-      console.log('🔌 PC state:', pc.connectionState)
+      console.log('🔌 PC connection state:', pc.connectionState)
+      
       if (pc.connectionState === 'connected') {
-        // Always set connected — both video and audio calls
+        console.log('✅ PEER CONNECTION ESTABLISHED!')
         setStatus('connected')
       }
+      
       if (pc.connectionState === 'failed') {
-        console.log('🔄 PC failed — attempting ICE restart')
-        try { pc.restartIce() } catch (e) { console.warn('restartIce failed:', e.message) }
+        console.log('❌ PC CONNECTION FAILED — restarting ICE')
+        try { pc.restartIce() } catch (e) { console.warn('ICE restart failed:', e.message) }
       }
+      
       if (pc.connectionState === 'disconnected') {
-        // Give it 3 seconds to recover before restarting
+        console.log('⚠️ PC DISCONNECTED — giving 3s to recover')
         setTimeout(() => {
           if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-            console.log('🔄 PC still disconnected — restarting ICE')
-            try { pc.restartIce() } catch (e) { console.warn('restartIce failed:', e.message) }
+            console.log('🔄 Still disconnected — restarting ICE')
+            try { pc.restartIce() } catch (e) { console.warn('ICE restart failed:', e.message) }
           }
         }, 3000)
       }
@@ -221,13 +224,31 @@ export default function VideoCall() {
 
     pc.oniceconnectionstatechange = () => {
       console.log('🧊 ICE state:', pc.iceConnectionState)
-      if (pc.iceConnectionState === 'failed') {
-        console.log('🔄 ICE failed — restarting')
-        try { pc.restartIce() } catch (e) { console.warn('restartIce failed:', e.message) }
-      }
+      
       if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-        console.log('✅ ICE connected!')
-        setStatus('connecting') // will become 'connected' when ontrack fires
+        console.log('✅ ICE CONNECTED! Audio should work now.')
+        setStatus('connected')
+      }
+      
+      if (pc.iceConnectionState === 'failed') {
+        console.log('🔄 ICE FAILED — restarting ICE immediately')
+        try { 
+          pc.restartIce()
+          console.log('✅ ICE restart triggered')
+        } catch (e) { 
+          console.warn('❌ ICE restart failed:', e.message) 
+        }
+      }
+      
+      if (pc.iceConnectionState === 'disconnected') {
+        console.log('⚠️ ICE DISCONNECTED — waiting 2s before restart')
+        // Give it a short time to reconnect automatically
+        setTimeout(() => {
+          if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+            console.log('🔄 Still disconnected after 2s — restarting ICE')
+            try { pc.restartIce() } catch (e) { console.warn('ICE restart failed:', e.message) }
+          }
+        }, 2000)
       }
     }
 
