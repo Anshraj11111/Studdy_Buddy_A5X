@@ -128,12 +128,18 @@ export default function VideoCall() {
     vid.srcObject = stream
     console.log('📺 Remote stream set, tracks:', stream.getTracks().map(t => t.kind + ':' + t.readyState))
 
-    // Play — works for both <video> and <audio> elements
-    vid.play().catch(err => {
-      console.warn('Remote play failed:', err.message)
-    })
-
+    // Set connected FIRST so video becomes visible (display:block), then play
     setStatus('connected')
+
+    // Play after a tick so the DOM has updated (video becomes visible)
+    setTimeout(() => {
+      if (vid.srcObject) {
+        vid.play().catch(err => {
+          console.warn('Remote play failed:', err.message)
+          setAutoplayBlocked(true)
+        })
+      }
+    }, 100)
   }, [])
 
   // ── Play remote video/audio once connected ────────────────────────────────
@@ -695,7 +701,7 @@ export default function VideoCall() {
             objectFit: 'cover',
             background: '#0a0a0f',
             zIndex: 1,
-            display: isConnected ? 'block' : 'none',
+            visibility: isConnected ? 'visible' : 'hidden',
           }}
         />
       )}
