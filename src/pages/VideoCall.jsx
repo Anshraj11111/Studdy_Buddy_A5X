@@ -107,12 +107,31 @@ export default function VideoCall() {
       ? {
           video: false,
           audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
+            echoCancellation: { ideal: true },
+            noiseSuppression: { ideal: true },
+            autoGainControl: { ideal: true },
+            // Additional professional-grade audio settings
+            sampleRate: 48000,
+            channelCount: 1, // Mono for voice calls (reduces bandwidth)
+            latency: 0.01,   // Low latency
+            voiceIsolation: { ideal: true }, // Modern browsers support this
           }
         }
-      : { video: true, audio: true }
+      : { 
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
+          },
+          audio: {
+            echoCancellation: { ideal: true },
+            noiseSuppression: { ideal: true },
+            autoGainControl: { ideal: true },
+            sampleRate: 48000,
+            latency: 0.01,
+            voiceIsolation: { ideal: true },
+          }
+        }
     const stream = await navigator.mediaDevices.getUserMedia(constraints)
     localStreamRef.current = stream
     if (localVideoRef.current) localVideoRef.current.srcObject = stream
@@ -127,6 +146,15 @@ export default function VideoCall() {
 
     vid.srcObject = stream
     console.log('📺 Remote stream set, tracks:', stream.getTracks().map(t => t.kind + ':' + t.readyState))
+    
+    // Debug: Log audio track details
+    const audioTracks = stream.getAudioTracks()
+    console.log('🔊 Audio tracks:', audioTracks.length, audioTracks.map(t => ({
+      id: t.id,
+      enabled: t.enabled,
+      muted: t.muted,
+      readyState: t.readyState
+    })))
 
     // Set connected FIRST so video becomes visible (display:block), then play
     setStatus('connected')
