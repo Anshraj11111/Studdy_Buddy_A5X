@@ -115,11 +115,42 @@ export default function VideoCall() {
             autoGainControl: true,
           }
         }
-      : { video: true, audio: true }
-    const stream = await navigator.mediaDevices.getUserMedia(constraints)
-    localStreamRef.current = stream
-    if (localVideoRef.current) localVideoRef.current.srcObject = stream
-    return stream
+      : {
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user',
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+          }
+        }
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+      localStreamRef.current = stream
+      if (localVideoRef.current) localVideoRef.current.srcObject = stream
+      return stream
+    } catch (err) {
+      console.error('❌ getUserMedia error:', err.name, err.message)
+      
+      // Fallback to basic constraints if ideal fails
+      if (!audioOnly && err.name === 'OverconstrainedError') {
+        console.log('⚠️ Trying fallback constraints...')
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+          localStreamRef.current = fallbackStream
+          if (localVideoRef.current) localVideoRef.current.srcObject = fallbackStream
+          return fallbackStream
+        } catch (fallbackErr) {
+          console.error('❌ Fallback also failed:', fallbackErr.message)
+          throw fallbackErr
+        }
+      }
+      
+      throw err
+    }
   }, [audioOnly])
 
   // ── Attach remote stream to <video>/<audio> element ─────────────────────
