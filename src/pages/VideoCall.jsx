@@ -105,52 +105,43 @@ export default function VideoCall() {
   // ── Get local camera / mic ────────────────────────────────────────────────
   const getLocalStream = useCallback(async () => {
     if (localStreamRef.current) return localStreamRef.current
-    // audioOnly = voice call — explicit constraints for mobile compatibility
-    const constraints = audioOnly
-      ? {
-          video: false,
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          }
-        }
-      : {
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: 'user',
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-          }
-        }
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
+
+    if (audioOnly) {
+      // Voice call
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: false,
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      })
       localStreamRef.current = stream
       if (localVideoRef.current) localVideoRef.current.srcObject = stream
       return stream
-    } catch (err) {
-      console.error('❌ getUserMedia error:', err.name, err.message)
-      
-      // Fallback to basic constraints if ideal fails
-      if (!audioOnly && err.name === 'OverconstrainedError') {
-        console.log('⚠️ Trying fallback constraints...')
-        try {
-          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-          localStreamRef.current = fallbackStream
-          if (localVideoRef.current) localVideoRef.current.srcObject = fallbackStream
-          return fallbackStream
-        } catch (fallbackErr) {
-          console.error('❌ Fallback also failed:', fallbackErr.message)
-          throw fallbackErr
-        }
-      }
-      
-      throw err
     }
+
+    // Video call — try progressively simpler constraints until one works
+    const attempts = [
+      { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true },
+      { video: { width: { ideal: 640 },  height: { ideal: 480 } }, audio: true },
+      { video: true, audio: true },
+      { video: true, audio: false },  // camera only, no mic — last resort
+    ]
+
+    let lastErr
+    for (const constraints of attempts) {
+      try {
+        console.log('🎥 Trying constraints:', JSON.stringify(constraints))
+        const stream = await navigator.mediaDevices.getUserMedia(constraints)
+        localStreamRef.current = stream
+        if (localVideoRef.current) localVideoRef.current.srcObject = stream
+        console.log('✅ Got stream with constraints:', JSON.stringify(constraints))
+        return stream
+      } catch (err) {
+        console.warn('⚠️ getUserMedia attempt failed:', err.name, err.message)
+        lastErr = err
+        // NotAllowedError = user denied permission, stop trying
+        if (err.name === 'NotAllowedError') throw err
+      }
+    }
+    throw lastErr
   }, [audioOnly])
 
   // ── Attach remote stream to <video>/<audio> element ─────────────────────
@@ -315,12 +306,22 @@ export default function VideoCall() {
         })
       }
 
-      const stream   = await getLocalStream()
+      // Get stream — if camera fails, still proceed (audio-only fallback)
+      let stream = null
+      try {
+        stream = await getLocalStream()
+      } catch (camErr) {
+        console.warn('⚠️ handleOffer: camera failed, proceeding without local stream:', camErr.message)
+      }
+
       const toUserId = data.fromUserId
       const pc       = buildPC(toUserId)
       pcRef.current  = pc
 
-      stream.getTracks().forEach(t => pc.addTrack(t, stream))
+      // Add tracks only if we have a stream
+      if (stream) {
+        stream.getTracks().forEach(t => pc.addTrack(t, stream))
+      }
 
       await pc.setRemoteDescription(new RTCSessionDescription(data.offer))
       await flushCandidates(pc)
@@ -563,8 +564,13 @@ export default function VideoCall() {
 
     const init = async () => {
       try {
-        // 1. Get camera/mic first
-        await getLocalStream()
+        // 1. Get camera/mic — don't let failure block signaling
+        try {
+          await getLocalStream()
+        } catch (camErr) {
+          console.warn('⚠️ Camera/mic failed, continuing without it:', camErr.message)
+          // Don't return — still proceed so calleeReady gets emitted
+        }
 
         // 2. Wait for ICE servers
         await waitForIce()
@@ -584,10 +590,8 @@ export default function VideoCall() {
             setStatus('ringing')
           }
         } else if (isCaller && !isCalleeRef.current) {
-          // Caller navigated here from Chat — Chat.jsx already sent initiateCall
-          // Just set status to 'calling' and wait for calleeReady, then send offer
           setStatus('calling')
-          console.log('� Caller from Chat.jsx — waiting for calleeReady')
+          console.log('📞 Caller from Chat.jsx — waiting for calleeReady')
           startCallingTone()
         } else if (!isCalleeRef.current) {
           setStatus('idle')
