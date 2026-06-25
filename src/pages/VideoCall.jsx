@@ -228,6 +228,28 @@ export default function VideoCall() {
       if (pc.connectionState === 'connected') {
         console.log('✅ PEER CONNECTION ESTABLISHED!')
         setStatus('connected')
+
+        // If we had no local stream at offer time, try to add it now via renegotiation
+        if (!localStreamRef.current) {
+          console.log('🔄 Trying to add local stream post-connect...')
+          navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+              localStreamRef.current = stream
+              if (localVideoRef.current) localVideoRef.current.srcObject = stream
+
+              const senders = pc.getSenders()
+              stream.getTracks().forEach(track => {
+                const existingSender = senders.find(s => s.track?.kind === track.kind)
+                if (existingSender) {
+                  existingSender.replaceTrack(track).catch(e => console.warn('replaceTrack failed:', e.message))
+                } else {
+                  pc.addTrack(track, stream)
+                }
+              })
+              console.log('✅ Local stream added post-connect')
+            })
+            .catch(e => console.warn('⚠️ Post-connect stream failed:', e.message))
+        }
       }
       
       if (pc.connectionState === 'failed') {
