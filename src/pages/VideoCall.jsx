@@ -73,12 +73,14 @@ export default function VideoCall() {
   const userRef      = useRef(user)
   const otherUserRef = useRef(null)
   const isCalleeRef  = useRef(isCallee)
+  const isCallerRef  = useRef(isCaller)
   const iceConfigRef = useRef(FALLBACK_ICE)
 
   useEffect(() => { roomIdRef.current   = roomId  }, [roomId])
   useEffect(() => { userRef.current     = user    }, [user])
   useEffect(() => { otherUserRef.current = otherUser }, [otherUser])
   useEffect(() => { isCalleeRef.current = isCallee }, [isCallee])
+  useEffect(() => { isCallerRef.current = isCaller }, [isCaller])
 
   // ── Fetch fresh ICE servers from backend — wait up to 3s ────────────────
   const iceReadyRef = useRef(false)
@@ -360,7 +362,7 @@ export default function VideoCall() {
       console.log('✅ calleeReady received from', data.fromUserId)
       
       // If we're the caller from Chat.jsx, NOW send the offer
-      if (isCaller && !offerSent.current && !isInitiating.current) {
+      if (isCallerRef.current && !offerSent.current && !isInitiating.current) {
         console.log('📤 Caller received calleeReady — sending offer now')
         isInitiating.current = true
         
