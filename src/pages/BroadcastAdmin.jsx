@@ -3,7 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Settings, Save, Cpu, Zap, Radio, Leaf, Copy, Check, RefreshCw } from 'lucide-react'
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_URL = (() => {
+  const base = import.meta.env.VITE_API_URL || "https://studdy-buddy-backend-a5x.onrender.com";
+  if (base.endsWith('/api')) return base;
+  if (base.endsWith('/')) return base + 'api';
+  return base + '/api';
+})();
 
 // Channel configuration
 const CHANNELS = [
@@ -48,11 +53,11 @@ const CHANNELS = [
 // Admin API functions
 const adminAPI = {
   getCodes: () => axios.get(`${API_URL}/broadcast/admin/codes`, {
-    headers: { 'x-admin-secret': 'H5' }
+    headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' }
   }),
   updateCode: (channel, code) => axios.put(`${API_URL}/broadcast/admin/codes`, 
     { channel, code }, 
-    { headers: { 'x-admin-secret': 'H5' } }
+    { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }
   )
 }
 

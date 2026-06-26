@@ -88,19 +88,26 @@ function JoinForm({ channel, onClose, onSuccess, isRequest = false }) {
     if (!school.trim() || !cls.trim() || !code.trim()) {
       setError('All fields are required'); return
     }
+    
     setLoading(true); setError('')
     try {
       if (isRequest) {
         await broadcastAPI.requestJoin({ channel, school, class: cls, code })
         onSuccess('request', channel)
       } else {
-        // First call the API
-        await broadcastAPI.joinChannel({ channel, school, class: cls, code })
+        const joinResponse = await broadcastAPI.joinChannel({ channel, school, class: cls, code })
         
-        // Pass the form data along with success callback so parent can create temp enrollment
+        // Verify the response channel matches what we requested
+        if (joinResponse.data?.enrollment?.channel !== channel) {
+          console.error('Channel mismatch - Requested:', channel, 'Got:', joinResponse.data?.enrollment?.channel)
+          setError('Server returned wrong channel - please try again')
+          return
+        }
+        
         onSuccess('joined', channel, { school: school.trim(), class: cls.trim() })
       }
     } catch (err) {
+      console.error('Join/Request error:', err.response?.data || err.message)
       setError(err?.response?.data?.message || 'Failed. Check your code.')
     } finally { setLoading(false) }
   }
@@ -313,6 +320,7 @@ export default function Broadcast() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [error, setError]             = useState('')
   const [currentUserId, setCurrentUserId] = useState(null)    // Track current user ID
+  const [preventBackendOverride, setPreventBackendOverride] = useState(false) // Prevent backend from overriding temp data
 
   // modals
   const [joinTarget, setJoinTarget]     = useState(null)  // channel id for join form
@@ -338,7 +346,6 @@ export default function Broadcast() {
     
     // If user changed, force complete reset
     if (currentUserId && currentUserId !== user._id) {
-      console.log('User changed - force reset:', currentUserId, '→', user._id)
       // Reset everything immediately
       setEnrollment(null)
       setPendingReq(null) 
@@ -377,28 +384,34 @@ export default function Broadcast() {
     setLoading(true)
     try {
       const r = await broadcastAPI.getStatus()
-      console.log('Fetched status for user:', user?._id, 'Response:', r.data)
       
       // Validate that the response is for the current user
       if (r.data.userId && user?._id && r.data.userId !== user._id) {
         console.warn('Response user ID mismatch:', r.data.userId, 'vs current:', user._id)
-        // Clear state and return - don't use invalid data
         setEnrollment(null)
         setPendingReq(null)
         return
       }
       
-      // Additional validation for enrollment and pending request user IDs
-      const enrollment = r.data.enrollment
+      const backendEnrollment = r.data.enrollment
       const pendingReq = r.data.pendingRequest
       
-      if (enrollment && enrollment.userId && enrollment.userId !== user._id) {
-        console.warn('Enrollment user ID mismatch, ignoring')
-        setEnrollment(null)
-      } else {
-        setEnrollment(enrollment)
+      // If we're preventing override, skip this update
+      if (preventBackendOverride && enrollment && enrollment.userId === user?._id) {
+        return
       }
       
+      // Update enrollment with validation
+      if (backendEnrollment && backendEnrollment.userId && backendEnrollment.userId !== user._id) {
+        console.warn('Enrollment user ID mismatch, ignoring')
+        setEnrollment(null)
+      } else if (backendEnrollment) {
+        setEnrollment(backendEnrollment)
+      } else if (!backendEnrollment && (!enrollment || enrollment.school === 'Loading...')) {
+        setEnrollment(null)
+      }
+      
+      // Update pending request
       if (pendingReq && pendingReq.userId && pendingReq.userId !== user._id) {
         console.warn('Pending request user ID mismatch, ignoring')  
         setPendingReq(null)
@@ -408,9 +421,6 @@ export default function Broadcast() {
       
     } catch (err) {
       console.error('Failed to fetch status:', err)
-      // Clear state on error
-      setEnrollment(null)
-      setPendingReq(null)
     } finally {
       setLoading(false)
     }
@@ -440,7 +450,9 @@ export default function Broadcast() {
     const onTyping = ({ userId: uid, userName }) =>
       setTypingUsers(p => p.find(u => u.userId === uid) ? p : [...p, { userId: uid, userName }])
     const onStopTyping = ({ userId: uid }) => setTypingUsers(p => p.filter(u => u.userId !== uid))
-    const onErr = ({ message: m }) => { setError(m); setTimeout(() => setError(''), 3500) }
+    const onErr = ({ message: m }) => { 
+      setError(m); setTimeout(() => setError(''), 3500) 
+    }
     const onResolved = ({ status, channel }) => {
       if (status === 'accepted') {
         fetchStatus().then(() => setView('chat'))
@@ -507,6 +519,14 @@ export default function Broadcast() {
 
   // ── Channel card click ────────────────────────────────────────────────────
   const handleChannelClick = (channelId) => {
+    // Validate channelId exists in our CHANNELS array
+    const targetChannel = CHANNELS.find(c => c.id === channelId)
+    if (!targetChannel) {
+      console.error('Invalid channel ID:', channelId)
+      setError(`Invalid channel: ${channelId}`)
+      return
+    }
+    
     // If user is enrolled in this channel, go directly to chat
     if (enrollment?.channel === channelId && enrollment?.userId === user?._id) {
       setView('chat')
@@ -524,29 +544,41 @@ export default function Broadcast() {
   }
 
   const handleJoinSuccess = (type, channelId, formData = null) => {
+    // Validate channelId exists in CHANNELS
+    const targetChannel = CHANNELS.find(c => c.id === channelId)
+    if (!targetChannel) {
+      console.error('Invalid channel ID:', channelId)
+      setError(`Invalid channel: ${channelId}`)
+      return
+    }
+    
     setJoinTarget(null); setShowRequestForm(false); setAlreadyEnrolledTarget(null)
     if (type === 'joined') {
       // Create proper enrollment object with actual form data
       const tempEnrollment = {
-        channel: channelId,
+        channel: channelId, // Use the exact channelId passed from form
         school: formData?.school || 'Loading...', 
         class: formData?.class || 'Loading...',
         joinedAt: new Date().toISOString(),
         userId: user?._id
       }
       
+      // Prevent background fetch from overriding this for a short time
+      setPreventBackendOverride(true)
+      const clearPreventOverride = setTimeout(() => {
+        setPreventBackendOverride(false)
+      }, 3000) // Prevent override for 3 seconds
+      
       // Instantly update UI state
       setEnrollment(tempEnrollment)
       setView('chat')
-      
-      console.log('Set temp enrollment:', tempEnrollment)
       
       // Refresh enrollment data in background to get real data from backend
       setTimeout(() => {
         fetchStatus().catch(err => {
           console.error('Failed to refresh status after join:', err)
         })
-      }, 500) // Small delay to ensure backend has processed
+      }, 1000) // Longer delay to ensure backend has processed and prevent immediate override
       
     } else {
       fetchStatus() // Refresh to get latest pending request
@@ -669,7 +701,6 @@ export default function Broadcast() {
   }
 
   const ch = CHANNELS.find(c => c.id === enrollment?.channel)
-  console.log('Current ch value:', ch, 'enrollment.channel:', enrollment?.channel)
 
   // ── Group messages by date ────────────────────────────────────────────────
   const grouped = []
@@ -993,7 +1024,6 @@ export default function Broadcast() {
         {/* ── CHAT VIEW ─────────────────────────────────────────────────────── */}
         {view === 'chat' && enrollment && enrollment.userId === user?._id && ch && (
           <>
-            {console.log('Rendering chat view with enrollment:', enrollment, 'and ch:', ch)}
             {/* Chat header */}
             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(8,6,24,0.9)', borderBottom: '1px solid rgba(99,102,241,0.12)', backdropFilter: 'blur(16px)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
