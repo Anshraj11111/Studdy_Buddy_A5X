@@ -30,6 +30,8 @@ const Settings = lazy(() => import('./pages/Settings'))
 const AdminPanel = lazy(() => import('./pages/AdminPanel'))
 const Rewards = lazy(() => import('./pages/Rewards'))
 const GeneralGroup = lazy(() => import('./pages/GeneralGroup'))
+const Broadcast = lazy(() => import('./pages/Broadcast'))
+const BroadcastAdmin = lazy(() => import('./pages/BroadcastAdmin'))
 
 // Minimal page-level skeleton shown while a lazy chunk loads
 function PageLoader() {
@@ -116,9 +118,11 @@ function AppShell() {
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
           <Route path="/general-group" element={<ProtectedRoute><GeneralGroup /></ProtectedRoute>} />
+          <Route path="/broadcast" element={<ProtectedRoute><Broadcast /></ProtectedRoute>} />
 
           {/* Admin — standalone, no navbar */}
           <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/admin/broadcast" element={<BroadcastAdmin />} />
 
           {/* Default */}
           <Route

@@ -1,9 +1,83 @@
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { adminAPI } from "../services/api"
-import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp } from "lucide-react"
+import { adminAPI, broadcastAPI } from "../services/api"
+import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Radio, Check, X, Plus, Key, Settings } from "lucide-react"
 
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || "H5"
+
+const CHANNELS = [
+  { id: 'robotics', name: 'Robotics', icon: '🤖', color: '#6366f1' },
+  { id: 'aiml', name: 'AI & ML', icon: '🧠', color: '#8b5cf6' },
+  { id: 'electronics', name: 'Electronics', icon: '⚡', color: '#3b82f6' },
+  { id: 'renewable_energy', name: 'Renewable Energy', icon: '🌱', color: '#10b981' },
+]
+
+// ── Per-channel code row with inline edit ────────────────────────────────────
+function ChannelCodeRow({ ch, existing, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [val, setVal] = useState(existing?.code || '')
+  const [saving, setSaving] = useState(false)
+
+  // Sync when existing changes (after fetch)
+  useState(() => { setVal(existing?.code || '') }, [existing])
+
+  const handleSave = async () => {
+    setSaving(true)
+    await onSave(val)
+    setSaving(false)
+    setEditing(false)
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '12px 14px', borderRadius: 12, marginBottom: 10,
+      background: 'rgba(255,255,255,0.04)',
+      border: `1px solid ${existing ? ch.color + '30' : 'rgba(99,102,241,0.1)'}`,
+    }}>
+      {/* Channel icon + name */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: 140, flexShrink: 0 }}>
+        <span style={{ fontSize: 20 }}>{ch.icon}</span>
+        <span style={{ color: ch.color, fontWeight: 700, fontSize: 13 }}>{ch.name}</span>
+      </div>
+
+      {/* Code display / input */}
+      {editing ? (
+        <input
+          autoFocus value={val} onChange={e => setVal(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') { setEditing(false); setVal(existing?.code || '') } }}
+          placeholder="Enter access code..."
+          style={{ flex: 1, padding: '7px 12px', background: 'rgba(255,255,255,0.08)', border: `1px solid ${ch.color}50`, borderRadius: 8, color: 'white', fontSize: 13, outline: 'none', fontFamily: 'monospace' }}
+        />
+      ) : (
+        <div style={{ flex: 1 }}>
+          {existing?.code
+            ? <span style={{ color: 'white', fontFamily: 'monospace', fontSize: 14, fontWeight: 600, letterSpacing: '0.5px' }}>{existing.code}</span>
+            : <span style={{ color: 'rgba(148,163,184,0.35)', fontSize: 12, fontStyle: 'italic' }}>No code set — students can't join</span>}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      {editing ? (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={handleSave} disabled={saving}
+            style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg,${ch.color},${ch.color}cc)`, color: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+            {saving ? '...' : '✓ Save'}
+          </button>
+          <button onClick={() => { setEditing(false); setVal(existing?.code || '') }}
+            style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'transparent', color: 'rgba(148,163,184,0.6)', cursor: 'pointer', fontSize: 12 }}>
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button onClick={() => { setEditing(true); setVal(existing?.code || '') }}
+          style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${ch.color}40`, background: `${ch.color}12`, color: ch.color, cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
+          {existing ? '✏️ Change' : '+ Set Code'}
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function AdminPanel() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem("admin_auth") === "true")
@@ -18,6 +92,12 @@ export default function AdminPanel() {
   const [page, setPage] = useState(1)
   const [actionLoading, setActionLoading] = useState(null)
   const [toast, setToast] = useState(null)
+  const [mainTab, setMainTab] = useState("users") // "users" | "broadcast"
+
+  // Broadcast state
+  const [bRequests, setBRequests] = useState([])
+  const [bCodes, setBCodes] = useState([])
+  const [bLoading, setBLoading] = useState(false)
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type })
@@ -54,9 +134,66 @@ export default function AdminPanel() {
     }
   }, [tab, search, page])
 
+  const fetchBroadcastData = useCallback(async () => {
+    setBLoading(true)
+    try {
+      const [reqRes, codeRes] = await Promise.all([
+        broadcastAPI.getRequests(),
+        broadcastAPI.getCodes(),
+      ])
+      setBRequests(reqRes.data.requests || [])
+      setBCodes(codeRes.data.codes || [])
+    } catch (err) {
+      showToast('Failed to load broadcast data', 'error')
+    } finally { setBLoading(false) }
+  }, [])
+
   useEffect(() => {
     if (authed) fetchData()
   }, [authed, fetchData])
+
+  useEffect(() => {
+    if (authed && mainTab === 'broadcast') fetchBroadcastData()
+  }, [authed, mainTab, fetchBroadcastData])
+
+  const handleAcceptRequest = async (id) => {
+    setActionLoading(id + '_accept')
+    try {
+      await broadcastAPI.acceptRequest(id)
+      setBRequests(prev => prev.filter(r => r._id !== id))
+      showToast('Request accepted!')
+    } catch { showToast('Failed', 'error') }
+    finally { setActionLoading(null) }
+  }
+
+  const handleRejectRequest = async (id) => {
+    setActionLoading(id + '_reject')
+    try {
+      await broadcastAPI.rejectRequest(id)
+      setBRequests(prev => prev.filter(r => r._id !== id))
+      showToast('Request rejected')
+    } catch { showToast('Failed', 'error') }
+    finally { setActionLoading(null) }
+  }
+
+  const handleAddCode = async (e) => {
+    e.preventDefault()
+    if (!newCode.code.trim()) { showToast('Enter a code', 'error'); return }
+    try {
+      await broadcastAPI.addCode({ channel: newCode.channel, code: newCode.code.trim() })
+      setNewCode(p => ({ ...p, code: '' }))
+      fetchBroadcastData()
+      showToast('Code added!')
+    } catch (err) { showToast(err?.response?.data?.message || 'Failed', 'error') }
+  }
+
+  const handleDeleteCode = async (id) => {
+    try {
+      await broadcastAPI.deleteCode(id)
+      setBCodes(prev => prev.filter(c => c._id !== id))
+      showToast('Code deleted')
+    } catch { showToast('Failed', 'error') }
+  }
 
   const handleToggle = async (id) => {
     setActionLoading(id + "_toggle")
@@ -173,6 +310,46 @@ export default function AdminPanel() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6" style={{ zIndex: 5 }}>
 
+        {/* Main tab switcher */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+          {[
+            { id: 'users', label: 'User Management', icon: <Users size={14} /> },
+            { id: 'broadcast', label: '📡 Broadcast Channels', icon: <Radio size={14} /> },
+          ].map(t => (
+            <button key={t.id} onClick={() => setMainTab(t.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '9px 18px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                background: mainTab === t.id ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.05)',
+                border: mainTab === t.id ? 'none' : '1px solid rgba(99,102,241,0.2)',
+                color: mainTab === t.id ? 'white' : 'rgba(148,163,184,0.7)',
+                boxShadow: mainTab === t.id ? '0 2px 12px rgba(99,102,241,0.35)' : 'none',
+              }}>
+              {t.icon} {t.label}
+            </button>
+          ))}
+          
+          {/* Dedicated Broadcast Admin Link */}
+          <motion.a 
+            href="/admin/broadcast"
+            target="_blank"
+            rel="noopener noreferrer"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '9px 18px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+              background: 'linear-gradient(135deg,#10b981,#059669)', 
+              color: 'white',
+              textDecoration: 'none',
+              boxShadow: '0 2px 12px rgba(16,185,129,0.35)',
+            }}>
+            <Settings size={14} /> 🚀 Dedicated Broadcast Admin
+          </motion.a>
+        </div>
+
+        {/* ── USERS TAB ─────────────────────────────────────────────────── */}
+        {mainTab === 'users' && <>
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
@@ -358,6 +535,155 @@ export default function AdminPanel() {
                 Next
               </motion.button>
             </div>
+          </div>
+        )}
+        </> /* end users tab */}
+
+        {/* ── BROADCAST TAB ──────────────────────────────────────────────── */}
+        {mainTab === 'broadcast' && (
+          <div>
+            {bLoading ? (
+              <div style={{ textAlign: 'center', padding: 60 }}>
+                <Loader2 size={32} style={{ color: '#818cf8', animation: 'spin 1s linear infinite' }} />
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+
+                {/* ── Pending Join Requests ── */}
+                <div style={{ borderRadius: 18, background: 'rgba(10,8,30,0.75)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)', overflow: 'hidden' }}>
+                  <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Users size={16} color="#818cf8" />
+                      <span style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>Join Requests</span>
+                      {bRequests.length > 0 && (
+                        <span style={{ background: '#ef4444', color: 'white', borderRadius: 99, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>{bRequests.length}</span>
+                      )}
+                    </div>
+                    <button onClick={fetchBroadcastData} style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8, color: '#a5b4fc', cursor: 'pointer', padding: '5px 8px', display: 'flex', alignItems: 'center' }}>
+                      <RefreshCw size={13} />
+                    </button>
+                  </div>
+                  <div style={{ padding: '12px 16px', maxHeight: 420, overflowY: 'auto' }}>
+                    {bRequests.length === 0 ? (
+                      <p style={{ color: 'rgba(148,163,184,0.4)', textAlign: 'center', padding: '30px 0', fontSize: 13 }}>No pending requests</p>
+                    ) : bRequests.map((req, i) => {
+                      const chCurrent  = CHANNELS.find(c => c.id === req.currentChannel)
+                      const chRequested = CHANNELS.find(c => c.id === req.requestedChannel)
+                      return (
+                        <motion.div key={req._id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                          style={{ padding: '14px', borderRadius: 14, marginBottom: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.1)' }}>
+                          
+                          {/* User Info Header */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                            {req.user?.profileImage
+                              ? <img src={req.user.profileImage} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(99,102,241,0.3)' }} />
+                              : <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 14, border: '2px solid rgba(99,102,241,0.3)' }}>{req.user?.name?.[0]?.toUpperCase()}</div>}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ color: 'white', fontWeight: 700, fontSize: 14, margin: 0 }}>{req.user?.name}</p>
+                              <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 12, margin: 0 }}>{req.user?.email}</p>
+                            </div>
+                            <div style={{ fontSize: 10, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
+                              {new Date(req.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+
+                          {/* Student Details */}
+                          <div style={{ 
+                            background: 'rgba(255,255,255,0.02)', 
+                            border: '1px solid rgba(99,102,241,0.08)',
+                            borderRadius: 8, padding: '10px', marginBottom: 10 
+                          }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
+                              <div>
+                                <span style={{ color: 'rgba(148,163,184,0.5)' }}>School: </span>
+                                <span style={{ color: 'white', fontWeight: 600 }}>{req.school}</span>
+                              </div>
+                              <div>
+                                <span style={{ color: 'rgba(148,163,184,0.5)' }}>Class: </span>
+                                <span style={{ color: 'white', fontWeight: 600 }}>{req.class}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Channel Switch Info */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 13 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: `${chCurrent?.color}15`, border: `1px solid ${chCurrent?.color}30` }}>
+                              <span style={{ fontSize: 16 }}>{chCurrent?.icon}</span>
+                              <span style={{ color: chCurrent?.color, fontWeight: 600 }}>{chCurrent?.name}</span>
+                            </div>
+                            <span style={{ color: 'rgba(148,163,184,0.4)', fontSize: 16 }}>→</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: `${chRequested?.color}15`, border: `1px solid ${chRequested?.color}30` }}>
+                              <span style={{ fontSize: 16 }}>{chRequested?.icon}</span>
+                              <span style={{ color: chRequested?.color, fontWeight: 600 }}>{chRequested?.name}</span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                              onClick={() => handleAcceptRequest(req._id)}
+                              disabled={actionLoading === req._id + '_accept'}
+                              style={{ 
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, 
+                                padding: '9px', borderRadius: 10, border: '1px solid rgba(52,211,153,0.4)', 
+                                background: 'rgba(52,211,153,0.12)', color: '#34d399', cursor: 'pointer', 
+                                fontSize: 12, fontWeight: 700 
+                              }}>
+                              {actionLoading === req._id + '_accept' ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />} 
+                              Accept Request
+                            </motion.button>
+                            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                              onClick={() => handleRejectRequest(req._id)}
+                              disabled={actionLoading === req._id + '_reject'}
+                              style={{ 
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, 
+                                padding: '9px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.4)', 
+                                background: 'rgba(239,68,68,0.12)', color: '#f87171', cursor: 'pointer', 
+                                fontSize: 12, fontWeight: 700 
+                              }}>
+                              {actionLoading === req._id + '_reject' ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <X size={14} />} 
+                              Reject Request
+                            </motion.button>
+                          </div>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* ── Access Codes Management — one code per channel ── */}
+                <div style={{ borderRadius: 18, background: 'rgba(10,8,30,0.75)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)', overflow: 'hidden' }}>
+                  <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Key size={16} color="#818cf8" />
+                      <span style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>Channel Access Codes</span>
+                    </div>
+                    <span style={{ color: 'rgba(148,163,184,0.45)', fontSize: 11, fontFamily: 'monospace' }}>one code per channel</span>
+                  </div>
+                  <div style={{ padding: '16px' }}>
+                    {CHANNELS.map((ch) => {
+                      const existing = bCodes.find(c => c.channel === ch.id)
+                      return (
+                        <ChannelCodeRow key={ch.id} ch={ch} existing={existing}
+                          onSave={async (code) => {
+                            try {
+                              // Delete old codes for this channel first
+                              const oldCodes = bCodes.filter(c => c.channel === ch.id)
+                              await Promise.all(oldCodes.map(c => broadcastAPI.deleteCode(c._id)))
+                              if (code.trim()) await broadcastAPI.addCode({ channel: ch.id, code: code.trim() })
+                              fetchBroadcastData()
+                              showToast(`${ch.name} code updated!`)
+                            } catch (err) { showToast(err?.response?.data?.message || 'Failed', 'error') }
+                          }}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

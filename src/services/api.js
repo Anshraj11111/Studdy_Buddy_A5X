@@ -262,6 +262,24 @@ export const adminAPI = {
   deleteUser: (id) => api.delete(`/admin/users/${id}`, { headers: adminHeaders() }),
 };
 
+/* ---------------- BROADCAST CHANNELS ---------------- */
+export const broadcastAPI = {
+  getStatus:       () => api.get('/broadcast/status'),
+  joinChannel:     (data) => api.post('/broadcast/join', data),
+  requestJoin:     (data) => api.post('/broadcast/request-join', data),
+  leaveChannel:    () => api.post('/broadcast/leave'),
+  getMessages:     () => api.get('/broadcast/messages'),
+  deleteMessage:   (id) => api.delete(`/broadcast/messages/${id}`),
+  getMembers:      (channel) => api.get(`/broadcast/members/${channel}`),
+  // Admin
+  getCodes:        () => api.get('/broadcast/admin/codes', { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
+  addCode:         (data) => api.post('/broadcast/admin/codes', data, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
+  deleteCode:      (id) => api.delete(`/broadcast/admin/codes/${id}`, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
+  getRequests:     () => api.get('/broadcast/admin/requests', { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
+  acceptRequest:   (id) => api.put(`/broadcast/admin/requests/${id}/accept`, {}, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
+  rejectRequest:   (id) => api.put(`/broadcast/admin/requests/${id}/reject`, {}, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
+};
+
 /* ---------------- GENERAL GROUP ---------------- */
 export const generalGroupAPI = {
   join:           () => api.post('/general-group/join'),

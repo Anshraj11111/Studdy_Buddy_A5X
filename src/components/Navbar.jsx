@@ -52,7 +52,7 @@ export default function Navbar({ onMenuClick }) {
         { to: '/doubts', label: 'My Doubts' },
         { to: '/mentors', label: 'Mentors' },
         { to: '/chats', label: 'Chats' },
-        { to: '/general-group', label: '📢 Group' },
+        { to: '/broadcast', label: '📡 Broadcast' },
         { to: '/resources', label: 'Resources' },
         { to: '/communities', label: 'Communities' },
         { to: '/rewards', label: '⚡ Rewards' },
@@ -60,7 +60,7 @@ export default function Navbar({ onMenuClick }) {
     : [
         { to: '/mentor-dashboard', label: 'Dashboard' },
         { to: '/chats', label: 'Chats' },
-        { to: '/general-group', label: '📢 Group' },
+        { to: '/broadcast', label: '📡 Broadcast' },
         { to: '/resources', label: 'Resources' },
         { to: '/communities', label: 'Communities' },
         { to: '/rewards', label: '⚡ Rewards' },
