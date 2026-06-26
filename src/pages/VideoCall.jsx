@@ -24,8 +24,8 @@ const FALLBACK_ICE = {
       credential: '3a7ymuMhHgFio/OH',
     },
   ],
-  iceCandidatePoolSize: 0,
-  iceTransportPolicy: 'all',  // allow all — relay + direct — works on same machine
+  iceCandidatePoolSize: 10,   // pre-gather candidates for faster connection
+  iceTransportPolicy: 'all',
 }
 
 export default function VideoCall() {
@@ -92,8 +92,8 @@ export default function VideoCall() {
         if (d.iceServers?.length) {
           iceConfigRef.current = {
             iceServers: d.iceServers,
-            iceCandidatePoolSize: 0,
-            iceTransportPolicy: 'all',  // allow direct + relay
+            iceCandidatePoolSize: 10,  // pre-gather for faster connect
+            iceTransportPolicy: 'all',
           }
           console.log('✅ ICE servers from backend:', d.iceServers.length, 'servers')
         }

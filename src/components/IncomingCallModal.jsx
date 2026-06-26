@@ -35,13 +35,16 @@ export default function IncomingCallModal() {
         const callerName = data.caller?.name || data.fromUser?.name || 'Someone'
         showCallNotification(callerName)
 
-        // Vibrate on mobile (only if supported and allowed)
+        // Vibrate on mobile (only if supported and user has interacted with page)
         try {
-          if (navigator.vibrate && typeof navigator.vibrate === 'function') {
-            navigator.vibrate([300, 200, 300, 200, 300])
+          if (navigator.vibrate && typeof navigator.vibrate === 'function' && document.hasFocus()) {
+            // Small delay to ensure user has interacted
+            setTimeout(() => {
+              try { navigator.vibrate([300, 200, 300, 200, 300]) } catch (_) {}
+            }, 500)
           }
         } catch (err) {
-          // Vibration blocked by permissions policy or not supported - safely ignore
+          // Vibration blocked - safely ignore
         }
 
         // Auto reject after 30s
