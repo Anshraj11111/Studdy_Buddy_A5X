@@ -267,7 +267,7 @@ export const broadcastAPI = {
   getStatus:       () => api.get('/broadcast/status'),
   joinChannel:     (data) => api.post('/broadcast/join', data),
   requestJoin:     (data) => api.post('/broadcast/request-join', data),
-  leaveChannel:    () => api.post('/broadcast/leave'),
+  leaveChannel:    (data = {}) => api.post('/broadcast/leave', data),
   getMessages:     () => api.get('/broadcast/messages'),
   deleteMessage:   (id) => api.delete(`/broadcast/messages/${id}`),
   getMembers:      (channel) => api.get(`/broadcast/members/${channel}`),

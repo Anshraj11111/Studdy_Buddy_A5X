@@ -311,7 +311,9 @@ export default function Broadcast() {
   const isMentor = user?.role === 'mentor'
 
   const [view, setView]               = useState('home')      // 'home' | 'chat' | 'admin'
-  const [enrollment, setEnrollment]   = useState(null)        // current enrollment
+  const [enrollments, setEnrollments] = useState([])          // ALL user enrollments (multiple channels)
+  const [enrollment, setEnrollment]   = useState(null)        // current/primary enrollment (backward compatibility)
+  const [currentChannel, setCurrentChannel] = useState(null) // currently selected channel for chat
   const [pendingReq, setPendingReq]   = useState(null)        // pending request
   const [messages, setMessages]       = useState([])
   const [input, setInput]             = useState('')
@@ -347,7 +349,9 @@ export default function Broadcast() {
   useEffect(() => {
     if (!user?._id) {
       // Clear state when no user
+      setEnrollments([])
       setEnrollment(null)
+      setCurrentChannel(null)
       setPendingReq(null)
       setMessages([])
       setCurrentUserId(null)
@@ -358,7 +362,9 @@ export default function Broadcast() {
     // If user changed, force complete reset
     if (currentUserId && currentUserId !== user._id) {
       // Reset everything immediately
+      setEnrollments([])
       setEnrollment(null)
+      setCurrentChannel(null)
       setPendingReq(null) 
       setMessages([])
       setView('home')
@@ -399,26 +405,41 @@ export default function Broadcast() {
       // Validate that the response is for the current user
       if (r.data.userId && user?._id && r.data.userId !== user._id) {
         console.warn('Response user ID mismatch:', r.data.userId, 'vs current:', user._id)
+        setEnrollments([])
         setEnrollment(null)
+        setCurrentChannel(null)
         setPendingReq(null)
         return
       }
       
+      const backendEnrollments = r.data.enrollments || []
       const backendEnrollment = r.data.enrollment
       const pendingReq = r.data.pendingRequest
       
       // If we're preventing override, skip this update
-      if (preventBackendOverride && enrollment && enrollment.userId === user?._id) {
+      if (preventBackendOverride && enrollments.length > 0) {
         return
       }
       
-      // Update enrollment with validation
-      if (backendEnrollment && backendEnrollment.userId && backendEnrollment.userId !== user._id) {
-        console.warn('Enrollment user ID mismatch, ignoring')
-        setEnrollment(null)
-      } else if (backendEnrollment) {
+      // Update enrollments with validation
+      if (backendEnrollments && Array.isArray(backendEnrollments)) {
+        const validEnrollments = backendEnrollments.filter(e => 
+          e.userId === user?._id || !e.userId // Allow if userId matches or is not set
+        )
+        setEnrollments(validEnrollments)
+        
+        // Set primary enrollment (for backward compatibility)
+        if (validEnrollments.length > 0) {
+          setEnrollment(validEnrollments[0])
+        } else {
+          setEnrollment(null)
+        }
+      } else if (backendEnrollment && backendEnrollment.userId === user?._id) {
+        // Fallback to single enrollment
+        setEnrollments([backendEnrollment])
         setEnrollment(backendEnrollment)
-      } else if (!backendEnrollment && (!enrollment || enrollment.school === 'Loading...')) {
+      } else {
+        setEnrollments([])
         setEnrollment(null)
       }
       
@@ -439,11 +460,11 @@ export default function Broadcast() {
 
   // ── Load messages when entering chat view ────────────────────────────────
   useEffect(() => {
-    if (view !== 'chat' || !enrollment) return
+    if (view !== 'chat' || !currentChannel) return
     broadcastAPI.getMessages()
       .then(r => setMessages(r.data.messages || []))
       .catch(() => {})
-  }, [view, enrollment])
+  }, [view, currentChannel])
 
   // ── Scroll to bottom ──────────────────────────────────────────────────────
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
@@ -451,9 +472,9 @@ export default function Broadcast() {
   // ── Socket setup ─────────────────────────────────────────────────────────
   useEffect(() => {
     const socket = getSocket()
-    if (!socket || !enrollment) return
+    if (!socket || !currentChannel) return
 
-    socket.emit('joinBroadcastChannel', { channel: enrollment.channel })
+    socket.emit('joinBroadcastChannel', { channel: currentChannel })
 
     const onMsg = (msg) => setMessages(p => p.find(m => m._id === msg._id) ? p : [...p, msg])
     const onConfirmed = (c) => setMessages(p => p.map(m => m._id === c.tempId ? { ...c, temp: false } : m))
@@ -467,10 +488,24 @@ export default function Broadcast() {
     const onResolved = ({ status, channel }) => {
       if (status === 'accepted') {
         fetchStatus().then(() => setView('chat'))
-      } else {
-        fetchStatus() // Refresh to clear pending request
-        setError('Your request to join was rejected.')
-        setTimeout(() => setError(''), 4000)
+      } else if (status === 'rejected') {
+        // Clear pending request immediately for faster UI update
+        setPendingReq(null)
+        
+        // Show rejection message
+        const tempToast = document.createElement('div')
+        tempToast.innerHTML = `❌ Your request to join ${CHANNELS.find(c => c.id === channel)?.name} was rejected. You can try again.`
+        tempToast.style.cssText = `
+          position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
+          background: linear-gradient(135deg,#ef4444,#dc2626); color: white; 
+          padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px;
+          box-shadow: 0 4px 20px rgba(239,68,68,0.4); animation: slideDown 0.3s ease-out;
+        `
+        document.body.appendChild(tempToast)
+        setTimeout(() => tempToast.remove(), 5000)
+        
+        // Refresh status in background  
+        fetchStatus()
       }
     }
 
@@ -483,7 +518,7 @@ export default function Broadcast() {
     socket.on('broadcastRequestResolved',  onResolved)
 
     return () => {
-      socket.emit('leaveBroadcastChannel', { channel: enrollment.channel })
+      socket.emit('leaveBroadcastChannel', { channel: currentChannel })
       socket.off('broadcastMessage',          onMsg)
       socket.off('broadcastMessageConfirmed', onConfirmed)
       socket.off('broadcastMessageFailed',    onFailed)
@@ -492,33 +527,33 @@ export default function Broadcast() {
       socket.off('broadcastError',            onErr)
       socket.off('broadcastRequestResolved',  onResolved)
     }
-  }, [enrollment])
+  }, [currentChannel])
 
   // ── Send message ──────────────────────────────────────────────────────────
   const handleSend = useCallback(() => {
     if (!input.trim()) return
     const socket = getSocket()
-    if (!socket || !enrollment) return
+    if (!socket || !currentChannel) return
     const tempId = `temp_${Date.now()}_${Math.random()}`
     setMessages(p => [...p, {
       _id: tempId, content: input.trim(),
       createdAt: new Date().toISOString(), temp: true,
       sender: { _id: user?._id, name: user?.name, profileImage: user?.profileImage, role: user?.role },
     }])
-    socket.emit('sendBroadcastMessage', { channel: enrollment.channel, content: input.trim() })
+    socket.emit('sendBroadcastMessage', { channel: currentChannel, content: input.trim() })
     setInput('')
     if (inputRef.current) { inputRef.current.style.height = 'auto'; inputRef.current.focus() }
     isTyping.current = false
-    socket.emit('broadcastStopTyping', { channel: enrollment.channel })
-  }, [input, enrollment, user])
+    socket.emit('broadcastStopTyping', { channel: currentChannel })
+  }, [input, currentChannel, user])
 
   const handleInputChange = (e) => {
     setInput(e.target.value)
-    if (!isMentor || !enrollment) return
+    if (!isMentor || !currentChannel) return
     const socket = getSocket(); if (!socket) return
-    if (!isTyping.current) { isTyping.current = true; socket.emit('broadcastTyping', { channel: enrollment.channel }) }
+    if (!isTyping.current) { isTyping.current = true; socket.emit('broadcastTyping', { channel: currentChannel }) }
     clearTimeout(typingTimer.current)
-    typingTimer.current = setTimeout(() => { isTyping.current = false; socket.emit('broadcastStopTyping', { channel: enrollment.channel }) }, 2000)
+    typingTimer.current = setTimeout(() => { isTyping.current = false; socket.emit('broadcastStopTyping', { channel: currentChannel }) }, 2000)
   }
 
   const handleDelete = async (id) => {
@@ -538,22 +573,25 @@ export default function Broadcast() {
       return
     }
     
-    // If user is enrolled in this channel, go directly to chat
-    if (enrollment?.channel === channelId && enrollment?.userId === user?._id) {
+    // Check if user is already enrolled in this channel
+    const isEnrolledInChannel = enrollments.some(e => e.channel === channelId && e.userId === user?._id)
+    
+    if (isEnrolledInChannel) {
+      // Go directly to chat for this channel
+      setCurrentChannel(channelId)
       setView('chat')
       return
     }
     
-    // If user is enrolled in another channel, show switch request popup
-    if (enrollment && enrollment.channel !== channelId && enrollment.userId === user?._id) {
-      setAlreadyEnrolledTarget(channelId)
-      return
-    }
+    // Check if user has any existing enrollment (enrolled in any channel)
+    const hasAnyEnrollment = enrollments.length > 0
     
-    // If user has no enrollment, show join form
-    if (!enrollment || enrollment.userId !== user?._id) {
+    if (hasAnyEnrollment) {
+      // User is already enrolled in some channel, show simple request (no form)
+      handleSimpleRequest(channelId)
+    } else {
+      // New user, show full join form
       setJoinTarget(channelId)
-      return
     }
   }
 
@@ -568,31 +606,33 @@ export default function Broadcast() {
     
     setJoinTarget(null); setShowRequestForm(false); setAlreadyEnrolledTarget(null)
     if (type === 'joined') {
-      // Create proper enrollment object with actual form data  
-      const tempEnrollment = {
-        channel: channelId, // Use the EXACT channelId passed from form
+      // Create new enrollment object
+      const newEnrollment = {
+        channel: channelId,
         school: formData?.school || 'Loading...', 
         class: formData?.class || 'Loading...',
         joinedAt: new Date().toISOString(),
         userId: user?._id
       }
       
-      // Prevent background fetch from overriding this for a short time
-      setPreventBackendOverride(true)
-      setTimeout(() => {
-        setPreventBackendOverride(false)
-      }, 3000) // Prevent override for 3 seconds
+      // Add to enrollments array (multiple channels supported)
+      setEnrollments(prev => [...prev, newEnrollment])
       
-      // Instantly update UI state - CRITICAL: Use exact channelId
-      setEnrollment(tempEnrollment)
+      // Set as primary enrollment if first one
+      if (enrollments.length === 0) {
+        setEnrollment(newEnrollment)
+      }
+      
+      // Set current channel and go to chat
+      setCurrentChannel(channelId)
       setView('chat')
       
-      // Refresh enrollment data in background to get real data from backend
+      // Refresh enrollment data in background
       setTimeout(() => {
         fetchStatus().catch(err => {
           console.error('Failed to refresh status after join:', err)
         })
-      }, 1000) // Longer delay to ensure backend has processed
+      }, 1000)
       
     } else {
       fetchStatus() // Refresh to get latest pending request
@@ -602,6 +642,37 @@ export default function Broadcast() {
 
   // Simple request join for already enrolled users - Instant UI update
   const handleSimpleRequest = async (channelId) => {
+    // Check if already enrolled in this channel
+    const alreadyEnrolledInThisChannel = enrollments.some(e => e.channel === channelId)
+    if (alreadyEnrolledInThisChannel) {
+      const tempToast = document.createElement('div')
+      tempToast.innerHTML = `⚠️ You're already enrolled in ${CHANNELS.find(c => c.id === channelId)?.name} channel!`
+      tempToast.style.cssText = `
+        position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
+        background: linear-gradient(135deg,#f59e0b,#d97706); color: white; 
+        padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px;
+        box-shadow: 0 4px 20px rgba(245,158,11,0.4); animation: slideDown 0.3s ease-out;
+      `
+      document.body.appendChild(tempToast)
+      setTimeout(() => tempToast.remove(), 3000)
+      return
+    }
+
+    // Check if no existing enrollment
+    if (enrollments.length === 0) {
+      const tempToast = document.createElement('div')
+      tempToast.innerHTML = `⚠️ Please join a channel first before requesting additional access!`
+      tempToast.style.cssText = `
+        position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
+        background: linear-gradient(135deg,#f59e0b,#d97706); color: white; 
+        padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px;
+        box-shadow: 0 4px 20px rgba(245,158,11,0.4); animation: slideDown 0.3s ease-out;
+      `
+      document.body.appendChild(tempToast)
+      setTimeout(() => tempToast.remove(), 3000)
+      return
+    }
+    
     // Prevent multiple requests for same channel
     if (pendingReq?.channel === channelId) {
       const tempToast = document.createElement('div')
@@ -614,18 +685,16 @@ export default function Broadcast() {
       `
       document.body.appendChild(tempToast)
       setTimeout(() => tempToast.remove(), 3000)
-      setAlreadyEnrolledTarget(null)
       return
     }
 
     // Instantly update UI to show pending state
     const channelName = CHANNELS.find(c => c.id === channelId)?.name
     setPendingReq({ channel: channelId, status: 'pending', userId: user?._id })
-    setAlreadyEnrolledTarget(null)
     
     // Show instant success feedback
     const tempToast = document.createElement('div')
-    tempToast.innerHTML = `✅ Request sent for ${channelName}!`
+    tempToast.innerHTML = `✅ Request sent for ${channelName}! Admin will review your request.`
     tempToast.style.cssText = `
       position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
       background: linear-gradient(135deg,#10b981,#059669); color: white; 
@@ -660,27 +729,36 @@ export default function Broadcast() {
     })
   }
 
-  // Leave channel function - Instant leave without refresh
-  const handleLeaveChannel = async () => {
-    const channelName = CHANNELS.find(c => c.id === enrollment?.channel)?.name
+  // Leave channel function - Now needs to handle multiple enrollments
+  const handleLeaveChannel = async (channelToLeave = null) => {
+    const leaveChannelId = channelToLeave || currentChannel
+    const channelName = CHANNELS.find(c => c.id === leaveChannelId)?.name
     
-    if (!window.confirm(`⚠️ Leave ${channelName} Channel?\n\n• You will lose access to all messages and announcements\n• You'll need to fill out the complete registration form again to rejoin\n• Any pending requests will be cancelled\n\nAre you sure you want to leave?`)) {
+    if (!window.confirm(`⚠️ Leave ${channelName} Channel?\n\n• You will lose access to all messages and announcements\n• You'll need to re-enroll to join again\n\nAre you sure?`)) {
       return
     }
 
     try {
-      // Clear UI state IMMEDIATELY for instant feedback
-      setEnrollment(null)
-      setPendingReq(null) 
-      setMessages([])
-      setView('home')
-      setError('')
-      setTypingUsers([])
-      setInput('')
-      setJoinTarget(null)
-      setAlreadyEnrolledTarget(null)
+      // Call backend to leave the specific channel
+      await broadcastAPI.leaveChannel({ channel: leaveChannelId })
       
-      // Show immediate success message
+      // Update local state immediately
+      setEnrollments(prev => prev.filter(e => e.channel !== leaveChannelId))
+      
+      // If we're leaving the current channel, reset chat state
+      if (currentChannel === leaveChannelId) {
+        setCurrentChannel(null)
+        setMessages([])
+        setView('home')
+      }
+      
+      // If this was the primary enrollment, set new primary
+      if (enrollment?.channel === leaveChannelId) {
+        const remainingEnrollments = enrollments.filter(e => e.channel !== leaveChannelId)
+        setEnrollment(remainingEnrollments.length > 0 ? remainingEnrollments[0] : null)
+      }
+      
+      // Show success message
       const tempToast = document.createElement('div')
       tempToast.innerHTML = `✅ Successfully left ${channelName} channel!`
       tempToast.style.cssText = `
@@ -692,25 +770,9 @@ export default function Broadcast() {
       document.body.appendChild(tempToast)
       setTimeout(() => tempToast.remove(), 3000)
       
-      // Backend call in background - don't wait for it
-      broadcastAPI.leaveChannel().catch(err => {
-        console.error('Leave channel failed:', err)
-        // If backend fails, show error but don't revert UI since user expects to be left
-        const errorToast = document.createElement('div')
-        errorToast.innerHTML = `⚠️ Left channel but sync failed - please refresh if needed`
-        errorToast.style.cssText = `
-          position: fixed; top: 130px; left: 50%; transform: translateX(-50%); z-index: 1000;
-          background: linear-gradient(135deg,#f59e0b,#d97706); color: white; 
-          padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 12px;
-          box-shadow: 0 4px 16px rgba(245,158,11,0.4); animation: slideDown 0.3s ease-out;
-        `
-        document.body.appendChild(errorToast)
-        setTimeout(() => errorToast.remove(), 5000)
-      })
-      
     } catch (err) {
-      // This catch won't run since we're not awaiting the API call
-      console.error('Unexpected error:', err)
+      console.error('Leave channel failed:', err)
+      setError(err?.response?.data?.message || 'Failed to leave channel')
     }
   }
 
@@ -781,7 +843,7 @@ export default function Broadcast() {
     }
   }, [view])
 
-  const ch = CHANNELS.find(c => c.id === enrollment?.channel)
+  const ch = currentChannel ? CHANNELS.find(c => c.id === currentChannel) : null
 
   // ── Group messages by date ────────────────────────────────────────────────
   const grouped = []
@@ -874,19 +936,29 @@ export default function Broadcast() {
                   </motion.button>
                 )}
                 
-                {/* Current Enrollment Status - Only show if user has enrollment AND user IDs match */}
-                {enrollment && enrollment.channel && enrollment.userId === user?._id && (
+                {/* Current Enrollment Status - Show ALL enrollments */}
+                {enrollments.length > 0 && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    style={{ 
-                      display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, 
-                      padding: '10px 20px', borderRadius: 50, 
-                      background: `${CHANNELS.find(c => c.id === enrollment.channel)?.color}15`, 
-                      border: `1px solid ${CHANNELS.find(c => c.id === enrollment.channel)?.color}40`, 
-                      color: CHANNELS.find(c => c.id === enrollment.channel)?.color, 
-                      fontSize: 13, fontWeight: 600 
-                    }}>
-                    <span style={{ fontSize: 16 }}>{CHANNELS.find(c => c.id === enrollment.channel)?.icon}</span>
-                    ✓ Enrolled in <strong>{CHANNELS.find(c => c.id === enrollment.channel)?.name}</strong>
+                    style={{ marginTop: 14 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                      {enrollments.map((enroll) => {
+                        const channelInfo = CHANNELS.find(c => c.id === enroll.channel)
+                        return (
+                          <div key={enroll.channel}
+                            style={{ 
+                              display: 'inline-flex', alignItems: 'center', gap: 8, 
+                              padding: '8px 16px', borderRadius: 25, 
+                              background: `${channelInfo?.color}15`, 
+                              border: `1px solid ${channelInfo?.color}40`, 
+                              color: channelInfo?.color, 
+                              fontSize: 12, fontWeight: 600 
+                            }}>
+                            <span style={{ fontSize: 14 }}>{channelInfo?.icon}</span>
+                            ✓ Enrolled in <strong>{channelInfo?.name}</strong>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </motion.div>
                 )}
                 
@@ -898,8 +970,8 @@ export default function Broadcast() {
                   </motion.div>
                 )}
                 
-                {/* New User Message - Show only if no enrollment and no pending request */}
-                {(!enrollment || enrollment.userId !== user?._id) && (!pendingReq || pendingReq.userId !== user?._id) && (
+                {/* New User Message - Show only if no enrollments and no pending request */}
+                {enrollments.length === 0 && (!pendingReq || pendingReq.userId !== user?._id) && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     style={{ 
                       display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, 
@@ -914,97 +986,110 @@ export default function Broadcast() {
                 )}
               </motion.div>
 
-              {/* Quick Access to Enrolled Channel - Only show if user has enrollment AND user IDs match */}
-              {enrollment && enrollment.channel && enrollment.userId === user?._id && (
+              {/* Quick Access to Enrolled Channels - Show ALL enrolled channels */}
+              {enrollments.length > 0 && (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }} 
                   animate={{ opacity: 1, y: 0 }}
                   style={{ marginBottom: 24 }}>
                   <h3 style={{ color: 'white', fontSize: 18, fontWeight: 700, marginBottom: 12, textAlign: 'left' }}>
-                    📺 Your Active Channel
+                    📺 Your Active Channels ({enrollments.length})
                   </h3>
-                  <motion.div 
-                    whileHover={{ y: -2 }}
-                    onClick={() => setView('chat')}
-                    style={{
-                      background: `linear-gradient(135deg, ${CHANNELS.find(c => c.id === enrollment.channel)?.color}20, ${CHANNELS.find(c => c.id === enrollment.channel)?.color}10)`,
-                      border: `2px solid ${CHANNELS.find(c => c.id === enrollment.channel)?.color}60`,
-                      borderRadius: 18, padding: 20, cursor: 'pointer',
-                      boxShadow: `0 8px 32px ${CHANNELS.find(c => c.id === enrollment.channel)?.color}30`,
-                      position: 'relative', overflow: 'hidden'
-                    }}>
-                    
-                    {/* Glow effect */}
-                    <div style={{ 
-                      position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-                      background: CHANNELS.find(c => c.id === enrollment.channel)?.gradient 
-                    }} />
-                    
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <div style={{ 
-                          fontSize: 36, width: 60, height: 60, borderRadius: 16,
-                          background: `${CHANNELS.find(c => c.id === enrollment.channel)?.color}25`,
-                          border: `1px solid ${CHANNELS.find(c => c.id === enrollment.channel)?.color}50`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                          {CHANNELS.find(c => c.id === enrollment.channel)?.icon}
-                        </div>
-                        <div>
-                          <h4 style={{ color: 'white', fontSize: 20, fontWeight: 700, margin: 0 }}>
-                            {CHANNELS.find(c => c.id === enrollment.channel)?.name}
-                          </h4>
-                          <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: 13, margin: '2px 0 0' }}>
-                            {CHANNELS.find(c => c.id === enrollment.channel)?.desc}
-                          </p>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                            <span style={{ 
-                              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, 
-                              background: `${CHANNELS.find(c => c.id === enrollment.channel)?.color}30`, 
-                              color: CHANNELS.find(c => c.id === enrollment.channel)?.color,
-                              border: `1px solid ${CHANNELS.find(c => c.id === enrollment.channel)?.color}50` 
-                            }}>
-                              ✓ ENROLLED
-                            </span>
-                            <span style={{ fontSize: 10, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
-                              Since {enrollment?.joinedAt ? new Date(enrollment.joinedAt).toLocaleDateString() : 'N/A'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div style={{ display: 'flex', gap: 10 }}>
-                        {/* Leave Button */}
-                        <motion.button 
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleLeaveChannel}
-                          style={{ 
-                            padding: '10px 20px', borderRadius: 12, 
-                            background: 'rgba(239,68,68,0.15)', 
-                            border: '1px solid rgba(239,68,68,0.3)', 
-                            color: '#f87171', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                            display: 'flex', alignItems: 'center', gap: 6
-                          }}>
-                          🚪 Leave Channel
-                        </motion.button>
-                        
-                        {/* Open Chat Button */}
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {enrollments.map((enroll) => {
+                      const channelInfo = CHANNELS.find(c => c.id === enroll.channel)
+                      return (
                         <motion.div 
-                          whileHover={{ scale: 1.05 }}
-                          style={{ 
-                            padding: '12px 24px', borderRadius: 12, 
-                            background: CHANNELS.find(c => c.id === enrollment.channel)?.gradient,
-                            color: 'white', fontWeight: 700, fontSize: 14,
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            cursor: 'pointer'
+                          key={enroll.channel}
+                          whileHover={{ y: -2 }}
+                          onClick={() => {
+                            setCurrentChannel(enroll.channel)
+                            setView('chat')
                           }}
-                          onClick={() => setView('chat')}>
-                          💬 Open Chat
+                          style={{
+                            background: `linear-gradient(135deg, ${channelInfo?.color}20, ${channelInfo?.color}10)`,
+                            border: `2px solid ${channelInfo?.color}60`,
+                            borderRadius: 16, padding: 16, cursor: 'pointer',
+                            boxShadow: `0 8px 32px ${channelInfo?.color}30`,
+                            position: 'relative', overflow: 'hidden'
+                          }}>
+                          
+                          {/* Glow effect */}
+                          <div style={{ 
+                            position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+                            background: channelInfo?.gradient 
+                          }} />
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                              <div style={{ 
+                                fontSize: 28, width: 48, height: 48, borderRadius: 12,
+                                background: `${channelInfo?.color}25`,
+                                border: `1px solid ${channelInfo?.color}50`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}>
+                                {channelInfo?.icon}
+                              </div>
+                              <div>
+                                <h4 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>
+                                  {channelInfo?.name}
+                                </h4>
+                                <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: 11, margin: '2px 0 0' }}>
+                                  {channelInfo?.desc}
+                                </p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                                  <span style={{ 
+                                    fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 99, 
+                                    background: `${channelInfo?.color}30`, 
+                                    color: channelInfo?.color,
+                                    border: `1px solid ${channelInfo?.color}50` 
+                                  }}>
+                                    ✓ ENROLLED
+                                  </span>
+                                  <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
+                                    Since {enroll?.joinedAt ? new Date(enroll.joinedAt).toLocaleDateString() : 'N/A'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              {/* Leave Button */}
+                              <motion.button 
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleLeaveChannel(enroll.channel)
+                                }}
+                                style={{ 
+                                  padding: '8px 12px', borderRadius: 8, 
+                                  background: 'rgba(239,68,68,0.15)', 
+                                  border: '1px solid rgba(239,68,68,0.3)', 
+                                  color: '#f87171', cursor: 'pointer', fontWeight: 600, fontSize: 11,
+                                  display: 'flex', alignItems: 'center', gap: 4
+                                }}>
+                                🚪 Leave
+                              </motion.button>
+                              
+                              {/* Open Chat Button */}
+                              <motion.div 
+                                whileHover={{ scale: 1.05 }}
+                                style={{ 
+                                  padding: '8px 16px', borderRadius: 8, 
+                                  background: channelInfo?.gradient,
+                                  color: 'white', fontWeight: 700, fontSize: 12,
+                                  display: 'flex', alignItems: 'center', gap: 6,
+                                  cursor: 'pointer'
+                                }}>
+                                💬 Open Chat
+                              </motion.div>
+                            </div>
+                          </div>
                         </motion.div>
-                      </div>
-                    </div>
-                  </motion.div>
+                      )
+                    })}
+                  </div>
                 </motion.div>
               )}
 
@@ -1018,22 +1103,21 @@ export default function Broadcast() {
               {/* 4 Channel Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16 }}>
                 {CHANNELS.map((ch, i) => {
-                  const isEnrolled = enrollment?.channel === ch.id && enrollment?.userId === user?._id
+                  const isEnrolled = enrollments.some(e => e.channel === ch.id && e.userId === user?._id)
                   const isPending  = pendingReq?.channel === ch.id && pendingReq?.userId === user?._id
-                  const hasOtherEnrollment = enrollment && enrollment.channel !== ch.id && enrollment.userId === user?._id
-                  const isClickable = true // All cards are clickable
+                  const hasExistingEnrollment = enrollments.length > 0
                   
                   return (
                     <motion.div key={ch.id}
                       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.08, type: 'spring', stiffness: 200 }}
-                      whileHover={{ y: isEnrolled ? -2 : isPending ? -1 : -4, transition: { duration: 0.2 } }}
+                      whileHover={{ y: isPending ? -1 : -4, transition: { duration: 0.2 } }}
                       onClick={() => handleChannelClick(ch.id)}
                       style={{
                         borderRadius: 18, overflow: 'hidden', 
                         cursor: 'pointer',
                         background: 'rgba(10,8,30,0.8)', 
-                        border: `1px solid ${isEnrolled ? ch.color + '60' : isPending ? '#fbbf24' + '40' : hasOtherEnrollment ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.12)'}`,
+                        border: `1px solid ${isEnrolled ? ch.color + '60' : isPending ? '#fbbf24' + '40' : 'rgba(99,102,241,0.12)'}`,
                         backdropFilter: 'blur(20px)', position: 'relative',
                         boxShadow: isEnrolled ? `0 0 24px ${ch.color}30` : isPending ? '0 0 16px rgba(251,191,36,0.2)' : 'none',
                         opacity: isPending ? 0.7 : 1,
@@ -1059,14 +1143,9 @@ export default function Broadcast() {
                                     ⏳ Pending
                                   </span>
                                 )}
-                                {!isEnrolled && !isPending && hasOtherEnrollment && (
-                                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
-                                    📤 Request to Join
-                                  </span>
-                                )}
-                                {!isEnrolled && !isPending && !hasOtherEnrollment && (
+                                {!isEnrolled && !isPending && (
                                   <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(148,163,184,0.1)', color: 'rgba(148,163,184,0.6)', border: '1px solid rgba(148,163,184,0.2)' }}>
-                                    Available
+                                    {hasExistingEnrollment ? 'Request Access' : 'Available'}
                                   </span>
                                 )}
                               </div>
@@ -1080,13 +1159,13 @@ export default function Broadcast() {
                             whileHover={{ scale: 1.05 }}
                             style={{ 
                               padding: '7px 16px', borderRadius: 50, 
-                              background: isEnrolled ? ch.gradient : isPending ? 'rgba(251,191,36,0.15)' : hasOtherEnrollment ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.15)', 
-                              border: isEnrolled ? 'none' : isPending ? '1px solid rgba(251,191,36,0.3)' : hasOtherEnrollment ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(99,102,241,0.3)', 
-                              color: isEnrolled ? 'white' : isPending ? '#fbbf24' : hasOtherEnrollment ? '#818cf8' : '#a5b4fc', 
+                              background: isEnrolled ? ch.gradient : isPending ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)', 
+                              border: isEnrolled ? 'none' : isPending ? '1px solid rgba(251,191,36,0.3)' : '1px solid rgba(99,102,241,0.3)', 
+                              color: isEnrolled ? 'white' : isPending ? '#fbbf24' : '#a5b4fc', 
                               fontSize: 12, fontWeight: 700, 
                               cursor: 'pointer',
                             }}>
-                            {isEnrolled ? 'Open Chat →' : isPending ? 'Request Sent' : hasOtherEnrollment ? 'Request Switch →' : 'Join →'}
+                            {isEnrolled ? 'Open Chat →' : isPending ? 'Request Sent' : (hasExistingEnrollment ? 'Send Request →' : 'Join →')}
                           </motion.div>
                         </div>
                         
@@ -1104,7 +1183,10 @@ export default function Broadcast() {
                               <span style={{ fontSize: 10, color: ch.color }}>✓ You are enrolled</span>
                             </div>
                             <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
-                              Joined: {enrollment?.joinedAt && enrollment?.userId === user?._id ? new Date(enrollment.joinedAt).toLocaleDateString() : 'N/A'}
+                              Joined: {(() => {
+                                const enrollment = enrollments.find(e => e.channel === ch.id)
+                                return enrollment?.joinedAt ? new Date(enrollment.joinedAt).toLocaleDateString() : 'N/A'
+                              })()}
                             </span>
                           </motion.div>
                         )}
@@ -1126,24 +1208,6 @@ export default function Broadcast() {
                             </span>
                           </motion.div>
                         )}
-                        
-                        {hasOtherEnrollment && !isEnrolled && !isPending && (
-                          <motion.div 
-                            initial={{ opacity: 0, height: 0 }} 
-                            animate={{ opacity: 1, height: 'auto' }}
-                            style={{ 
-                              marginTop: 12, padding: '8px 12px', borderRadius: 8, 
-                              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                            }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 10, color: '#818cf8' }}>📤 Click to request channel switch</span>
-                            </div>
-                            <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
-                              From {CHANNELS.find(c => c.id === enrollment?.channel)?.name}
-                            </span>
-                          </motion.div>
-                        )}
                       </div>
                     </motion.div>
                   )
@@ -1154,7 +1218,7 @@ export default function Broadcast() {
         )}
 
         {/* ── CHAT VIEW ─────────────────────────────────────────────────────── */}
-        {view === 'chat' && enrollment && enrollment.userId === user?._id && ch && (
+        {view === 'chat' && currentChannel && (
           <>
             {/* Chat header */}
             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(8,6,24,0.9)', borderBottom: '1px solid rgba(99,102,241,0.12)', backdropFilter: 'blur(16px)' }}>
@@ -1162,11 +1226,11 @@ export default function Broadcast() {
                 <button onClick={() => setView('home')} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', cursor: 'pointer', padding: '6px 8px', display: 'flex', alignItems: 'center' }}>
                   <ArrowLeft size={16} />
                 </button>
-                <div style={{ width: 42, height: 42, borderRadius: 12, background: `${ch.color}18`, border: `1px solid ${ch.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{ch.icon}</div>
+                <div style={{ width: 42, height: 42, borderRadius: 12, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}18`, border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{CHANNELS.find(c => c.id === currentChannel)?.icon}</div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>{ch.name}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: `${ch.color}18`, color: ch.color, border: `1px solid ${ch.color}35` }}>BROADCAST</span>
+                    <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>{CHANNELS.find(c => c.id === currentChannel)?.name}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}18`, color: CHANNELS.find(c => c.id === currentChannel)?.color, border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}35` }}>BROADCAST</span>
                   </div>
                   <p style={{ color: 'rgba(148,163,184,0.5)', fontSize: 11, margin: 0, fontFamily: 'monospace' }}>
                     Only mentors can send messages
@@ -1179,7 +1243,7 @@ export default function Broadcast() {
                 <motion.button 
                   whileHover={{ scale: 1.05 }} 
                   whileTap={{ scale: 0.95 }}
-                  onClick={handleLeaveChannel}
+                  onClick={() => handleLeaveChannel(currentChannel)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '8px 16px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 600,
@@ -1220,14 +1284,14 @@ export default function Broadcast() {
                 {grouped.map(item =>
                   item.type === 'divider' ? (
                     <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0 8px' }}>
-                      <div style={{ flex: 1, height: 1, background: `${ch.color}18` }} />
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(148,163,184,0.45)', padding: '3px 12px', borderRadius: 99, background: `${ch.color}08`, border: `1px solid ${ch.color}18` }}>{item.label}</span>
-                      <div style={{ flex: 1, height: 1, background: `${ch.color}18` }} />
+                      <div style={{ flex: 1, height: 1, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}18` }} />
+                      <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(148,163,184,0.45)', padding: '3px 12px', borderRadius: 99, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}08`, border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}18` }}>{item.label}</span>
+                      <div style={{ flex: 1, height: 1, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}18` }} />
                     </div>
                   ) : (
                     <MessageBubble key={item._id} msg={item}
                       isOwn={String(item.sender?._id) === String(user?._id)}
-                      isMentor={isMentor} onDelete={handleDelete} channelColor={ch.color} />
+                      isMentor={isMentor} onDelete={handleDelete} channelColor={CHANNELS.find(c => c.id === currentChannel)?.color} />
                   )
                 )}
                 {typingUsers.length > 0 && (
@@ -1235,7 +1299,7 @@ export default function Broadcast() {
                     <div style={{ display: 'flex', gap: 3 }}>
                       {[0,1,2].map(i => (
                         <motion.div key={i} animate={{ y: [0, -4, 0] }} transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.15 }}
-                          style={{ width: 6, height: 6, borderRadius: '50%', background: ch.color }} />
+                          style={{ width: 6, height: 6, borderRadius: '50%', background: CHANNELS.find(c => c.id === currentChannel)?.color }} />
                       ))}
                     </div>
                     <span style={{ fontSize: 11, color: 'rgba(148,163,184,0.55)', fontStyle: 'italic' }}>{typingUsers.map(u => u.userName).join(', ')} typing...</span>
@@ -1252,18 +1316,18 @@ export default function Broadcast() {
                   <Avatar user={user} size={36} />
                   <div style={{ flex: 1, position: 'relative' }}>
                     <textarea ref={inputRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown}
-                      placeholder={`Send a message to ${ch.name}...`} rows={1}
-                      style={{ width: '100%', resize: 'none', overflowY: 'auto', padding: '10px 44px 10px 14px', background: 'rgba(255,255,255,0.07)', border: `1px solid ${ch.color}30`, borderRadius: 14, color: 'white', fontSize: 13, outline: 'none', fontFamily: 'inherit', maxHeight: 120, boxSizing: 'border-box' }}
+                      placeholder={`Send a message to ${CHANNELS.find(c => c.id === currentChannel)?.name}...`} rows={1}
+                      style={{ width: '100%', resize: 'none', overflowY: 'auto', padding: '10px 44px 10px 14px', background: 'rgba(255,255,255,0.07)', border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}30`, borderRadius: 14, color: 'white', fontSize: 13, outline: 'none', fontFamily: 'inherit', maxHeight: 120, boxSizing: 'border-box' }}
                       onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }} />
                   </div>
                   <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }} onClick={handleSend} disabled={!input.trim()}
-                    style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0, background: input.trim() ? ch.gradient : 'rgba(255,255,255,0.07)', color: input.trim() ? 'white' : 'rgba(148,163,184,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                    style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0, background: input.trim() ? CHANNELS.find(c => c.id === currentChannel)?.gradient : 'rgba(255,255,255,0.07)', color: input.trim() ? 'white' : 'rgba(148,163,184,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
                     <Send size={18} />
                   </motion.button>
                 </div>
               ) : (
-                <div style={{ maxWidth: 780, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, background: `${ch.color}08`, border: `1px solid ${ch.color}18` }}>
-                  <Info size={14} color={ch.color} />
+                <div style={{ maxWidth: 780, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}08`, border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}18` }}>
+                  <Info size={14} color={CHANNELS.find(c => c.id === currentChannel)?.color} />
                   <span style={{ color: 'rgba(148,163,184,0.6)', fontSize: 12 }}>You can read messages. Only mentors can send in this channel.</span>
                 </div>
               )}
@@ -1272,14 +1336,13 @@ export default function Broadcast() {
         )}
 
         {/* Fallback for invalid chat state */}
-        {view === 'chat' && (!enrollment || enrollment.userId !== user?._id || !ch) && (
+        {view === 'chat' && !currentChannel && (
           <>
-            {console.log('Showing fallback - view:', view, 'enrollment:', enrollment, 'user._id:', user?._id, 'ch:', ch)}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px' }}>
               <div style={{ textAlign: 'center' }}>
-                <h3 style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: '0 0 8px' }}>No Channel Access</h3>
+                <h3 style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: '0 0 8px' }}>No Channel Selected</h3>
                 <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 14, margin: '0 0 20px' }}>
-                  You're not enrolled in any broadcast channel.
+                  Please select a channel from your enrolled channels.
                 </p>
                 <motion.button 
                   whileHover={{ scale: 1.05 }} 
