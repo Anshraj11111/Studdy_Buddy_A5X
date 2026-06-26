@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { broadcastAPI } from '../services/api'
 import { getSocket } from '../services/socket'
-import { Send, Trash2, Users, X, Smile, Info, Zap, Cpu, Radio, Leaf, ArrowLeft } from 'lucide-react'
+import { Send, Trash2, Users, X, Smile, Info, Zap, Cpu, Radio, Leaf, ArrowLeft, Copy, Check, Save, RefreshCw } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 
@@ -310,7 +310,7 @@ export default function Broadcast() {
   const { user } = useAuthStore()
   const isMentor = user?.role === 'mentor'
 
-  const [view, setView]               = useState('home')      // 'home' | 'chat'
+  const [view, setView]               = useState('home')      // 'home' | 'chat' | 'admin'
   const [enrollment, setEnrollment]   = useState(null)        // current enrollment
   const [pendingReq, setPendingReq]   = useState(null)        // pending request
   const [messages, setMessages]       = useState([])
@@ -321,6 +321,17 @@ export default function Broadcast() {
   const [error, setError]             = useState('')
   const [currentUserId, setCurrentUserId] = useState(null)    // Track current user ID
   const [preventBackendOverride, setPreventBackendOverride] = useState(false) // Prevent backend from overriding temp data
+  
+  // Admin states
+  const [showAdminPanel, setShowAdminPanel] = useState(false)
+  const [adminCodes, setAdminCodes] = useState({})
+  const [newAdminCodes, setNewAdminCodes] = useState({})
+  const [adminLoading, setAdminLoading] = useState(false)
+  const [adminSaving, setAdminSaving] = useState('')
+  const [adminSuccess, setAdminSuccess] = useState('')
+  const [enrollmentStats, setEnrollmentStats] = useState(null)
+  const [showEnrollments, setShowEnrollments] = useState(false)
+  const [copied, setCopied] = useState('')
 
   // modals
   const [joinTarget, setJoinTarget]     = useState(null)  // channel id for join form
@@ -384,11 +395,10 @@ export default function Broadcast() {
     setLoading(true)
     try {
       const r = await broadcastAPI.getStatus()
-      console.log('📥 fetchStatus - Response:', r.data)
       
       // Validate that the response is for the current user
       if (r.data.userId && user?._id && r.data.userId !== user._id) {
-        console.warn('⚠️ Response user ID mismatch:', r.data.userId, 'vs current:', user._id)
+        console.warn('Response user ID mismatch:', r.data.userId, 'vs current:', user._id)
         setEnrollment(null)
         setPendingReq(null)
         return
@@ -397,37 +407,31 @@ export default function Broadcast() {
       const backendEnrollment = r.data.enrollment
       const pendingReq = r.data.pendingRequest
       
-      console.log('📥 Backend enrollment:', backendEnrollment)
-      console.log('📥 Current enrollment:', enrollment)
-      
       // If we're preventing override, skip this update
       if (preventBackendOverride && enrollment && enrollment.userId === user?._id) {
-        console.log('🚫 Preventing backend override of temp enrollment')
         return
       }
       
       // Update enrollment with validation
       if (backendEnrollment && backendEnrollment.userId && backendEnrollment.userId !== user._id) {
-        console.warn('⚠️ Enrollment user ID mismatch, ignoring')
+        console.warn('Enrollment user ID mismatch, ignoring')
         setEnrollment(null)
       } else if (backendEnrollment) {
-        console.log('✅ Setting enrollment from backend:', backendEnrollment.channel)
         setEnrollment(backendEnrollment)
       } else if (!backendEnrollment && (!enrollment || enrollment.school === 'Loading...')) {
-        console.log('❌ No backend enrollment, clearing')
         setEnrollment(null)
       }
       
       // Update pending request
       if (pendingReq && pendingReq.userId && pendingReq.userId !== user._id) {
-        console.warn('⚠️ Pending request user ID mismatch, ignoring')  
+        console.warn('Pending request user ID mismatch, ignoring')  
         setPendingReq(null)
       } else {
         setPendingReq(pendingReq)
       }
       
     } catch (err) {
-      console.error('❌ Failed to fetch status:', err)
+      console.error('Failed to fetch status:', err)
     } finally {
       setLoading(false)
     }
@@ -541,28 +545,26 @@ export default function Broadcast() {
     }
     
     // If user is enrolled in another channel, show switch request popup
-    if (enrollment && enrollment.userId === user?._id) {
+    if (enrollment && enrollment.channel !== channelId && enrollment.userId === user?._id) {
       setAlreadyEnrolledTarget(channelId)
       return
     }
     
     // If user has no enrollment, show join form
-    setJoinTarget(channelId)
+    if (!enrollment || enrollment.userId !== user?._id) {
+      setJoinTarget(channelId)
+      return
+    }
   }
 
   const handleJoinSuccess = (type, channelId, formData = null) => {
-    console.log('🔥 handleJoinSuccess - Type:', type, 'ChannelId:', channelId)
-    console.log('🔥 handleJoinSuccess - FormData:', formData)
-    
     // Validate channelId exists in CHANNELS
     const targetChannel = CHANNELS.find(c => c.id === channelId)
     if (!targetChannel) {
-      console.error('❌ Invalid channel ID:', channelId)
+      console.error('Invalid channel ID:', channelId)
       setError(`Invalid channel: ${channelId}`)
       return
     }
-    
-    console.log('✅ Target channel found:', targetChannel.name, 'ID:', targetChannel.id)
     
     setJoinTarget(null); setShowRequestForm(false); setAlreadyEnrolledTarget(null)
     if (type === 'joined') {
@@ -575,13 +577,9 @@ export default function Broadcast() {
         userId: user?._id
       }
       
-      console.log('🚀 Creating temp enrollment with channel:', channelId)
-      console.log('🚀 Temp enrollment object:', tempEnrollment)
-      
       // Prevent background fetch from overriding this for a short time
       setPreventBackendOverride(true)
       setTimeout(() => {
-        console.log('⏰ Clearing prevent override flag')
         setPreventBackendOverride(false)
       }, 3000) // Prevent override for 3 seconds
       
@@ -589,11 +587,8 @@ export default function Broadcast() {
       setEnrollment(tempEnrollment)
       setView('chat')
       
-      console.log('🎯 UI state updated - enrollment channel:', tempEnrollment.channel, 'view: chat')
-      
       // Refresh enrollment data in background to get real data from backend
       setTimeout(() => {
-        console.log('🔄 Fetching real status from backend...')
         fetchStatus().catch(err => {
           console.error('Failed to refresh status after join:', err)
         })
@@ -719,14 +714,74 @@ export default function Broadcast() {
     }
   }
 
-  const ch = CHANNELS.find(c => c.id === enrollment?.channel)
-  
-  // Debug channel calculation
-  if (enrollment?.channel) {
-    console.log('🎯 Channel calculation - enrollment.channel:', enrollment.channel)
-    console.log('🎯 Found channel object:', ch)
-    console.log('🎯 Available channels:', CHANNELS.map(c => ({ id: c.id, name: c.name })))
+  // ── Admin Functions ──────────────────────────────────────────────────────────
+  const loadAdminData = async () => {
+    if (!isAdmin()) return
+    
+    setAdminLoading(true)
+    try {
+      // Load codes
+      const codesResponse = await broadcastAPI.getCodes()
+      const codesMap = {}
+      codesResponse.data.codes.forEach(codeDoc => {
+        codesMap[codeDoc.channel] = codeDoc.code
+      })
+      setAdminCodes(codesMap)
+      setNewAdminCodes({ ...codesMap })
+
+      // Load enrollment stats
+      const statsResponse = await broadcastAPI.getAllEnrollments()
+      setEnrollmentStats(statsResponse.data)
+    } catch (err) {
+      console.error('Failed to load admin data:', err)
+      setError('Failed to load admin data')
+    } finally {
+      setAdminLoading(false)
+    }
   }
+
+  const updateAdminCode = async (channel) => {
+    const code = newAdminCodes[channel]
+    if (!code?.trim()) {
+      setError('Code cannot be empty')
+      return
+    }
+
+    setAdminSaving(channel)
+    try {
+      await broadcastAPI.updateCode({ channel, code: code.trim() })
+      setAdminCodes(prev => ({ ...prev, [channel]: code.trim() }))
+      setAdminSuccess(`${CHANNELS.find(c => c.id === channel)?.name} code updated!`)
+      setTimeout(() => setAdminSuccess(''), 3000)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to update code')
+      setTimeout(() => setError(''), 3000)
+    } finally {
+      setAdminSaving('')
+    }
+  }
+
+  const copyAdminCode = (channel) => {
+    const code = adminCodes[channel] || newAdminCodes[channel]
+    if (code) {
+      navigator.clipboard.writeText(code)
+      setCopied(channel)
+      setTimeout(() => setCopied(''), 2000)
+    }
+  }
+
+  const isAdmin = () => {
+    return user?.email === ADMIN_EMAIL || user?.role === 'admin'
+  }
+
+  // Load admin data when admin panel is opened
+  useEffect(() => {
+    if (view === 'admin' && isAdmin()) {
+      loadAdminData()
+    }
+  }, [view])
+
+  const ch = CHANNELS.find(c => c.id === enrollment?.channel)
 
   // ── Group messages by date ────────────────────────────────────────────────
   const grouped = []
@@ -747,25 +802,6 @@ export default function Broadcast() {
 
   return (
     <div className="flex min-h-screen" style={{ position: 'relative' }}>
-      {/* Temporary debug console */}
-      {enrollment && (
-        <div style={{ 
-          position: 'fixed', top: 80, left: 20, 
-          background: 'rgba(0,0,0,0.9)', border: '2px solid #0f0', 
-          borderRadius: 8, padding: 12, fontSize: 11, color: '#0f0',
-          maxWidth: 300, zIndex: 1000, fontFamily: 'monospace'
-        }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#fff' }}>🐛 LIVE DEBUG</div>
-          <div>Enrollment Channel: {enrollment.channel}</div>
-          <div>Expected Channel: {CHANNELS.find(c => c.id === enrollment.channel)?.name}</div>
-          <div>Actual Display: {ch?.name || 'NOT FOUND'}</div>
-          <div>View: {view}</div>
-          <div style={{ color: enrollment.channel === ch?.id ? '#0f0' : '#f00' }}>
-            Match: {enrollment.channel === ch?.id ? '✅' : '❌'}
-          </div>
-        </div>
-      )}
-      
       {/* Add CSS for animations */}
       <style>
         {`
@@ -810,6 +846,33 @@ export default function Broadcast() {
                 <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 14, margin: 0 }}>
                   Select your channel to receive announcements and resources from mentors
                 </p>
+                
+                {/* Admin Toggle Button */}
+                {isAdmin() && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setView('admin')
+                    }}
+                    style={{
+                      marginTop: 16,
+                      padding: '10px 20px',
+                      borderRadius: 25,
+                      border: 'none',
+                      background: 'linear-gradient(135deg,#10b981,#059669)',
+                      color: 'white',
+                      fontWeight: 600,
+                      fontSize: 13,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    ⚙️ Admin Dashboard
+                  </motion.button>
+                )}
                 
                 {/* Current Enrollment Status - Only show if user has enrollment AND user IDs match */}
                 {enrollment && enrollment.channel && enrollment.userId === user?._id && (
@@ -957,22 +1020,23 @@ export default function Broadcast() {
                 {CHANNELS.map((ch, i) => {
                   const isEnrolled = enrollment?.channel === ch.id && enrollment?.userId === user?._id
                   const isPending  = pendingReq?.channel === ch.id && pendingReq?.userId === user?._id
-                  const isDisabled = isPending || isEnrolled
+                  const hasOtherEnrollment = enrollment && enrollment.channel !== ch.id && enrollment.userId === user?._id
+                  const isClickable = true // All cards are clickable
                   
                   return (
                     <motion.div key={ch.id}
                       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.08, type: 'spring', stiffness: 200 }}
-                      whileHover={{ y: isEnrolled ? -2 : isDisabled ? 0 : -4, transition: { duration: 0.2 } }}
+                      whileHover={{ y: isEnrolled ? -2 : isPending ? -1 : -4, transition: { duration: 0.2 } }}
                       onClick={() => handleChannelClick(ch.id)}
                       style={{
                         borderRadius: 18, overflow: 'hidden', 
-                        cursor: 'pointer', // Always clickable
+                        cursor: 'pointer',
                         background: 'rgba(10,8,30,0.8)', 
-                        border: `1px solid ${isEnrolled ? ch.color + '60' : isPending ? '#fbbf24' + '40' : 'rgba(99,102,241,0.12)'}`,
+                        border: `1px solid ${isEnrolled ? ch.color + '60' : isPending ? '#fbbf24' + '40' : hasOtherEnrollment ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.12)'}`,
                         backdropFilter: 'blur(20px)', position: 'relative',
                         boxShadow: isEnrolled ? `0 0 24px ${ch.color}30` : isPending ? '0 0 16px rgba(251,191,36,0.2)' : 'none',
-                        opacity: isPending ? 0.7 : 1, // Only dim pending, not enrolled
+                        opacity: isPending ? 0.7 : 1,
                       }}>
                       {/* Top gradient bar */}
                       <div style={{ height: 4, background: isEnrolled ? ch.gradient : isPending ? 'linear-gradient(90deg, #fbbf24, #f59e0b)' : ch.gradient, opacity: isEnrolled || isPending ? 1 : 0.3 }} />
@@ -995,7 +1059,12 @@ export default function Broadcast() {
                                     ⏳ Pending
                                   </span>
                                 )}
-                                {!isEnrolled && !isPending && (
+                                {!isEnrolled && !isPending && hasOtherEnrollment && (
+                                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
+                                    📤 Request to Join
+                                  </span>
+                                )}
+                                {!isEnrolled && !isPending && !hasOtherEnrollment && (
                                   <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(148,163,184,0.1)', color: 'rgba(148,163,184,0.6)', border: '1px solid rgba(148,163,184,0.2)' }}>
                                     Available
                                   </span>
@@ -1011,13 +1080,13 @@ export default function Broadcast() {
                             whileHover={{ scale: 1.05 }}
                             style={{ 
                               padding: '7px 16px', borderRadius: 50, 
-                              background: isEnrolled ? ch.gradient : isPending ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)', 
-                              border: isEnrolled ? 'none' : isPending ? '1px solid rgba(251,191,36,0.3)' : '1px solid rgba(99,102,241,0.3)', 
-                              color: isEnrolled ? 'white' : isPending ? '#fbbf24' : '#a5b4fc', 
+                              background: isEnrolled ? ch.gradient : isPending ? 'rgba(251,191,36,0.15)' : hasOtherEnrollment ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.15)', 
+                              border: isEnrolled ? 'none' : isPending ? '1px solid rgba(251,191,36,0.3)' : hasOtherEnrollment ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(99,102,241,0.3)', 
+                              color: isEnrolled ? 'white' : isPending ? '#fbbf24' : hasOtherEnrollment ? '#818cf8' : '#a5b4fc', 
                               fontSize: 12, fontWeight: 700, 
                               cursor: 'pointer',
                             }}>
-                            {isEnrolled ? 'Open Chat →' : isPending ? 'Request Sent' : 'Join →'}
+                            {isEnrolled ? 'Open Chat →' : isPending ? 'Request Sent' : hasOtherEnrollment ? 'Request Switch →' : 'Join →'}
                           </motion.div>
                         </div>
                         
@@ -1054,6 +1123,24 @@ export default function Broadcast() {
                             </div>
                             <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
                               Admin review required
+                            </span>
+                          </motion.div>
+                        )}
+                        
+                        {hasOtherEnrollment && !isEnrolled && !isPending && (
+                          <motion.div 
+                            initial={{ opacity: 0, height: 0 }} 
+                            animate={{ opacity: 1, height: 'auto' }}
+                            style={{ 
+                              marginTop: 12, padding: '8px 12px', borderRadius: 8, 
+                              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                            }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: 10, color: '#818cf8' }}>📤 Click to request channel switch</span>
+                            </div>
+                            <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
+                              From {CHANNELS.find(c => c.id === enrollment?.channel)?.name}
                             </span>
                           </motion.div>
                         )}
@@ -1209,6 +1296,473 @@ export default function Broadcast() {
               </div>
             </div>
           </>
+        )}
+
+        {/* ── ADMIN VIEW ─────────────────────────────────────────────────────── */}
+        {view === 'admin' && isAdmin() && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              {/* Admin Header */}
+              <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 28, textAlign: 'center' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg,rgba(16,185,129,0.25),rgba(5,150,105,0.25))', border: '1px solid rgba(16,185,129,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    ⚙️
+                  </div>
+                </div>
+                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 26, margin: '0 0 8px' }}>Admin Dashboard</h1>
+                <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 14, margin: 0 }}>
+                  Manage broadcast channel access codes and enrollment statistics
+                </p>
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setView('home')}
+                  style={{
+                    marginTop: 16,
+                    padding: '10px 20px',
+                    borderRadius: 25,
+                    border: 'none',
+                    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  ← Back to Channels
+                </motion.button>
+              </motion.div>
+
+              {adminLoading && (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(148,163,184,0.6)' }}>
+                  <div style={{ width: 32, height: 32, border: '3px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+                  Loading admin data...
+                </div>
+              )}
+
+              {!adminLoading && (
+                <>
+                  {/* Enrollment Statistics Dashboard */}
+                  {enrollmentStats && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{ marginBottom: 32 }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                        <h2 style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 12,
+                            background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.2))',
+                            border: '1px solid rgba(16,185,129,0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            📊
+                          </div>
+                          Channel Enrollment Statistics
+                        </h2>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 12, color: 'rgba(148,163,184,0.6)' }}>Total Enrollments</div>
+                          <div style={{ fontSize: 24, fontWeight: 700, color: 'white' }}>{enrollmentStats.totalEnrollments}</div>
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 20 }}>
+                        {CHANNELS.map((channel) => {
+                          const stats = enrollmentStats.channelStats[channel.id] || { count: 0, members: [] }
+                          return (
+                            <motion.div
+                              key={channel.id}
+                              whileHover={{ y: -2 }}
+                              style={{
+                                background: 'rgba(10,8,30,0.8)',
+                                border: `1px solid ${channel.color}30`,
+                                borderRadius: 16,
+                                padding: 20,
+                                backdropFilter: 'blur(20px)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              {/* Top gradient bar */}
+                              <div 
+                                style={{ 
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: 3,
+                                  background: channel.gradient
+                                }} 
+                              />
+
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                  <div 
+                                    style={{
+                                      width: 40,
+                                      height: 40,
+                                      borderRadius: 12,
+                                      background: `${channel.color}18`,
+                                      border: `1px solid ${channel.color}40`,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      fontSize: 20
+                                    }}
+                                  >
+                                    {channel.icon}
+                                  </div>
+                                  <div>
+                                    <h4 style={{ color: 'white', fontWeight: 600, fontSize: 16, margin: 0 }}>{channel.name}</h4>
+                                    <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 12, margin: 0 }}>{stats.count} students enrolled</p>
+                                  </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                  <div 
+                                    style={{ 
+                                      fontSize: 24, 
+                                      fontWeight: 700,
+                                      color: channel.color 
+                                    }}
+                                  >
+                                    {stats.count}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {stats.count > 0 && (
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, marginBottom: 8 }}>
+                                    <span style={{ color: 'rgba(148,163,184,0.6)' }}>Recent enrollments</span>
+                                    {stats.count > 3 && (
+                                      <button 
+                                        onClick={() => setShowEnrollments(showEnrollments === channel.id ? null : channel.id)}
+                                        style={{ 
+                                          background: 'none',
+                                          border: 'none',
+                                          color: '#818cf8',
+                                          cursor: 'pointer',
+                                          fontSize: 12
+                                        }}
+                                      >
+                                        {showEnrollments === channel.id ? 'Show less' : `View all ${stats.count}`}
+                                      </button>
+                                    )}
+                                  </div>
+                                  
+                                  <div style={{ maxHeight: showEnrollments === channel.id ? 'none' : '100px', overflow: 'hidden' }}>
+                                    {(showEnrollments === channel.id ? stats.members : stats.members.slice(0, 3)).map((member) => (
+                                      <div key={member.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 8, marginBottom: 4 }}>
+                                        <div 
+                                          style={{
+                                            width: 24,
+                                            height: 24,
+                                            borderRadius: '50%',
+                                            background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 10,
+                                            fontWeight: 700,
+                                            color: 'white'
+                                          }}
+                                        >
+                                          {member.user?.profileImage ? (
+                                            <img src={member.user.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                          ) : (
+                                            member.user?.name?.charAt(0)?.toUpperCase() || '?'
+                                          )}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div style={{ color: 'white', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {member.user?.name || 'Unknown'}
+                                          </div>
+                                          <div style={{ color: 'rgba(148,163,184,0.6)', fontSize: 10 }}>
+                                            {member.school} • {member.class}
+                                          </div>
+                                        </div>
+                                        <div style={{ fontSize: 10, color: 'rgba(148,163,184,0.4)' }}>
+                                          {new Date(member.joinedAt).toLocaleDateString()}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {stats.count === 0 && (
+                                <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(148,163,184,0.5)', fontSize: 12 }}>
+                                  No students enrolled yet
+                                </div>
+                              )}
+                            </motion.div>
+                          )
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Channel Access Codes Management */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                      <h2 style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0 }}>Channel Access Codes</h2>
+                      <button
+                        onClick={loadAdminData}
+                        style={{
+                          padding: '10px 20px',
+                          borderRadius: 12,
+                          border: 'none',
+                          background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                          color: 'white',
+                          fontWeight: 600,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8
+                        }}
+                      >
+                        <RefreshCw size={14} />
+                        Refresh Data
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
+                      {CHANNELS.map((channel, index) => {
+                        const currentCode = adminCodes[channel.id] || ''
+                        const newCode = newAdminCodes[channel.id] || ''
+                        const hasChanges = newCode !== currentCode
+                        const isSaving = adminSaving === channel.id
+                        const isCopied = copied === channel.id
+
+                        return (
+                          <motion.div
+                            key={channel.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            style={{
+                              background: 'rgba(10,8,30,0.8)',
+                              border: `1px solid ${channel.color}30`,
+                              borderRadius: 20,
+                              padding: 24,
+                              backdropFilter: 'blur(20px)',
+                              position: 'relative',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {/* Top gradient bar */}
+                            <div 
+                              style={{ 
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                height: 4,
+                                background: channel.gradient
+                              }} 
+                            />
+
+                            {/* Channel Header */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+                              <div 
+                                style={{
+                                  width: 48,
+                                  height: 48,
+                                  borderRadius: 14,
+                                  background: `${channel.color}18`,
+                                  border: `1px solid ${channel.color}40`,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: 24
+                                }}
+                              >
+                                {channel.icon}
+                              </div>
+                              <div>
+                                <h3 style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: 0 }}>{channel.name}</h3>
+                                <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 12, margin: 0 }}>{channel.desc}</p>
+                              </div>
+                            </div>
+
+                            {/* Current Code Display */}
+                            {currentCode && (
+                              <div style={{ marginBottom: 16 }}>
+                                <label style={{ display: 'block', color: 'rgba(148,163,184,0.8)', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+                                  Current Code
+                                </label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <div 
+                                    style={{
+                                      flex: 1,
+                                      padding: '10px 12px',
+                                      borderRadius: 10,
+                                      background: 'rgba(255,255,255,0.06)',
+                                      border: '1px solid rgba(99,102,241,0.2)',
+                                      color: 'white',
+                                      fontFamily: 'monospace',
+                                      fontSize: 13
+                                    }}
+                                  >
+                                    {currentCode}
+                                  </div>
+                                  <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => copyAdminCode(channel.id)}
+                                    style={{
+                                      padding: 8,
+                                      borderRadius: 8,
+                                      border: 'none',
+                                      background: 'rgba(255,255,255,0.1)',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}
+                                  >
+                                    {isCopied ? (
+                                      <Check size={16} color="#10b981" />
+                                    ) : (
+                                      <Copy size={16} color="#9ca3af" />
+                                    )}
+                                  </motion.button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Code Input */}
+                            <div style={{ marginBottom: 16 }}>
+                              <label style={{ display: 'block', color: 'rgba(148,163,184,0.8)', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+                                {currentCode ? 'New Code' : 'Set Code'}
+                              </label>
+                              <input
+                                type="text"
+                                value={newCode}
+                                onChange={(e) => setNewAdminCodes(prev => ({ 
+                                  ...prev, 
+                                  [channel.id]: e.target.value 
+                                }))}
+                                placeholder={`Enter access code for ${channel.name}`}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px 12px',
+                                  borderRadius: 10,
+                                  background: 'rgba(255,255,255,0.06)',
+                                  border: '1px solid rgba(99,102,241,0.2)',
+                                  color: 'white',
+                                  fontSize: 13,
+                                  outline: 'none',
+                                  boxSizing: 'border-box'
+                                }}
+                              />
+                            </div>
+
+                            {/* Update Button */}
+                            <motion.button
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => updateAdminCode(channel.id)}
+                              disabled={!hasChanges || !newCode.trim() || isSaving}
+                              style={{
+                                width: '100%',
+                                padding: 12,
+                                borderRadius: 12,
+                                border: 'none',
+                                background: hasChanges && newCode.trim() && !isSaving 
+                                  ? channel.gradient 
+                                  : 'rgba(75,85,99,0.5)',
+                                color: 'white',
+                                fontWeight: 700,
+                                cursor: hasChanges && newCode.trim() && !isSaving ? 'pointer' : 'not-allowed',
+                                opacity: hasChanges && newCode.trim() && !isSaving ? 1 : 0.6,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 8
+                              }}
+                            >
+                              {isSaving ? (
+                                <>
+                                  <RefreshCw size={16} className="animate-spin" />
+                                  Updating...
+                                </>
+                              ) : (
+                                <>
+                                  <Save size={16} />
+                                  {currentCode ? 'Update Code' : 'Set Code'}
+                                </>
+                              )}
+                            </motion.button>
+
+                            {/* Status indicator */}
+                            <div style={{ marginTop: 12, textAlign: 'center' }}>
+                              <span 
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  padding: '4px 12px',
+                                  borderRadius: 20,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  background: currentCode ? `${channel.color}20` : 'rgba(107,114,128,0.2)',
+                                  color: currentCode ? channel.color : '#9ca3af',
+                                  border: `1px solid ${currentCode ? channel.color + '40' : '#374151'}`
+                                }}
+                              >
+                                {currentCode ? '✅ Code Set' : '⚠️ No Code Set'}
+                              </span>
+                            </div>
+                          </motion.div>
+                        )
+                      })}
+                    </div>
+                  </motion.div>
+
+                  {/* Instructions */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    style={{
+                      marginTop: 40,
+                      padding: 20,
+                      borderRadius: 16,
+                      background: 'rgba(10,8,30,0.6)',
+                      border: '1px solid rgba(99,102,241,0.2)',
+                      backdropFilter: 'blur(16px)'
+                    }}
+                  >
+                    <h3 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      ⚙️ How it works
+                    </h3>
+                    <ul style={{ color: 'rgba(148,163,184,0.7)', fontSize: 13, lineHeight: 1.6, margin: 0, paddingLeft: 20 }}>
+                      <li>Set unique access codes for each broadcast channel</li>
+                      <li>Students must enter the correct code to join a channel</li>
+                      <li>Codes can be updated anytime - existing members stay enrolled</li>
+                      <li>Share codes with students through your institution</li>
+                      <li>Only mentors can send messages in broadcast channels</li>
+                    </ul>
+                  </motion.div>
+                </>
+              )}
+            </div>
+          </div>
         )}
       </div>
 

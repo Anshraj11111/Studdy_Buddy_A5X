@@ -274,6 +274,7 @@ export const broadcastAPI = {
   // Admin
   getCodes:        () => api.get('/broadcast/admin/codes', { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
   addCode:         (data) => api.post('/broadcast/admin/codes', data, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
+  updateCode:      (data) => api.put('/broadcast/admin/codes', data, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
   deleteCode:      (id) => api.delete(`/broadcast/admin/codes/${id}`, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
   getRequests:     () => api.get('/broadcast/admin/requests', { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
   acceptRequest:   (id) => api.put(`/broadcast/admin/requests/${id}/accept`, {}, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
