@@ -58,7 +58,10 @@ const adminAPI = {
   updateCode: (channel, code) => axios.put(`${API_URL}/broadcast/admin/codes`, 
     { channel, code }, 
     { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }
-  )
+  ),
+  getAllEnrollments: () => axios.get(`${API_URL}/broadcast/admin/enrollments`, {
+    headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' }
+  })
 }
 
 export default function BroadcastAdmin() {
@@ -69,10 +72,12 @@ export default function BroadcastAdmin() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [copied, setCopied] = useState('')
+  const [enrollmentStats, setEnrollmentStats] = useState(null)
+  const [showEnrollments, setShowEnrollments] = useState(false)
 
-  // Load existing codes
+  // Load existing codes and enrollment stats
   useEffect(() => {
-    loadCodes()
+    Promise.all([loadCodes(), loadEnrollmentStats()])
   }, [])
 
   const loadCodes = async () => {
@@ -87,6 +92,16 @@ export default function BroadcastAdmin() {
     } catch (err) {
       setError('Failed to load codes')
       console.error('Load codes error:', err)
+    }
+  }
+
+  const loadEnrollmentStats = async () => {
+    try {
+      const response = await adminAPI.getAllEnrollments()
+      setEnrollmentStats(response.data)
+    } catch (err) {
+      console.error('Load enrollment stats error:', err)
+      // Don't show error for stats, it's not critical
     } finally {
       setLoading(false)
     }
@@ -207,6 +222,168 @@ export default function BroadcastAdmin() {
 
         {/* Channel Code Cards */}
         <div className="max-w-4xl mx-auto">
+          {/* Enrollment Statistics Dashboard */}
+          {enrollmentStats && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                  <div style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.2))',
+                    border: '1px solid rgba(16,185,129,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    📊
+                  </div>
+                  Channel Enrollment Statistics
+                </h2>
+                <div className="text-right">
+                  <div className="text-sm text-gray-400">Total Enrollments</div>
+                  <div className="text-2xl font-bold text-white">{enrollmentStats.totalEnrollments}</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {CHANNELS.map((channel) => {
+                  const stats = enrollmentStats.channelStats[channel.id] || { count: 0, members: [] }
+                  return (
+                    <motion.div
+                      key={channel.id}
+                      whileHover={{ y: -2 }}
+                      style={{
+                        background: 'rgba(10,8,30,0.8)',
+                        border: `1px solid ${channel.color}30`,
+                        borderRadius: 16,
+                        padding: 20,
+                        backdropFilter: 'blur(20px)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      {/* Top gradient bar */}
+                      <div 
+                        style={{ 
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: 3,
+                          background: channel.gradient
+                        }} 
+                      />
+
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 12,
+                              background: `${channel.color}18`,
+                              border: `1px solid ${channel.color}40`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: 20
+                            }}
+                          >
+                            {channel.icon}
+                          </div>
+                          <div>
+                            <h4 className="text-white font-semibold">{channel.name}</h4>
+                            <p className="text-gray-400 text-sm">{stats.count} students enrolled</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div 
+                            className="text-2xl font-bold"
+                            style={{ color: channel.color }}
+                          >
+                            {stats.count}
+                          </div>
+                        </div>
+                      </div>
+
+                      {stats.count > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-400">Recent enrollments</span>
+                            {stats.count > 3 && (
+                              <button 
+                                onClick={() => setShowEnrollments(showEnrollments === channel.id ? null : channel.id)}
+                                className="text-indigo-400 hover:text-indigo-300"
+                              >
+                                {showEnrollments === channel.id ? 'Show less' : `View all ${stats.count}`}
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-1">
+                            {(showEnrollments === channel.id ? stats.members : stats.members.slice(0, 3)).map((member) => (
+                              <div key={member.id} className="flex items-center gap-2 text-sm bg-white bg-opacity-5 rounded-lg p-2">
+                                <div 
+                                  style={{
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: 'white'
+                                  }}
+                                >
+                                  {member.user?.profileImage ? (
+                                    <img src={member.user.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                  ) : (
+                                    member.user?.name?.charAt(0)?.toUpperCase() || '?'
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-white font-medium truncate">{member.user?.name || 'Unknown'}</div>
+                                  <div className="text-gray-400 text-xs">{member.school} • {member.class}</div>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {new Date(member.joinedAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {stats.count === 0 && (
+                        <div className="text-center py-4">
+                          <div className="text-gray-500 text-sm">No students enrolled yet</div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white">Channel Access Codes</h2>
+            <button
+              onClick={() => Promise.all([loadCodes(), loadEnrollmentStats()])}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-medium transition-colors"
+            >
+              🔄 Refresh Data
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {CHANNELS.map((channel, index) => {
               const currentCode = codes[channel.id] || ''

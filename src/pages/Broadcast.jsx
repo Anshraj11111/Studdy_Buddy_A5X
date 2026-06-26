@@ -384,10 +384,11 @@ export default function Broadcast() {
     setLoading(true)
     try {
       const r = await broadcastAPI.getStatus()
+      console.log('📥 fetchStatus - Response:', r.data)
       
       // Validate that the response is for the current user
       if (r.data.userId && user?._id && r.data.userId !== user._id) {
-        console.warn('Response user ID mismatch:', r.data.userId, 'vs current:', user._id)
+        console.warn('⚠️ Response user ID mismatch:', r.data.userId, 'vs current:', user._id)
         setEnrollment(null)
         setPendingReq(null)
         return
@@ -396,31 +397,37 @@ export default function Broadcast() {
       const backendEnrollment = r.data.enrollment
       const pendingReq = r.data.pendingRequest
       
+      console.log('📥 Backend enrollment:', backendEnrollment)
+      console.log('📥 Current enrollment:', enrollment)
+      
       // If we're preventing override, skip this update
       if (preventBackendOverride && enrollment && enrollment.userId === user?._id) {
+        console.log('🚫 Preventing backend override of temp enrollment')
         return
       }
       
       // Update enrollment with validation
       if (backendEnrollment && backendEnrollment.userId && backendEnrollment.userId !== user._id) {
-        console.warn('Enrollment user ID mismatch, ignoring')
+        console.warn('⚠️ Enrollment user ID mismatch, ignoring')
         setEnrollment(null)
       } else if (backendEnrollment) {
+        console.log('✅ Setting enrollment from backend:', backendEnrollment.channel)
         setEnrollment(backendEnrollment)
       } else if (!backendEnrollment && (!enrollment || enrollment.school === 'Loading...')) {
+        console.log('❌ No backend enrollment, clearing')
         setEnrollment(null)
       }
       
       // Update pending request
       if (pendingReq && pendingReq.userId && pendingReq.userId !== user._id) {
-        console.warn('Pending request user ID mismatch, ignoring')  
+        console.warn('⚠️ Pending request user ID mismatch, ignoring')  
         setPendingReq(null)
       } else {
         setPendingReq(pendingReq)
       }
       
     } catch (err) {
-      console.error('Failed to fetch status:', err)
+      console.error('❌ Failed to fetch status:', err)
     } finally {
       setLoading(false)
     }
@@ -544,41 +551,53 @@ export default function Broadcast() {
   }
 
   const handleJoinSuccess = (type, channelId, formData = null) => {
+    console.log('🔥 handleJoinSuccess - Type:', type, 'ChannelId:', channelId)
+    console.log('🔥 handleJoinSuccess - FormData:', formData)
+    
     // Validate channelId exists in CHANNELS
     const targetChannel = CHANNELS.find(c => c.id === channelId)
     if (!targetChannel) {
-      console.error('Invalid channel ID:', channelId)
+      console.error('❌ Invalid channel ID:', channelId)
       setError(`Invalid channel: ${channelId}`)
       return
     }
     
+    console.log('✅ Target channel found:', targetChannel.name, 'ID:', targetChannel.id)
+    
     setJoinTarget(null); setShowRequestForm(false); setAlreadyEnrolledTarget(null)
     if (type === 'joined') {
-      // Create proper enrollment object with actual form data
+      // Create proper enrollment object with actual form data  
       const tempEnrollment = {
-        channel: channelId, // Use the exact channelId passed from form
+        channel: channelId, // Use the EXACT channelId passed from form
         school: formData?.school || 'Loading...', 
         class: formData?.class || 'Loading...',
         joinedAt: new Date().toISOString(),
         userId: user?._id
       }
       
+      console.log('🚀 Creating temp enrollment with channel:', channelId)
+      console.log('🚀 Temp enrollment object:', tempEnrollment)
+      
       // Prevent background fetch from overriding this for a short time
       setPreventBackendOverride(true)
-      const clearPreventOverride = setTimeout(() => {
+      setTimeout(() => {
+        console.log('⏰ Clearing prevent override flag')
         setPreventBackendOverride(false)
       }, 3000) // Prevent override for 3 seconds
       
-      // Instantly update UI state
+      // Instantly update UI state - CRITICAL: Use exact channelId
       setEnrollment(tempEnrollment)
       setView('chat')
       
+      console.log('🎯 UI state updated - enrollment channel:', tempEnrollment.channel, 'view: chat')
+      
       // Refresh enrollment data in background to get real data from backend
       setTimeout(() => {
+        console.log('🔄 Fetching real status from backend...')
         fetchStatus().catch(err => {
           console.error('Failed to refresh status after join:', err)
         })
-      }, 1000) // Longer delay to ensure backend has processed and prevent immediate override
+      }, 1000) // Longer delay to ensure backend has processed
       
     } else {
       fetchStatus() // Refresh to get latest pending request
@@ -701,6 +720,13 @@ export default function Broadcast() {
   }
 
   const ch = CHANNELS.find(c => c.id === enrollment?.channel)
+  
+  // Debug channel calculation
+  if (enrollment?.channel) {
+    console.log('🎯 Channel calculation - enrollment.channel:', enrollment.channel)
+    console.log('🎯 Found channel object:', ch)
+    console.log('🎯 Available channels:', CHANNELS.map(c => ({ id: c.id, name: c.name })))
+  }
 
   // ── Group messages by date ────────────────────────────────────────────────
   const grouped = []
@@ -721,6 +747,25 @@ export default function Broadcast() {
 
   return (
     <div className="flex min-h-screen" style={{ position: 'relative' }}>
+      {/* Temporary debug console */}
+      {enrollment && (
+        <div style={{ 
+          position: 'fixed', top: 80, left: 20, 
+          background: 'rgba(0,0,0,0.9)', border: '2px solid #0f0', 
+          borderRadius: 8, padding: 12, fontSize: 11, color: '#0f0',
+          maxWidth: 300, zIndex: 1000, fontFamily: 'monospace'
+        }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#fff' }}>🐛 LIVE DEBUG</div>
+          <div>Enrollment Channel: {enrollment.channel}</div>
+          <div>Expected Channel: {CHANNELS.find(c => c.id === enrollment.channel)?.name}</div>
+          <div>Actual Display: {ch?.name || 'NOT FOUND'}</div>
+          <div>View: {view}</div>
+          <div style={{ color: enrollment.channel === ch?.id ? '#0f0' : '#f00' }}>
+            Match: {enrollment.channel === ch?.id ? '✅' : '❌'}
+          </div>
+        </div>
+      )}
+      
       {/* Add CSS for animations */}
       <style>
         {`

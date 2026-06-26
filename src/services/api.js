@@ -278,6 +278,7 @@ export const broadcastAPI = {
   getRequests:     () => api.get('/broadcast/admin/requests', { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
   acceptRequest:   (id) => api.put(`/broadcast/admin/requests/${id}/accept`, {}, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
   rejectRequest:   (id) => api.put(`/broadcast/admin/requests/${id}/reject`, {}, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
+  getAllEnrollments: () => api.get('/broadcast/admin/enrollments', { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
 };
 
 /* ---------------- GENERAL GROUP ---------------- */
