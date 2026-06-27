@@ -53,7 +53,7 @@ export default function AIBot() {
 
       {/* Background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.88)' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: "var(--bg-overlay)" }} />
 
       <div style={{ position: 'relative', zIndex: 60 }}>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -63,7 +63,7 @@ export default function AIBot() {
       <div className="relative flex flex-col flex-1 lg:ml-[240px] mt-16 overflow-hidden" style={{ zIndex: 5 }}>
 
         {/* AI Header */}
-        <div className="flex-shrink-0" style={{ background: 'rgba(10,8,30,0.9)', borderBottom: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
+        <div className="flex-shrink-0" style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-primary)", backdropFilter: 'blur(20px)' }}>
           <div className="h-0.5" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
           <div className="flex items-center gap-3 px-4 py-3">
             <motion.div
@@ -71,15 +71,15 @@ export default function AIBot() {
               transition={{ duration: 2, repeat: Infinity }}
               className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
-              <Bot size={20} className="text-white" />
+              <Bot size={20} className="text-theme-primary" />
             </motion.div>
             <div>
-              <h1 className="font-bold text-white text-sm flex items-center gap-1.5">
+              <h1 className="font-bold text-theme-primary text-sm flex items-center gap-1.5">
                 AI Study Assistant
                 <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 1.5, repeat: Infinity }}
                   className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
               </h1>
-              <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: '0.7rem', fontFamily: 'monospace' }}>
+              <p style={{ color: "var(--text-secondary)", fontSize: '0.7rem', fontFamily: 'monospace' }}>
                 Powered by AI • Always here to help
               </p>
             </div>
@@ -97,7 +97,7 @@ export default function AIBot() {
               {msg.role === 'assistant' && (
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mr-2 mt-1"
                   style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 12px rgba(99,102,241,0.4)' }}>
-                  <Sparkles size={14} className="text-white" />
+                  <Sparkles size={14} className="text-theme-primary" />
                 </div>
               )}
               <div className={`max-w-[78%] sm:max-w-lg`}>
@@ -117,7 +117,7 @@ export default function AIBot() {
                     borderRadius: '18px 18px 18px 4px',
                   } : {
                     background: 'rgba(10,8,30,0.85)',
-                    border: '1px solid rgba(99,102,241,0.2)',
+                    border: "1px solid var(--border-primary)",
                     backdropFilter: 'blur(20px)',
                     borderRadius: '18px 18px 18px 4px',
                   }}>
@@ -126,7 +126,7 @@ export default function AIBot() {
                       <AlertCircle size={14} /> {msg.content}
                     </p>
                   ) : (
-                    <p className="text-sm text-white whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                    <p className="text-sm text-theme-primary whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   )}
                 </div>
               </div>
@@ -139,12 +139,12 @@ export default function AIBot() {
                 className="flex justify-start">
                 <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mr-2"
                   style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
-                  <Sparkles size={14} className="text-white" />
+                  <Sparkles size={14} className="text-theme-primary" />
                 </div>
-                <div className="px-4 py-3 rounded-2xl" style={{ background: 'rgba(10,8,30,0.85)', border: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)', borderRadius: '18px 18px 18px 4px' }}>
+                <div className="px-4 py-3 rounded-2xl" style={{ background: 'rgba(10,8,30,0.85)', border: "1px solid var(--border-primary)", backdropFilter: 'blur(20px)', borderRadius: '18px 18px 18px 4px' }}>
                   <div className="flex items-center gap-2">
                     <Loader2 size={14} className="animate-spin" style={{ color: '#818cf8' }} />
-                    <span className="text-sm" style={{ color: 'rgba(148,163,184,0.7)' }}>AI is thinking...</span>
+                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>AI is thinking...</span>
                   </div>
                 </div>
               </motion.div>
@@ -155,7 +155,7 @@ export default function AIBot() {
         </div>
 
         {/* Input */}
-        <div className="flex-shrink-0 px-3 sm:px-5 py-3" style={{ background: 'rgba(10,8,30,0.9)', borderTop: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
+        <div className="flex-shrink-0 px-3 sm:px-5 py-3" style={{ background: "var(--bg-card)", borderTop: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
           <div className="flex gap-2 items-end">
             <textarea
               value={input}
@@ -163,17 +163,17 @@ export default function AIBot() {
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything about your doubts..."
               rows={1}
-              className="flex-1 text-sm text-white placeholder-gray-500 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.2)', minHeight: '48px', maxHeight: '120px' }}
+              className="flex-1 text-sm text-theme-primary placeholder-gray-500 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              style={{ background: 'rgba(255,255,255,0.06)', border: "1px solid var(--border-primary)", minHeight: '48px', maxHeight: '120px' }}
             />
             <motion.button whileHover={{ scale: input.trim() ? 1.08 : 1 }} whileTap={{ scale: input.trim() ? 0.92 : 1 }}
               onClick={handleSend} disabled={!input.trim() || loading}
-              className="w-12 h-12 flex items-center justify-center rounded-xl text-white transition flex-shrink-0 disabled:opacity-40"
+              className="w-12 h-12 flex items-center justify-center rounded-xl text-theme-primary transition flex-shrink-0 disabled:opacity-40"
               style={{ background: input.trim() ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.2)', boxShadow: input.trim() ? '0 2px 12px rgba(99,102,241,0.4)' : 'none' }}>
               <Send size={18} />
             </motion.button>
           </div>
-          <p className="text-xs text-center mt-2" style={{ color: 'rgba(148,163,184,0.4)' }}>
+          <p className="text-xs text-center mt-2" style={{ color: "var(--text-muted)" }}>
             Press Enter to send • Shift + Enter for new line
           </p>
         </div>

@@ -10,8 +10,8 @@ const TOPICS = ['Robotics', 'Programming', 'Electronics', 'Mechanics', 'AI/ML']
 
 const inputStyle = {
   background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(99,102,241,0.2)',
-  color: 'white',
+  border: "1px solid var(--border-primary)",
+  color: "var(--text-primary)",
   borderRadius: '12px',
   padding: '12px 16px',
   fontSize: '0.9rem',
@@ -53,7 +53,7 @@ export default function EditDoubt() {
     <div className="flex min-h-screen" style={{ position: 'relative' }}>
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.82)' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: "var(--bg-overlay)" }} />
       <div style={{ position: 'relative', zIndex: 60 }}>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
@@ -64,7 +64,7 @@ export default function EditDoubt() {
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
               <Loader2 size={36} style={{ color: '#818cf8' }} />
             </motion.div>
-            <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: '0.8rem', fontFamily: 'monospace' }}>Loading doubt...</p>
+            <p style={{ color: "var(--text-secondary)", fontSize: '0.8rem', fontFamily: 'monospace' }}>Loading doubt...</p>
           </div>
         ) : (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl">
@@ -81,17 +81,17 @@ export default function EditDoubt() {
                 <h1 className="text-2xl font-bold" style={{ background: 'linear-gradient(135deg,#a5b4fc,#818cf8,#c4b5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                   Edit Doubt
                 </h1>
-                <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: '0.8rem', fontFamily: 'monospace' }}>Update your question</p>
+                <p style={{ color: "var(--text-secondary)", fontSize: '0.8rem', fontFamily: 'monospace' }}>Update your question</p>
               </div>
             </div>
 
             {/* Form Card */}
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(10,8,30,0.8)', border: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(24px)' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)", backdropFilter: 'blur(24px)' }}>
               <div className="h-0.5" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
               <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5">
 
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-semibold mb-2" style={{ color: 'rgba(148,163,184,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <label className="flex items-center gap-2 text-xs font-semibold mb-2" style={{ color: "var(--text-secondary)", fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     <FileQuestion size={12} /> Title *
                   </label>
                   <input value={formData.title} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
@@ -101,7 +101,7 @@ export default function EditDoubt() {
                 </div>
 
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-semibold mb-2" style={{ color: 'rgba(148,163,184,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <label className="flex items-center gap-2 text-xs font-semibold mb-2" style={{ color: "var(--text-secondary)", fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     <AlignLeft size={12} /> Description *
                   </label>
                   <textarea value={formData.description} onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
@@ -112,7 +112,7 @@ export default function EditDoubt() {
                 </div>
 
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-semibold mb-2" style={{ color: 'rgba(148,163,184,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <label className="flex items-center gap-2 text-xs font-semibold mb-2" style={{ color: "var(--text-secondary)", fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     <BookOpen size={12} /> Topic
                   </label>
                   <select value={formData.topic} onChange={e => setFormData(p => ({ ...p, topic: e.target.value }))}
@@ -123,8 +123,8 @@ export default function EditDoubt() {
                 </div>
 
                 <div>
-                  <label className="flex items-center gap-2 text-xs font-semibold mb-2" style={{ color: 'rgba(148,163,184,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    <Tag size={12} /> Tags <span style={{ color: 'rgba(148,163,184,0.4)', fontWeight: 400, textTransform: 'none' }}>(comma separated)</span>
+                  <label className="flex items-center gap-2 text-xs font-semibold mb-2" style={{ color: "var(--text-secondary)", fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    <Tag size={12} /> Tags <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: 'none' }}>(comma separated)</span>
                   </label>
                   <input value={formData.tags} onChange={e => setFormData(p => ({ ...p, tags: e.target.value }))}
                     placeholder="python, beginner, help" style={inputStyle}
@@ -140,7 +140,7 @@ export default function EditDoubt() {
 
                 <div className="flex gap-3 pt-1">
                   <motion.button type="submit" disabled={submitting} whileHover={{ scale: submitting ? 1 : 1.02 }} whileTap={{ scale: submitting ? 1 : 0.98 }}
-                    className="flex-1 flex items-center justify-center gap-2 py-3 text-white font-semibold rounded-xl transition disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 py-3 text-theme-primary font-semibold rounded-xl transition disabled:opacity-50"
                     style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 4px 16px rgba(99,102,241,0.4)' }}>
                     {submitting ? <><Loader2 size={16} className="animate-spin" /> Updating...</> : <><Save size={16} /> Update Doubt</>}
                   </motion.button>

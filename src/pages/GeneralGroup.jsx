@@ -62,12 +62,12 @@ function EmojiPicker({ onSelect, onClose }) {
         position: 'absolute', bottom: '100%', right: 0, marginBottom: 8,
         width: 320, borderRadius: 16,
         background: 'rgba(12,10,30,0.98)', backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(99,102,241,0.25)',
+        border: "1px solid var(--border-primary)",
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         zIndex: 200, overflow: 'hidden',
       }}>
       {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid rgba(99,102,241,0.15)', padding: '6px 8px 0', gap: 2 }}>
+      <div style={{ display: 'flex', borderBottom: "1px solid var(--border-secondary)", padding: '6px 8px 0', gap: 2 }}>
         {EMOJI_CATEGORIES.map((cat, i) => (
           <button key={i} onClick={() => setTab(i)}
             style={{
@@ -105,7 +105,7 @@ function Avatar({ user, size = 38 }) {
       width: size, height: size, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
       background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.4, fontWeight: 700, color: 'white',
+      fontSize: size * 0.4, fontWeight: 700, color: "var(--text-primary)",
       border: '2px solid rgba(99,102,241,0.3)',
     }}>
       {user?.profileImage
@@ -138,23 +138,23 @@ function MembersPanel({ onClose }) {
       }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 18px', borderBottom: '1px solid rgba(99,102,241,0.15)',
+        padding: '14px 18px', borderBottom: "1px solid var(--border-secondary)",
         background: 'rgba(99,102,241,0.06)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Users size={18} color="#818cf8" />
-          <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>
+          <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>
             Members · {members.length}
           </span>
         </div>
         <button onClick={onClose}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(148,163,184,0.7)', padding: 4 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: "var(--text-secondary)", padding: 4 }}>
           <X size={20} />
         </button>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
         {loading
-          ? <div style={{ textAlign: 'center', paddingTop: 60, color: 'rgba(148,163,184,0.5)', fontSize: 13 }}>Loading...</div>
+          ? <div style={{ textAlign: 'center', paddingTop: 60, color: "var(--text-tertiary)", fontSize: 13 }}>Loading...</div>
           : members.map((m, i) => (
             <motion.div key={m._id}
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
@@ -167,7 +167,7 @@ function MembersPanel({ onClose }) {
               <Avatar user={m} size={40} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: 'white', fontWeight: 600, fontSize: 13 }}>{m.name}</span>
+                  <span style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: 13 }}>{m.name}</span>
                   {m.role === 'mentor' && (
                     <span style={{
                       fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 6,
@@ -176,7 +176,7 @@ function MembersPanel({ onClose }) {
                     }}>MENTOR</span>
                   )}
                 </div>
-                <p style={{ fontSize: 11, color: 'rgba(148,163,184,0.5)', margin: 0 }}>{m.email}</p>
+                <p style={{ fontSize: 11, color: "var(--text-tertiary)", margin: 0 }}>{m.email}</p>
               </div>
               <span style={{ fontSize: 10, color: 'rgba(99,102,241,0.5)', whiteSpace: 'nowrap' }}>
                 {fmtDate(m.joinedAt)}
@@ -234,7 +234,7 @@ function MessageBubble({ msg, isOwn, isMentor, onDelete }) {
           padding: '9px 13px',
           boxShadow: isOwn ? '0 2px 12px rgba(99,102,241,0.35)' : '0 1px 4px rgba(0,0,0,0.3)',
         }}>
-          <p style={{ color: 'white', fontSize: 13, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          <p style={{ color: "var(--text-primary)", fontSize: 13, lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
             {msg.content}
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 3 }}>
@@ -251,7 +251,7 @@ function MessageBubble({ msg, isOwn, isMentor, onDelete }) {
                   position: 'absolute', top: -10,
                   right: isOwn ? 'auto' : -10, left: isOwn ? -10 : 'auto',
                   width: 24, height: 24, borderRadius: '50%', border: 'none',
-                  background: '#ef4444', color: 'white', cursor: 'pointer',
+                  background: '#ef4444', color: "var(--text-primary)", cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   boxShadow: '0 2px 8px rgba(239,68,68,0.5)',
                 }}>
@@ -469,7 +469,7 @@ export default function GeneralGroup() {
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               style={{
                 position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
-                zIndex: 100, background: '#ef4444', color: 'white',
+                zIndex: 100, background: '#ef4444', color: "var(--text-primary)",
                 padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600,
                 boxShadow: '0 4px 20px rgba(239,68,68,0.4)', whiteSpace: 'nowrap',
               }}>
@@ -482,7 +482,7 @@ export default function GeneralGroup() {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '10px 16px', flexShrink: 0,
-          background: 'rgba(8,6,24,0.88)', borderBottom: '1px solid rgba(99,102,241,0.15)',
+          background: 'rgba(8,6,24,0.88)', borderBottom: "1px solid var(--border-secondary)",
           backdropFilter: 'blur(16px)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -496,7 +496,7 @@ export default function GeneralGroup() {
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>General Group</span>
+                <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>General Group</span>
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6,
                   background: 'rgba(99,102,241,0.2)', color: '#a5b4fc',
@@ -523,7 +523,7 @@ export default function GeneralGroup() {
                 <Users size={14} />
                 <span>Members</span>
                 <span style={{
-                  background: '#6366f1', color: 'white', borderRadius: 99,
+                  background: '#6366f1', color: "var(--text-primary)", borderRadius: 99,
                   padding: '1px 7px', fontSize: 10, fontWeight: 700,
                 }}>{memberCount}</span>
               </motion.button>
@@ -544,7 +544,7 @@ export default function GeneralGroup() {
                   display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 10,
                   cursor: joining ? 'not-allowed' : 'pointer',
                   background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none',
-                  color: 'white', fontSize: 12, fontWeight: 700,
+                  color: "var(--text-primary)", fontSize: 12, fontWeight: 700,
                   boxShadow: '0 2px 12px rgba(99,102,241,0.4)', opacity: joining ? 0.7 : 1,
                 }}>
                 <LogIn size={14} />{joining ? 'Joining...' : 'Join Group'}
@@ -572,7 +572,7 @@ export default function GeneralGroup() {
                 }}>
                 <Users size={36} color="#818cf8" />
               </motion.div>
-              <h2 style={{ color: 'white', fontSize: 22, fontWeight: 800, margin: 0 }}>General Group</h2>
+              <h2 style={{ color: "var(--text-primary)", fontSize: 22, fontWeight: 800, margin: 0 }}>General Group</h2>
               <p style={{ color: 'rgba(148,163,184,0.65)', fontSize: 14, maxWidth: 340, lineHeight: 1.7, margin: 0 }}>
                 A broadcast channel for everyone. Mentors post announcements, updates &amp; resources. Students can read all messages.
               </p>
@@ -597,7 +597,7 @@ export default function GeneralGroup() {
                 style={{
                   marginTop: 4, padding: '13px 36px', borderRadius: 50, border: 'none',
                   background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                  color: 'white', fontWeight: 700, fontSize: 15,
+                  color: "var(--text-primary)", fontWeight: 700, fontSize: 15,
                   cursor: joining ? 'not-allowed' : 'pointer',
                   boxShadow: '0 4px 20px rgba(99,102,241,0.45)', opacity: joining ? 0.7 : 1,
                 }}>
@@ -610,7 +610,7 @@ export default function GeneralGroup() {
           {isMember && (
             <div style={{ padding: '8px 12px', maxWidth: 780, margin: '0 auto', width: '100%' }}>
               {messages.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(148,163,184,0.4)', fontSize: 13 }}>
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: "var(--text-muted)", fontSize: 13 }}>
                   No messages yet.{isMentor ? ' Be the first to post!' : ' Waiting for a mentor to post...'}
                 </div>
               )}
@@ -672,8 +672,8 @@ export default function GeneralGroup() {
                     style={{
                       width: '100%', resize: 'none', overflowY: 'auto',
                       padding: '10px 44px 10px 14px', background: 'rgba(255,255,255,0.07)',
-                      border: '1px solid rgba(99,102,241,0.25)', borderRadius: 14,
-                      color: 'white', fontSize: 13, outline: 'none', fontFamily: 'inherit', maxHeight: 120,
+                      border: "1px solid var(--border-primary)", borderRadius: 14,
+                      color: "var(--text-primary)", fontSize: 13, outline: 'none', fontFamily: 'inherit', maxHeight: 120,
                       boxSizing: 'border-box',
                     }}
                     onInput={e => {
@@ -722,10 +722,10 @@ export default function GeneralGroup() {
                 maxWidth: 780, margin: '0 auto',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: '10px 16px', borderRadius: 12,
-                background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.15)',
+                background: 'rgba(99,102,241,0.07)', border: "1px solid var(--border-secondary)",
               }}>
                 <Info size={14} color="#818cf8" />
-                <span style={{ color: 'rgba(148,163,184,0.6)', fontSize: 12 }}>
+                <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>
                   You can read messages. Only mentors can send messages in this group.
                 </span>
               </div>

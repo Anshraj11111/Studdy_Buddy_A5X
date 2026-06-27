@@ -18,12 +18,12 @@ const TOPICS = [
 ]
 
 const SKILL_COLORS = {
-  'Robotics': { bg: 'rgba(96,165,250,0.15)', border: 'rgba(96,165,250,0.3)', text: '#93c5fd' },
-  'Programming': { bg: 'rgba(52,211,153,0.15)', border: 'rgba(52,211,153,0.3)', text: '#6ee7b7' },
-  'AI/ML': { bg: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.3)', text: '#c4b5fd' },
-  'IoT': { bg: 'rgba(56,189,248,0.15)', border: 'rgba(56,189,248,0.3)', text: '#7dd3fc' },
-  'Electronics': { bg: 'rgba(251,191,36,0.15)', border: 'rgba(251,191,36,0.3)', text: '#fcd34d' },
-  'Embedded Systems': { bg: 'rgba(248,113,113,0.15)', border: 'rgba(248,113,113,0.3)', text: '#fca5a5' },
+  'Robotics': { bg: '#dbeafe', text: '#3b82f6' },
+  'Programming': { bg: '#d1fae5', text: '#059669' },
+  'AI/ML': { bg: '#e9d5ff', text: '#a855f7' },
+  'IoT': { bg: '#cffafe', text: '#0891b2' },
+  'Electronics': { bg: '#fef3c7', text: '#d97706' },
+  'Embedded Systems': { bg: '#fee2e2', text: '#dc2626' },
 }
 
 export default function Mentors() {
@@ -88,12 +88,8 @@ export default function Mentors() {
   })
 
   return (
-    <div className="flex min-h-screen" style={{ position: 'relative' }}>
+    <div className="flex min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-
-      {/* Background */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.80)' }} />
 
       {/* Sidebar */}
       <div style={{ position: 'relative', zIndex: 60 }}>
@@ -101,42 +97,29 @@ export default function Mentors() {
       </div>
 
       {/* Main */}
-      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-5 py-5 overflow-x-hidden" style={{ zIndex: 5 }}>
+      <div className="relative flex-1 lg:ml-[240px] mt-16 px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden"
+        style={{ background: 'var(--bg-primary)' }}>
 
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-6">
-          <motion.div
-            animate={{ boxShadow: ['0 0 0px rgba(99,102,241,0)', '0 0 24px rgba(99,102,241,0.5)', '0 0 0px rgba(99,102,241,0)'] }}
-            transition={{ duration: 3, repeat: Infinity }}
-            className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.25))', border: '1px solid rgba(99,102,241,0.4)' }}
-          >
-            <UserCircle2 size={28} style={{ color: '#818cf8' }} />
-          </motion.div>
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} 
+          className="flex items-start justify-between mb-6">
           <div>
-            <motion.h1 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-              className="text-2xl sm:text-3xl font-bold"
-              style={{ background: 'linear-gradient(135deg,#a5b4fc,#818cf8,#c4b5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              Find a Mentor
-            </motion.h1>
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-              style={{ color: 'rgba(148,163,184,0.7)', fontSize: '0.8rem', fontFamily: 'monospace' }}>
-              Connect with experts and accelerate your learning
-            </motion.p>
+            <h1 className="text-3xl font-bold text-theme-primary mb-1.5">Find a Mentor</h1>
+            <p className="text-theme-secondary text-sm">Connect with experts and accelerate your learning</p>
           </div>
         </motion.div>
 
         {/* Search */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-4">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-6">
           <div className="relative">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'rgba(148,163,184,0.5)' }} />
+            <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-tertiary" />
             <input
               type="text"
               placeholder="Search mentors by name or skill..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(12px)' }}
+              className="w-full pl-11 pr-4 py-3 rounded-lg text-theme-primary placeholder-theme-muted focus:outline-none focus:ring-2 focus:ring-indigo-500/30 text-sm transition-all"
+              style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}
             />
           </div>
         </motion.div>
@@ -146,12 +129,11 @@ export default function Mentors() {
           className="flex gap-2 flex-wrap mb-5">
           {TOPICS.map(topic => (
             <button key={topic.id} onClick={() => setSelectedTopic(topic.id)}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-200"
+              className="px-3.5 py-1.5 rounded-full text-xs font-medium transition-all"
               style={{
-                background: selectedTopic === topic.id ? `${topic.color}25` : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${selectedTopic === topic.id ? topic.color + '60' : 'rgba(255,255,255,0.1)'}`,
-                color: selectedTopic === topic.id ? topic.color : 'rgba(148,163,184,0.7)',
-                boxShadow: selectedTopic === topic.id ? `0 0 12px ${topic.color}30` : 'none',
+                background: selectedTopic === topic.id ? '#e0e7ff' : 'var(--bg-secondary)',
+                color: selectedTopic === topic.id ? '#6366f1' : 'var(--text-tertiary)',
+                border: `1px solid ${selectedTopic === topic.id ? '#c7d2fe' : 'var(--border-primary)'}`
               }}>
               {topic.label}
             </button>
@@ -159,20 +141,26 @@ export default function Mentors() {
         </motion.div>
 
         {/* Count */}
-        <div className="flex items-center justify-between mb-4">
-          <p style={{ color: 'rgba(148,163,184,0.5)', fontSize: '0.75rem', fontFamily: 'monospace' }}>
-            <span style={{ color: '#818cf8' }}>{filteredMentors.length}</span> mentor{filteredMentors.length !== 1 ? 's' : ''} found
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-theme-secondary text-sm flex items-center gap-1.5">
+            <UserCircle2 size={16} className="text-indigo-500" />
+            <span className="font-semibold text-theme-primary">{filteredMentors.length}</span> 
+            <span>mentor{filteredMentors.length !== 1 ? 's' : ''} found</span>
           </p>
         </div>
 
         {/* Error */}
         {error && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="flex items-center gap-3 p-4 rounded-xl mb-5"
-            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }}>
-            <AlertCircle className="text-red-400 flex-shrink-0" size={16} />
-            <p className="text-red-300 text-sm flex-1">{error}</p>
-            <button onClick={fetchMentors} className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs hover:bg-red-600 transition">Retry</button>
+            className="flex items-center gap-3 p-4 rounded-lg mb-5"
+            style={{ background: 'var(--bg-secondary)', border: '1px solid #fca5a5', color: '#dc2626' }}>
+            <AlertCircle className="flex-shrink-0" size={18} />
+            <p className="text-sm flex-1">{error}</p>
+            <button onClick={fetchMentors} 
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-80"
+              style={{ background: '#dc2626', color: 'white' }}>
+              Retry
+            </button>
           </motion.div>
         )}
 
@@ -180,9 +168,9 @@ export default function Mentors() {
         {loading ? (
           <div className="flex flex-col items-center py-24 gap-3">
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-              <Loader2 size={36} style={{ color: '#818cf8' }} />
+              <Loader2 size={36} className="text-indigo-500" />
             </motion.div>
-            <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: '0.8rem', fontFamily: 'monospace' }}>Loading mentors...</p>
+            <p className="text-theme-secondary text-sm">Loading mentors...</p>
           </div>
         ) : filteredMentors.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -190,70 +178,64 @@ export default function Mentors() {
               <motion.div key={mentor._id}
                 initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(index * 0.06, 0.4), type: 'spring', stiffness: 200 }}
-                whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                className="group relative rounded-2xl overflow-hidden"
-                style={{ background: 'rgba(10,8,30,0.7)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(20px)' }}
+                className="group relative rounded-xl overflow-hidden transition-all hover:shadow-lg"
+                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}
               >
-                {/* Top glow bar */}
-                <div className="h-0.5 w-full" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
-
-                {/* Hover glow */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  style={{ background: 'radial-gradient(ellipse at top,rgba(99,102,241,0.12),transparent 70%)' }} />
-
-                <div className="p-5 relative z-10">
+                <div className="p-5 relative">
                   {/* Avatar */}
                   <div className="flex flex-col items-center mb-4">
-                    <motion.div className="relative mb-3"
-                      whileHover={{ scale: 1.05 }} transition={{ duration: 0.2 }}>
-                      <div className="w-18 h-18 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-2xl"
-                        style={{ width: 72, height: 72, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}>
+                    <div className="relative mb-3">
+                      <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-2xl"
+                        style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
                         {mentor.profileImage
                           ? <img src={mentor.profileImage} alt={mentor.name} className="w-full h-full object-cover" />
                           : mentor.name?.charAt(0).toUpperCase() || 'M'}
                       </div>
-                      {/* Real online dot */}
-                      <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2"
-                        style={{ background: onlineUsers.has(String(mentor._id)) ? '#34d399' : '#6b7280', borderColor: 'rgba(10,8,30,0.9)' }} />
-                    </motion.div>
+                      {/* Online indicator */}
+                      <div className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full border-2"
+                        style={{ 
+                          background: onlineUsers.has(String(mentor._id)) ? '#34d399' : '#94a3b8', 
+                          borderColor: 'var(--bg-secondary)' 
+                        }} />
+                    </div>
 
-                    <h3 className="font-bold text-white text-center text-sm mb-1">{mentor.name}</h3>
-                    <div className="px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                      style={{ background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.35)', color: '#c4b5fd' }}>
+                    <h3 className="font-semibold text-theme-primary text-center text-base mb-1">{mentor.name}</h3>
+                    <div className="px-2.5 py-1 rounded-md text-xs font-medium"
+                      style={{ background: '#e0e7ff', color: '#6366f1' }}>
                       ✦ Mentor
                     </div>
                   </div>
 
                   {/* Skills */}
                   <div className="mb-4">
-                    <p style={{ color: 'rgba(148,163,184,0.5)', fontSize: '0.65rem', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Expertise</p>
+                    <p className="text-theme-tertiary text-xs uppercase tracking-wide mb-2">Expertise</p>
                     <div className="flex flex-wrap gap-1.5">
                       {mentor.skills?.length > 0 ? mentor.skills.slice(0, 3).map((skill, idx) => {
-                        const c = SKILL_COLORS[skill] || { bg: 'rgba(99,102,241,0.15)', border: 'rgba(99,102,241,0.3)', text: '#a5b4fc' }
+                        const c = SKILL_COLORS[skill] || { bg: '#e0e7ff', text: '#6366f1' }
                         return (
-                          <span key={idx} className="px-2 py-0.5 rounded-md text-xs font-medium"
-                            style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                          <span key={idx} className="px-2 py-1 rounded-md text-xs font-medium"
+                            style={{ background: c.bg, color: c.text }}>
                             {skill}
                           </span>
                         )
-                      }) : <span style={{ color: 'rgba(148,163,184,0.4)', fontSize: '0.75rem' }}>No skills listed</span>}
+                      }) : <span className="text-theme-muted text-xs">No skills listed</span>}
                     </div>
                   </div>
 
                   {/* Stats */}
                   <div className="grid grid-cols-2 gap-2 mb-4 pb-4"
-                    style={{ borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
+                    style={{ borderBottom: '1px solid var(--border-primary)' }}>
                     {[
-                      { icon: Clock, label: 'Experience', value: '3+ Yrs', color: '#818cf8' },
-                      { icon: Award, label: 'Sessions', value: '250+', color: '#fbbf24' },
+                      { icon: Clock, label: 'Experience', value: '2+ Yrs', color: '#6366f1' },
+                      { icon: Award, label: 'Sessions', value: '250+', color: '#f59e0b' },
                     ].map(s => {
                       const Icon = s.icon
                       return (
-                        <div key={s.label} className="rounded-xl p-2 text-center"
-                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <Icon size={12} style={{ color: s.color, margin: '0 auto 3px' }} />
-                          <p style={{ color: 'rgba(148,163,184,0.5)', fontSize: '0.6rem', fontFamily: 'monospace' }}>{s.label}</p>
-                          <p className="text-white font-bold text-xs">{s.value}</p>
+                        <div key={s.label} className="rounded-lg p-2.5 text-center"
+                          style={{ background: 'var(--bg-primary)' }}>
+                          <Icon size={14} className="mx-auto mb-1" style={{ color: s.color }} />
+                          <p className="text-theme-tertiary text-xs mb-0.5">{s.label}</p>
+                          <p className="text-theme-primary font-semibold text-sm">{s.value}</p>
                         </div>
                       )
                     })}
@@ -261,18 +243,18 @@ export default function Mentors() {
 
                   {/* Buttons */}
                   <div className="flex gap-2">
-                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                       onClick={() => handleMessage(mentor)} disabled={!!connecting}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-xs font-semibold transition disabled:opacity-50"
-                      style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}>
-                      {connecting === mentor._id + '_msg' ? <Loader2 size={13} className="animate-spin" /> : <MessageCircle size={13} />}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-white text-xs font-semibold transition disabled:opacity-50"
+                      style={{ background: '#6366f1' }}>
+                      {connecting === mentor._id + '_msg' ? <Loader2 size={14} className="animate-spin" /> : <MessageCircle size={14} />}
                       Message
                     </motion.button>
-                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                       onClick={() => handleVideoCall(mentor)} disabled={!!connecting}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-xs font-semibold transition disabled:opacity-50"
-                      style={{ background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 4px 12px rgba(5,150,105,0.35)' }}>
-                      {connecting === mentor._id + '_video' ? <Loader2 size={13} className="animate-spin" /> : <Video size={13} />}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-white text-xs font-semibold transition disabled:opacity-50"
+                      style={{ background: '#10b981' }}>
+                      {connecting === mentor._id + '_video' ? <Loader2 size={14} className="animate-spin" /> : <Video size={14} />}
                       Video
                     </motion.button>
                   </div>
@@ -283,17 +265,17 @@ export default function Mentors() {
         ) : !error && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-24">
             <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
-              <Search size={32} style={{ color: 'rgba(99,102,241,0.6)' }} />
+              style={{ background: '#e0e7ff' }}>
+              <Search size={32} style={{ color: '#6366f1' }} />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">No mentors found</h3>
-            <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: '0.85rem' }}>
+            <h3 className="text-lg font-bold text-theme-primary mb-2">No mentors found</h3>
+            <p className="text-theme-secondary text-sm">
               {searchQuery ? `No results for "${searchQuery}"` : selectedTopic !== 'all' ? `No mentors for "${selectedTopic}"` : 'No mentors registered yet.'}
             </p>
             {(selectedTopic !== 'all' || searchQuery) && (
               <button onClick={() => { setSelectedTopic('all'); setSearchQuery('') }}
-                className="mt-4 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition"
-                style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 4px 12px rgba(99,102,241,0.35)' }}>
+                className="mt-4 px-5 py-2.5 rounded-lg text-white text-sm font-semibold transition-all hover:opacity-90"
+                style={{ background: '#6366f1' }}>
                 View All Mentors
               </button>
             )}

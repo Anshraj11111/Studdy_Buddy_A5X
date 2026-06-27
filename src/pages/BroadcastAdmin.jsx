@@ -73,7 +73,7 @@ export default function BroadcastAdmin() {
   const [success, setSuccess] = useState('')
   const [copied, setCopied] = useState('')
   const [enrollmentStats, setEnrollmentStats] = useState(null)
-  const [showEnrollments, setShowEnrollments] = useState(false)
+  const [showEnrollments, setShowEnrollments] = useState(null) // Changed from false to null
 
   // Load existing codes and enrollment stats
   useEffect(() => {
@@ -139,7 +139,7 @@ export default function BroadcastAdmin() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-theme-sidebar flex items-center justify-center">
         <div style={{
           width: 40,
           height: 40,
@@ -192,8 +192,8 @@ export default function BroadcastAdmin() {
               <Settings size={24} color="#818cf8" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Broadcast Channel Codes</h1>
-          <p className="text-gray-400 text-sm">Manage access codes for all broadcast channels</p>
+          <h1 className="text-3xl font-bold text-theme-primary mb-2">Broadcast Channel Codes</h1>
+          <p className="text-theme-tertiary text-sm">Manage access codes for all broadcast channels</p>
         </motion.div>
 
         {/* Notifications */}
@@ -203,7 +203,7 @@ export default function BroadcastAdmin() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg"
+              className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-theme-primary px-6 py-3 rounded-lg shadow-lg"
             >
               {error}
             </motion.div>
@@ -213,7 +213,7 @@ export default function BroadcastAdmin() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg"
+              className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 bg-green-500 text-theme-primary px-6 py-3 rounded-lg shadow-lg"
             >
               {success}
             </motion.div>
@@ -230,7 +230,7 @@ export default function BroadcastAdmin() {
               className="mb-8"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-theme-primary flex items-center gap-3">
                   <div style={{
                     width: 40,
                     height: 40,
@@ -246,8 +246,8 @@ export default function BroadcastAdmin() {
                   Channel Enrollment Statistics
                 </h2>
                 <div className="text-right">
-                  <div className="text-sm text-gray-400">Total Enrollments</div>
-                  <div className="text-2xl font-bold text-white">{enrollmentStats.totalEnrollments}</div>
+                  <div className="text-sm text-theme-tertiary">Total Enrollments</div>
+                  <div className="text-2xl font-bold text-theme-primary">{enrollmentStats.totalEnrollments}</div>
                 </div>
               </div>
               
@@ -259,7 +259,7 @@ export default function BroadcastAdmin() {
                       key={channel.id}
                       whileHover={{ y: -2 }}
                       style={{
-                        background: 'rgba(10,8,30,0.8)',
+                        background: "var(--bg-tertiary)",
                         border: `1px solid ${channel.color}30`,
                         borderRadius: 16,
                         padding: 20,
@@ -298,8 +298,8 @@ export default function BroadcastAdmin() {
                             {channel.icon}
                           </div>
                           <div>
-                            <h4 className="text-white font-semibold">{channel.name}</h4>
-                            <p className="text-gray-400 text-sm">{stats.count} students enrolled</p>
+                            <h4 className="text-theme-primary font-semibold">{channel.name}</h4>
+                            <p className="text-theme-tertiary text-sm">{stats.count} students enrolled</p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -315,7 +315,7 @@ export default function BroadcastAdmin() {
                       {stats.count > 0 && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-400">Recent enrollments</span>
+                            <span className="text-theme-tertiary">Recent enrollments</span>
                             {stats.count > 3 && (
                               <button 
                                 onClick={() => setShowEnrollments(showEnrollments === channel.id ? null : channel.id)}
@@ -340,7 +340,7 @@ export default function BroadcastAdmin() {
                                     justifyContent: 'center',
                                     fontSize: 10,
                                     fontWeight: 700,
-                                    color: 'white'
+                                    color: "var(--text-primary)"
                                   }}
                                 >
                                   {member.user?.profileImage ? (
@@ -350,10 +350,10 @@ export default function BroadcastAdmin() {
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-white font-medium truncate">{member.user?.name || 'Unknown'}</div>
-                                  <div className="text-gray-400 text-xs">{member.school} • {member.class}</div>
+                                  <div className="text-theme-primary font-medium truncate">{member.user?.name || 'Unknown'}</div>
+                                  <div className="text-theme-tertiary text-xs">{member.school} • {member.class}</div>
                                 </div>
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-theme-muted">
                                   {new Date(member.joinedAt).toLocaleDateString()}
                                 </div>
                               </div>
@@ -364,7 +364,7 @@ export default function BroadcastAdmin() {
 
                       {stats.count === 0 && (
                         <div className="text-center py-4">
-                          <div className="text-gray-500 text-sm">No students enrolled yet</div>
+                          <div className="text-theme-muted text-sm">No students enrolled yet</div>
                         </div>
                       )}
                     </motion.div>
@@ -375,10 +375,10 @@ export default function BroadcastAdmin() {
           )}
 
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-white">Channel Access Codes</h2>
+            <h2 className="text-2xl font-bold text-theme-primary">Channel Access Codes</h2>
             <button
               onClick={() => Promise.all([loadCodes(), loadEnrollmentStats()])}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-medium transition-colors"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-theme-primary font-medium transition-colors"
             >
               🔄 Refresh Data
             </button>
@@ -399,7 +399,7 @@ export default function BroadcastAdmin() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                   style={{
-                    background: 'rgba(10,8,30,0.8)',
+                    background: "var(--bg-tertiary)",
                     border: `1px solid ${channel.color}30`,
                     borderRadius: 20,
                     padding: 24,
@@ -438,20 +438,20 @@ export default function BroadcastAdmin() {
                       {channel.icon}
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white">{channel.name}</h3>
-                      <p className="text-gray-400 text-sm">{channel.desc}</p>
+                      <h3 className="text-xl font-bold text-theme-primary">{channel.name}</h3>
+                      <p className="text-theme-tertiary text-sm">{channel.desc}</p>
                     </div>
                   </div>
 
                   {/* Current Code Display */}
                   {currentCode && (
                     <div className="mb-4">
-                      <label className="block text-gray-300 text-sm font-medium mb-2">
+                      <label className="block text-theme-secondary text-sm font-medium mb-2">
                         Current Code
                       </label>
                       <div className="flex items-center gap-2">
                         <div 
-                          className="flex-1 px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white font-mono text-sm"
+                          className="flex-1 px-4 py-2 rounded-lg bg-theme-card border border-theme text-theme-primary font-mono text-sm"
                         >
                           {currentCode}
                         </div>
@@ -473,7 +473,7 @@ export default function BroadcastAdmin() {
 
                   {/* Code Input */}
                   <div className="mb-4">
-                    <label className="block text-gray-300 text-sm font-medium mb-2">
+                    <label className="block text-theme-secondary text-sm font-medium mb-2">
                       {currentCode ? 'New Code' : 'Set Code'}
                     </label>
                     <input
@@ -484,7 +484,7 @@ export default function BroadcastAdmin() {
                         [channel.id]: e.target.value 
                       }))}
                       placeholder={`Enter access code for ${channel.name}`}
-                      className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                      className="w-full px-4 py-3 rounded-lg bg-theme-card border border-theme text-theme-primary placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
                     />
                   </div>
 
@@ -502,7 +502,7 @@ export default function BroadcastAdmin() {
                       background: hasChanges && newCode.trim() && !isSaving 
                         ? channel.gradient 
                         : 'rgba(75,85,99,0.5)',
-                      color: 'white',
+                      color: "var(--text-primary)",
                       fontWeight: 700,
                       cursor: hasChanges && newCode.trim() && !isSaving ? 'pointer' : 'not-allowed',
                       opacity: hasChanges && newCode.trim() && !isSaving ? 1 : 0.6,
@@ -561,15 +561,15 @@ export default function BroadcastAdmin() {
           className="max-w-2xl mx-auto mt-12 p-6 rounded-2xl"
           style={{
             background: 'rgba(10,8,30,0.6)',
-            border: '1px solid rgba(99,102,241,0.2)',
+            border: "1px solid var(--border-primary)",
             backdropFilter: 'blur(16px)'
           }}
         >
-          <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-theme-primary mb-3 flex items-center gap-2">
             <Settings size={20} color="#818cf8" />
             How it works
           </h3>
-          <ul className="text-gray-300 text-sm space-y-2">
+          <ul className="text-theme-secondary text-sm space-y-2">
             <li>• Set unique access codes for each broadcast channel</li>
             <li>• Students must enter the correct code to join a channel</li>
             <li>• Codes can be updated anytime - existing members stay enrolled</li>

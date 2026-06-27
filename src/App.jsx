@@ -31,7 +31,6 @@ const AdminPanel = lazy(() => import('./pages/AdminPanel'))
 const Rewards = lazy(() => import('./pages/Rewards'))
 const GeneralGroup = lazy(() => import('./pages/GeneralGroup'))
 const Broadcast = lazy(() => import('./pages/Broadcast'))
-const BroadcastAdmin = lazy(() => import('./pages/BroadcastAdmin'))
 
 // Minimal page-level skeleton shown while a lazy chunk loads
 function PageLoader() {
@@ -88,7 +87,7 @@ function AppShell() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundImage: "url(${bgImage})", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed', backgroundColor: '#05030f' }}>
+    <div className="min-h-screen" style={{ position: 'relative', background: 'var(--bg-primary)' }}>
       {token && !isAdminRoute && <Navbar />}
       {token && !isAdminRoute && <IncomingCallModal />}
       <Suspense fallback={<PageLoader />}>
@@ -122,7 +121,6 @@ function AppShell() {
 
           {/* Admin — standalone, no navbar */}
           <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/admin/broadcast" element={<BroadcastAdmin />} />
 
           {/* Default */}
           <Route

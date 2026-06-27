@@ -7,7 +7,7 @@ import Input from '../components/Input'
 import Badge from '../components/Badge'
 
 const XP_LEVELS = [
-  { name: 'Beginner', min: 0, max: 99, color: 'bg-gray-400' },
+  { name: 'Beginner', min: 0, max: 99, color: 'bg-slate-500' },
   { name: 'Intermediate', min: 100, max: 299, color: 'bg-blue-500' },
   { name: 'Expert', min: 300, max: 699, color: 'bg-purple-500' },
   { name: 'Master', min: 700, max: Infinity, color: 'bg-yellow-500' },
@@ -56,13 +56,13 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-background-light dark:bg-background-dark">
+    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="text-4xl font-bold mb-8">Profile</h1>
+          <h1 className="text-4xl font-bold mb-8 text-theme-primary">Profile</h1>
 
           {/* Profile Card */}
           <Card className="mb-8">
@@ -71,16 +71,16 @@ export default function Profile() {
                 {user?.profileImage ? (
                   <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-white text-3xl font-bold">
+                  <span className="text-theme-primary text-3xl font-bold">
                     {user?.name?.charAt(0).toUpperCase()}
                   </span>
                 )}
               </div>
               <div>
-                <h2 className="text-2xl font-bold">{user?.name}</h2>
-                <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
+                <h2 className="text-2xl font-bold text-theme-primary">{user?.name}</h2>
+                <p className="text-theme-tertiary">{user?.email}</p>
                 {user?.address && (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">📍 {user.address}</p>
+                  <p className="text-theme-muted text-sm mt-0.5">📍 {user.address}</p>
                 )}
                 <Badge className="mt-2">{user?.role}</Badge>
               </div>
@@ -88,19 +88,19 @@ export default function Profile() {
 
             {/* Bio */}
             {user?.bio && (
-              <p className="text-gray-700 dark:text-gray-300 text-sm mb-4 leading-relaxed border-l-4 border-primary-400 pl-3 italic">
+              <p className="text-theme-secondary text-sm mb-4 leading-relaxed border-l-4 border-primary-400 pl-3 italic">
                 {user.bio}
               </p>
             )}
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">XP Points</p>
-                <p className="text-2xl font-bold">{user?.xp || 0}</p>
+                <p className="text-theme-tertiary text-sm">XP Points</p>
+                <p className="text-2xl font-bold text-theme-primary">{user?.xp || 0}</p>
               </div>
               <div>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">Member Since</p>
-                <p className="text-lg font-semibold">
+                <p className="text-theme-tertiary text-sm">Member Since</p>
+                <p className="text-lg font-semibold text-theme-primary">
                   {new Date(user?.createdAt).toLocaleDateString()}
                 </p>
               </div>
@@ -115,18 +115,18 @@ export default function Profile() {
               return (
                 <div className="mb-6">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <span className="text-sm font-semibold text-theme-secondary">
                       {level.name}
                     </span>
                     {nextLevel ? (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-xs text-theme-tertiary">
                         {xp} / {nextLevel.min} XP → {nextLevel.name}
                       </span>
                     ) : (
                       <span className="text-xs text-yellow-500 font-semibold">Max Level 🏆</span>
                     )}
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                  <div className="w-full rounded-full h-3" style={{ background: 'var(--input-border)' }}>
                     <div
                       className={`${level.color} h-3 rounded-full transition-all duration-500`}
                       style={{ width: `${progress}%` }}
@@ -156,21 +156,25 @@ export default function Profile() {
                 />
 
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium mb-2 text-theme-secondary">
                     Skills (comma-separated)
                   </label>
                   <textarea
                     name="skills"
                     value={formData.skills}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-theme-primary placeholder-theme-muted"
+                    style={{ 
+                      borderColor: 'var(--input-border)', 
+                      background: 'var(--input-bg)' 
+                    }}
                     rows="3"
                     placeholder="e.g., Robotics, Programming, Electronics"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium mb-2 text-theme-secondary">
                     Bio
                   </label>
                   <textarea
@@ -180,9 +184,13 @@ export default function Profile() {
                     maxLength={300}
                     rows="3"
                     placeholder="Tell others about yourself..."
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none text-theme-primary placeholder-theme-muted"
+                    style={{ 
+                      borderColor: 'var(--input-border)', 
+                      background: 'var(--input-bg)' 
+                    }}
                   />
-                  <p className="text-xs text-gray-400 mt-1 text-right">{formData.bio.length}/300</p>
+                  <p className="text-xs text-theme-tertiary mt-1 text-right">{formData.bio.length}/300</p>
                 </div>
 
                 <Input
@@ -195,7 +203,11 @@ export default function Profile() {
                 />
 
                 {error && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-lg text-sm">
+                  <div className="p-3 rounded-lg text-sm" style={{ 
+                    background: 'var(--bg-card)', 
+                    color: '#ef4444',
+                    border: '1px solid rgba(239, 68, 68, 0.3)'
+                  }}>
                     {error}
                   </div>
                 )}
@@ -223,7 +235,7 @@ export default function Profile() {
           {/* Skills */}
           {user?.skills && user.skills.length > 0 && (
             <Card className="mt-8">
-              <h3 className="text-xl font-bold mb-4">Skills</h3>
+              <h3 className="text-xl font-bold mb-4 text-theme-primary">Skills</h3>
               <div className="flex flex-wrap gap-2">
                 {user.skills.map((skill) => (
                   <Badge key={skill} variant="secondary">

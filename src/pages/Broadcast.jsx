@@ -64,7 +64,7 @@ function Avatar({ user, size = 36 }) {
       width: size, height: size, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
       background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: size * 0.4, fontWeight: 700, color: 'white',
+      fontSize: size * 0.4, fontWeight: 700, color: "var(--text-primary)",
       border: '2px solid rgba(99,102,241,0.3)',
     }}>
       {user?.profileImage
@@ -122,14 +122,14 @@ function JoinForm({ channel, onClose, onSuccess, isRequest = false }) {
       <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
         style={{
           width: '100%', maxWidth: 420, borderRadius: 20,
-          background: 'rgba(10,8,30,0.97)', border: '1px solid rgba(99,102,241,0.3)',
+          background: "var(--bg-card)", border: '1px solid rgba(99,102,241,0.3)',
           padding: 28, backdropFilter: 'blur(24px)',
         }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 26 }}>{ch?.icon}</span>
             <div>
-              <h3 style={{ color: 'white', fontWeight: 700, fontSize: 16, margin: 0 }}>
+              <h3 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 16, margin: 0 }}>
                 {isRequest ? 'Request to join' : 'Join'} {ch?.name}
               </h3>
               <p style={{ color: 'rgba(148,163,184,0.55)', fontSize: 11, margin: 0 }}>
@@ -137,7 +137,7 @@ function JoinForm({ channel, onClose, onSuccess, isRequest = false }) {
               </p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(148,163,184,0.6)', padding: 4 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: "var(--text-secondary)", padding: 4 }}>
             <X size={20} />
           </button>
         </div>
@@ -149,12 +149,12 @@ function JoinForm({ channel, onClose, onSuccess, isRequest = false }) {
             { label: ch?.name + ' Access Code', value: code, set: setCode, placeholder: 'Enter code provided by your institute' },
           ].map(({ label, value, set, placeholder }) => (
             <div key={label}>
-              <label style={{ color: 'rgba(148,163,184,0.7)', fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>{label}</label>
+              <label style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>{label}</label>
               <input value={value} onChange={e => set(e.target.value)} placeholder={placeholder}
                 style={{
                   width: '100%', padding: '10px 14px', borderRadius: 10, boxSizing: 'border-box',
-                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.2)',
-                  color: 'white', fontSize: 13, outline: 'none',
+                  background: 'rgba(255,255,255,0.06)', border: "1px solid var(--border-primary)",
+                  color: "var(--text-primary)", fontSize: 13, outline: 'none',
                 }} />
             </div>
           ))}
@@ -163,7 +163,7 @@ function JoinForm({ channel, onClose, onSuccess, isRequest = false }) {
         disabled={loading}
         style={{
           padding: '12px', borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
-          background: ch?.gradient, color: 'white', fontWeight: 700, fontSize: 14,
+          background: ch?.gradient, color: "var(--text-primary)", fontWeight: 700, fontSize: 14,
           opacity: loading ? 0.7 : 1, marginTop: 4,
         }}>
         {loading ? 'Submitting...' : isRequest ? 'Send Request' : 'Join Channel'}
@@ -200,7 +200,7 @@ function MessageBubble({ msg, isOwn, isMentor, onDelete, channelColor }) {
           borderRadius: isOwn ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
           opacity: msg.temp ? 0.7 : 1,
         }}>
-          <p style={{ color: 'white', fontSize: 13, lineHeight: 1.6, margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.content}</p>
+          <p style={{ color: "var(--text-primary)", fontSize: 13, lineHeight: 1.6, margin: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{msg.content}</p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 3 }}>
             <span style={{ fontSize: 10, color: isOwn ? 'rgba(255,255,255,0.5)' : 'rgba(148,163,184,0.4)' }}>
               {msg.temp ? '🕐' : fmt(msg.createdAt)}
@@ -213,7 +213,7 @@ function MessageBubble({ msg, isOwn, isMentor, onDelete, channelColor }) {
                 style={{
                   position: 'absolute', top: -10, right: isOwn ? 'auto' : -10, left: isOwn ? -10 : 'auto',
                   width: 22, height: 22, borderRadius: '50%', border: 'none', background: '#ef4444',
-                  color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: "var(--text-primary)", cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                 <Trash2 size={10} />
               </motion.button>
@@ -233,20 +233,20 @@ function AlreadyEnrolledPopup({ currentChannel, targetChannel, onClose, onReques
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 20 }}>
       <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-        style={{ width: '100%', maxWidth: 440, borderRadius: 20, background: 'rgba(10,8,30,0.97)', border: '1px solid rgba(99,102,241,0.3)', padding: 28 }}>
+        style={{ width: '100%', maxWidth: 440, borderRadius: 20, background: "var(--bg-card)", border: '1px solid rgba(99,102,241,0.3)', padding: 28 }}>
         
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
             <span style={{ fontSize: 32 }}>{current?.icon}</span>
-            <span style={{ fontSize: 20, color: 'rgba(148,163,184,0.4)' }}>→</span>
+            <span style={{ fontSize: 20, color: "var(--text-muted)" }}>→</span>
             <span style={{ fontSize: 32 }}>{target?.icon}</span>
           </div>
           
-          <h3 style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: '0 0 8px' }}>Request Channel Switch</h3>
-          <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: 14, lineHeight: 1.6, margin: 0 }}>
+          <h3 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 18, margin: '0 0 8px' }}>Request Channel Switch</h3>
+          <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
             You are currently enrolled in <strong style={{ color: current?.color }}>{current?.name}</strong>.
           </p>
-          <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: 14, lineHeight: 1.6, margin: '8px 0 0' }}>
+          <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.6, margin: '8px 0 0' }}>
             Send a request to join <strong style={{ color: target?.color }}>{target?.name}</strong> for admin approval.
           </p>
         </div>
@@ -254,23 +254,23 @@ function AlreadyEnrolledPopup({ currentChannel, targetChannel, onClose, onReques
         {/* User details that will be sent */}
         <div style={{ 
           background: 'rgba(255,255,255,0.04)', 
-          border: '1px solid rgba(99,102,241,0.15)',
+          border: "1px solid var(--border-secondary)",
           borderRadius: 12, padding: 16, marginBottom: 20 
         }}>
-          <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 11, fontWeight: 600, marginBottom: 8, textTransform: 'uppercase' }}>
+          <p style={{ color: "var(--text-secondary)", fontSize: 11, fontWeight: 600, marginBottom: 8, textTransform: 'uppercase' }}>
             Your details will be sent automatically:
           </p>
           <div style={{ display: 'grid', gap: 4 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'rgba(148,163,184,0.5)', fontSize: 12 }}>Current Channel:</span>
+              <span style={{ color: "var(--text-tertiary)", fontSize: 12 }}>Current Channel:</span>
               <span style={{ color: current?.color, fontSize: 12, fontWeight: 600 }}>{current?.name}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'rgba(148,163,184,0.5)', fontSize: 12 }}>Requested Channel:</span>
+              <span style={{ color: "var(--text-tertiary)", fontSize: 12 }}>Requested Channel:</span>
               <span style={{ color: target?.color, fontSize: 12, fontWeight: 600 }}>{target?.name}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'rgba(148,163,184,0.5)', fontSize: 12 }}>Admin Contact:</span>
+              <span style={{ color: "var(--text-tertiary)", fontSize: 12 }}>Admin Contact:</span>
               <span style={{ color: '#818cf8', fontSize: 12 }}>{ADMIN_EMAIL}</span>
             </div>
           </div>
@@ -280,9 +280,9 @@ function AlreadyEnrolledPopup({ currentChannel, targetChannel, onClose, onReques
           <button onClick={onClose}
             style={{ 
               flex: 1, padding: '12px', borderRadius: 12, 
-              border: '1px solid rgba(99,102,241,0.2)', 
+              border: "1px solid var(--border-primary)", 
               background: 'rgba(255,255,255,0.05)', 
-              color: 'rgba(148,163,184,0.7)', cursor: 'pointer', 
+              color: "var(--text-secondary)", cursor: 'pointer', 
               fontWeight: 600, fontSize: 14 
             }}>
             Cancel
@@ -294,7 +294,7 @@ function AlreadyEnrolledPopup({ currentChannel, targetChannel, onClose, onReques
             style={{ 
               flex: 2, padding: '12px', borderRadius: 12, border: 'none', 
               background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', 
-              color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 14,
+              color: "var(--text-primary)", cursor: 'pointer', fontWeight: 700, fontSize: 14,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
             }}>
             📤 Send Request to Admin
@@ -863,7 +863,7 @@ export default function Broadcast() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ position: 'relative' }}>
+    <div className="flex min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       {/* Add CSS for animations */}
       <style>
         {`
@@ -875,19 +875,17 @@ export default function Broadcast() {
       </style>
       
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.87)' }} />
       <div style={{ position: 'relative', zIndex: 60 }}>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
 
-      <div className="relative flex-1 lg:ml-[240px] mt-16" style={{ zIndex: 5, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', overflow: 'hidden' }}>
+      <div className="relative flex-1 lg:ml-[240px] mt-16" style={{ zIndex: 5, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', overflow: 'hidden', background: 'var(--bg-primary)' }}>
 
         {/* Error toast */}
         <AnimatePresence>
           {error && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 100, background: '#ef4444', color: 'white', padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(239,68,68,0.4)' }}>
+              style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 100, background: '#ef4444', color: "var(--text-primary)", padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(239,68,68,0.4)' }}>
               {error}
             </motion.div>
           )}
@@ -898,40 +896,20 @@ export default function Broadcast() {
           <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px' }}>
             <div style={{ maxWidth: 860, margin: '0 auto' }}>
               {/* Header */}
-              <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 28, textAlign: 'center' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 14, background: 'linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.25))', border: '1px solid rgba(99,102,241,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Radio size={22} color="#818cf8" />
-                  </div>
-                </div>
-                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 26, margin: '0 0 8px' }}>Broadcast Channels</h1>
-                <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 14, margin: 0 }}>
+              <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 32 }}>
+                <h1 className="text-3xl font-bold text-theme-primary mb-2">Broadcast Channels</h1>
+                <p className="text-theme-secondary text-sm">
                   Select your channel to receive announcements and resources from mentors
                 </p>
                 
                 {/* Admin Toggle Button */}
                 {isAdmin() && (
                   <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      setView('admin')
-                    }}
-                    style={{
-                      marginTop: 16,
-                      padding: '10px 20px',
-                      borderRadius: 25,
-                      border: 'none',
-                      background: 'linear-gradient(135deg,#10b981,#059669)',
-                      color: 'white',
-                      fontWeight: 600,
-                      fontSize: 13,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    }}
-                  >
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setView('admin')}
+                    className="mt-4 px-5 py-2.5 rounded-lg text-white font-semibold text-sm transition-all"
+                    style={{ background: '#10b981' }}>
                     ⚙️ Admin Dashboard
                   </motion.button>
                 )}
@@ -939,48 +917,38 @@ export default function Broadcast() {
                 {/* Current Enrollment Status - Show ALL enrollments */}
                 {enrollments.length > 0 && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    style={{ marginTop: 14 }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-                      {enrollments.map((enroll) => {
-                        const channelInfo = CHANNELS.find(c => c.id === enroll.channel)
-                        return (
-                          <div key={enroll.channel}
-                            style={{ 
-                              display: 'inline-flex', alignItems: 'center', gap: 8, 
-                              padding: '8px 16px', borderRadius: 25, 
-                              background: `${channelInfo?.color}15`, 
-                              border: `1px solid ${channelInfo?.color}40`, 
-                              color: channelInfo?.color, 
-                              fontSize: 12, fontWeight: 600 
-                            }}>
-                            <span style={{ fontSize: 14 }}>{channelInfo?.icon}</span>
-                            ✓ Enrolled in <strong>{channelInfo?.name}</strong>
-                          </div>
-                        )
-                      })}
-                    </div>
+                    className="mt-4 flex flex-wrap gap-2">
+                    {enrollments.map((enroll) => {
+                      const channelInfo = CHANNELS.find(c => c.id === enroll.channel)
+                      return (
+                        <div key={enroll.channel}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium"
+                          style={{ 
+                            background: '#e0e7ff', 
+                            color: '#6366f1'
+                          }}>
+                          <span className="text-sm">{channelInfo?.icon}</span>
+                          ✓ Enrolled in <strong>{channelInfo?.name}</strong>
+                        </div>
+                      )
+                    })}
                   </motion.div>
                 )}
                 
-                {/* Pending Request Status - Only show if user has pending request AND user IDs match */}
+                {/* Pending Request Status */}
                 {pendingReq && pendingReq.channel && pendingReq.userId === user?._id && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, padding: '8px 18px', borderRadius: 50, background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', color: '#fbbf24', fontSize: 12, fontWeight: 600 }}>
+                    className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-md text-xs font-medium"
+                    style={{ background: '#fef3c7', color: '#d97706' }}>
                     ⏳ Request pending for <strong>{CHANNELS.find(c => c.id === pendingReq.channel)?.name}</strong> — waiting for admin approval
                   </motion.div>
                 )}
                 
-                {/* New User Message - Show only if no enrollments and no pending request */}
+                {/* New User Message */}
                 {enrollments.length === 0 && (!pendingReq || pendingReq.userId !== user?._id) && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                    style={{ 
-                      display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, 
-                      padding: '10px 20px', borderRadius: 50, 
-                      background: 'rgba(99,102,241,0.12)', 
-                      border: '1px solid rgba(99,102,241,0.3)', 
-                      color: '#818cf8', 
-                      fontSize: 13, fontWeight: 600 
-                    }}>
+                    className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-md text-sm font-medium"
+                    style={{ background: '#e0e7ff', color: '#6366f1' }}>
                     🚀 Choose a channel below to get started
                   </motion.div>
                 )}
@@ -992,7 +960,7 @@ export default function Broadcast() {
                   initial={{ opacity: 0, y: 10 }} 
                   animate={{ opacity: 1, y: 0 }}
                   style={{ marginBottom: 24 }}>
-                  <h3 style={{ color: 'white', fontSize: 18, fontWeight: 700, marginBottom: 12, textAlign: 'left' }}>
+                  <h3 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700, marginBottom: 12, textAlign: 'left' }}>
                     📺 Your Active Channels ({enrollments.length})
                   </h3>
                   <div style={{ display: 'grid', gap: 12 }}>
@@ -1031,10 +999,10 @@ export default function Broadcast() {
                                 {channelInfo?.icon}
                               </div>
                               <div>
-                                <h4 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>
+                                <h4 style={{ color: "var(--text-primary)", fontSize: 16, fontWeight: 700, margin: 0 }}>
                                   {channelInfo?.name}
                                 </h4>
-                                <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: 11, margin: '2px 0 0' }}>
+                                <p style={{ color: "var(--text-secondary)", fontSize: 11, margin: '2px 0 0' }}>
                                   {channelInfo?.desc}
                                 </p>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
@@ -1046,7 +1014,7 @@ export default function Broadcast() {
                                   }}>
                                     ✓ ENROLLED
                                   </span>
-                                  <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
+                                  <span style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: 'monospace' }}>
                                     Since {enroll?.joinedAt ? new Date(enroll.joinedAt).toLocaleDateString() : 'N/A'}
                                   </span>
                                 </div>
@@ -1078,7 +1046,7 @@ export default function Broadcast() {
                                 style={{ 
                                   padding: '8px 16px', borderRadius: 8, 
                                   background: channelInfo?.gradient,
-                                  color: 'white', fontWeight: 700, fontSize: 12,
+                                  color: "var(--text-primary)", fontWeight: 700, fontSize: 12,
                                   display: 'flex', alignItems: 'center', gap: 6,
                                   cursor: 'pointer'
                                 }}>
@@ -1095,7 +1063,7 @@ export default function Broadcast() {
 
               {/* All Channels Overview */}
               <div style={{ marginBottom: 16 }}>
-                <h3 style={{ color: 'white', fontSize: 18, fontWeight: 700, marginBottom: 12, textAlign: 'left' }}>
+                <h3 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700, marginBottom: 12, textAlign: 'left' }}>
                   🌐 All Broadcast Channels
                 </h3>
               </div>
@@ -1116,7 +1084,7 @@ export default function Broadcast() {
                       style={{
                         borderRadius: 18, overflow: 'hidden', 
                         cursor: 'pointer',
-                        background: 'rgba(10,8,30,0.8)', 
+                        background: "var(--bg-tertiary)", 
                         border: `1px solid ${isEnrolled ? ch.color + '60' : isPending ? '#fbbf24' + '40' : 'rgba(99,102,241,0.12)'}`,
                         backdropFilter: 'blur(20px)', position: 'relative',
                         boxShadow: isEnrolled ? `0 0 24px ${ch.color}30` : isPending ? '0 0 16px rgba(251,191,36,0.2)' : 'none',
@@ -1131,7 +1099,7 @@ export default function Broadcast() {
                               {ch.icon}
                             </div>
                             <div>
-                              <h3 style={{ color: 'white', fontWeight: 700, fontSize: 16, margin: 0 }}>{ch.name}</h3>
+                              <h3 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 16, margin: 0 }}>{ch.name}</h3>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                                 {isEnrolled && (
                                   <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: `${ch.color}22`, color: ch.color, border: `1px solid ${ch.color}44` }}>
@@ -1144,7 +1112,7 @@ export default function Broadcast() {
                                   </span>
                                 )}
                                 {!isEnrolled && !isPending && (
-                                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(148,163,184,0.1)', color: 'rgba(148,163,184,0.6)', border: '1px solid rgba(148,163,184,0.2)' }}>
+                                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: 'rgba(148,163,184,0.1)', color: "var(--text-secondary)", border: '1px solid rgba(148,163,184,0.2)' }}>
                                     {hasExistingEnrollment ? 'Request Access' : 'Available'}
                                   </span>
                                 )}
@@ -1154,7 +1122,7 @@ export default function Broadcast() {
                         </div>
                         <p style={{ color: 'rgba(148,163,184,0.65)', fontSize: 13, lineHeight: 1.6, margin: '0 0 14px' }}>{ch.desc}</p>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: 11, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>#{ch.id}</span>
+                          <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: 'monospace' }}>#{ch.id}</span>
                           <motion.div 
                             whileHover={{ scale: 1.05 }}
                             style={{ 
@@ -1182,7 +1150,7 @@ export default function Broadcast() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ fontSize: 10, color: ch.color }}>✓ You are enrolled</span>
                             </div>
-                            <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
+                            <span style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: 'monospace' }}>
                               Joined: {(() => {
                                 const enrollment = enrollments.find(e => e.channel === ch.id)
                                 return enrollment?.joinedAt ? new Date(enrollment.joinedAt).toLocaleDateString() : 'N/A'
@@ -1203,7 +1171,7 @@ export default function Broadcast() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                               <span style={{ fontSize: 10, color: '#fbbf24' }}>⏳ Request pending approval</span>
                             </div>
-                            <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace' }}>
+                            <span style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: 'monospace' }}>
                               Admin review required
                             </span>
                           </motion.div>
@@ -1223,16 +1191,16 @@ export default function Broadcast() {
             {/* Chat header */}
             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(8,6,24,0.9)', borderBottom: '1px solid rgba(99,102,241,0.12)', backdropFilter: 'blur(16px)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={() => setView('home')} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: 'white', cursor: 'pointer', padding: '6px 8px', display: 'flex', alignItems: 'center' }}>
+                <button onClick={() => setView('home')} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: "var(--text-primary)", cursor: 'pointer', padding: '6px 8px', display: 'flex', alignItems: 'center' }}>
                   <ArrowLeft size={16} />
                 </button>
                 <div style={{ width: 42, height: 42, borderRadius: 12, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}18`, border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{CHANNELS.find(c => c.id === currentChannel)?.icon}</div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>{CHANNELS.find(c => c.id === currentChannel)?.name}</span>
+                    <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>{CHANNELS.find(c => c.id === currentChannel)?.name}</span>
                     <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 6, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}18`, color: CHANNELS.find(c => c.id === currentChannel)?.color, border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}35` }}>BROADCAST</span>
                   </div>
-                  <p style={{ color: 'rgba(148,163,184,0.5)', fontSize: 11, margin: 0, fontFamily: 'monospace' }}>
+                  <p style={{ color: "var(--text-tertiary)", fontSize: 11, margin: 0, fontFamily: 'monospace' }}>
                     Only mentors can send messages
                   </p>
                 </div>
@@ -1264,7 +1232,7 @@ export default function Broadcast() {
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '8px 16px', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 600,
                     background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                    color: 'white', border: 'none',
+                    color: "var(--text-primary)", border: 'none',
                     boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
                   }}
                 >
@@ -1277,7 +1245,7 @@ export default function Broadcast() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
               <div style={{ padding: '8px 12px', maxWidth: 780, margin: '0 auto' }}>
                 {messages.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '60px 20px', color: 'rgba(148,163,184,0.4)', fontSize: 13 }}>
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: "var(--text-muted)", fontSize: 13 }}>
                     No messages yet. {isMentor ? 'Be the first to post!' : 'Waiting for a mentor to post...'}
                   </div>
                 )}
@@ -1317,7 +1285,7 @@ export default function Broadcast() {
                   <div style={{ flex: 1, position: 'relative' }}>
                     <textarea ref={inputRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown}
                       placeholder={`Send a message to ${CHANNELS.find(c => c.id === currentChannel)?.name}...`} rows={1}
-                      style={{ width: '100%', resize: 'none', overflowY: 'auto', padding: '10px 44px 10px 14px', background: 'rgba(255,255,255,0.07)', border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}30`, borderRadius: 14, color: 'white', fontSize: 13, outline: 'none', fontFamily: 'inherit', maxHeight: 120, boxSizing: 'border-box' }}
+                      style={{ width: '100%', resize: 'none', overflowY: 'auto', padding: '10px 44px 10px 14px', background: 'rgba(255,255,255,0.07)', border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}30`, borderRadius: 14, color: "var(--text-primary)", fontSize: 13, outline: 'none', fontFamily: 'inherit', maxHeight: 120, boxSizing: 'border-box' }}
                       onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }} />
                   </div>
                   <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }} onClick={handleSend} disabled={!input.trim()}
@@ -1328,7 +1296,7 @@ export default function Broadcast() {
               ) : (
                 <div style={{ maxWidth: 780, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}08`, border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}18` }}>
                   <Info size={14} color={CHANNELS.find(c => c.id === currentChannel)?.color} />
-                  <span style={{ color: 'rgba(148,163,184,0.6)', fontSize: 12 }}>You can read messages. Only mentors can send in this channel.</span>
+                  <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>You can read messages. Only mentors can send in this channel.</span>
                 </div>
               )}
             </div>
@@ -1340,8 +1308,8 @@ export default function Broadcast() {
           <>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px' }}>
               <div style={{ textAlign: 'center' }}>
-                <h3 style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: '0 0 8px' }}>No Channel Selected</h3>
-                <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 14, margin: '0 0 20px' }}>
+                <h3 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 18, margin: '0 0 8px' }}>No Channel Selected</h3>
+                <p style={{ color: "var(--text-secondary)", fontSize: 14, margin: '0 0 20px' }}>
                   Please select a channel from your enrolled channels.
                 </p>
                 <motion.button 
@@ -1351,7 +1319,7 @@ export default function Broadcast() {
                   style={{
                     padding: '12px 24px', borderRadius: 12, border: 'none',
                     background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                    color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 14
+                    color: "var(--text-primary)", cursor: 'pointer', fontWeight: 600, fontSize: 14
                   }}
                 >
                   📡 Browse Channels
@@ -1372,8 +1340,8 @@ export default function Broadcast() {
                     ⚙️
                   </div>
                 </div>
-                <h1 style={{ color: 'white', fontWeight: 800, fontSize: 26, margin: '0 0 8px' }}>Admin Dashboard</h1>
-                <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 14, margin: 0 }}>
+                <h1 style={{ color: "var(--text-primary)", fontWeight: 800, fontSize: 26, margin: '0 0 8px' }}>Admin Dashboard</h1>
+                <p style={{ color: "var(--text-secondary)", fontSize: 14, margin: 0 }}>
                   Manage broadcast channel access codes and enrollment statistics
                 </p>
                 
@@ -1387,7 +1355,7 @@ export default function Broadcast() {
                     borderRadius: 25,
                     border: 'none',
                     background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                    color: 'white',
+                    color: "var(--text-primary)",
                     fontWeight: 600,
                     fontSize: 13,
                     cursor: 'pointer',
@@ -1401,7 +1369,7 @@ export default function Broadcast() {
               </motion.div>
 
               {adminLoading && (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(148,163,184,0.6)' }}>
+                <div style={{ textAlign: 'center', padding: '40px', color: "var(--text-secondary)" }}>
                   <div style={{ width: 32, height: 32, border: '3px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
                   Loading admin data...
                 </div>
@@ -1417,7 +1385,7 @@ export default function Broadcast() {
                       style={{ marginBottom: 32 }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                        <h2 style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <h2 style={{ color: "var(--text-primary)", fontSize: 22, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 12 }}>
                           <div style={{
                             width: 40,
                             height: 40,
@@ -1433,8 +1401,8 @@ export default function Broadcast() {
                           Channel Enrollment Statistics
                         </h2>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 12, color: 'rgba(148,163,184,0.6)' }}>Total Enrollments</div>
-                          <div style={{ fontSize: 24, fontWeight: 700, color: 'white' }}>{enrollmentStats.totalEnrollments}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Total Enrollments</div>
+                          <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)" }}>{enrollmentStats.totalEnrollments}</div>
                         </div>
                       </div>
                       
@@ -1446,7 +1414,7 @@ export default function Broadcast() {
                               key={channel.id}
                               whileHover={{ y: -2 }}
                               style={{
-                                background: 'rgba(10,8,30,0.8)',
+                                background: "var(--bg-tertiary)",
                                 border: `1px solid ${channel.color}30`,
                                 borderRadius: 16,
                                 padding: 20,
@@ -1485,8 +1453,8 @@ export default function Broadcast() {
                                     {channel.icon}
                                   </div>
                                   <div>
-                                    <h4 style={{ color: 'white', fontWeight: 600, fontSize: 16, margin: 0 }}>{channel.name}</h4>
-                                    <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 12, margin: 0 }}>{stats.count} students enrolled</p>
+                                    <h4 style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: 16, margin: 0 }}>{channel.name}</h4>
+                                    <p style={{ color: "var(--text-secondary)", fontSize: 12, margin: 0 }}>{stats.count} students enrolled</p>
                                   </div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
@@ -1505,7 +1473,7 @@ export default function Broadcast() {
                               {stats.count > 0 && (
                                 <div>
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, marginBottom: 8 }}>
-                                    <span style={{ color: 'rgba(148,163,184,0.6)' }}>Recent enrollments</span>
+                                    <span style={{ color: "var(--text-secondary)" }}>Recent enrollments</span>
                                     {stats.count > 3 && (
                                       <button 
                                         onClick={() => setShowEnrollments(showEnrollments === channel.id ? null : channel.id)}
@@ -1536,7 +1504,7 @@ export default function Broadcast() {
                                             justifyContent: 'center',
                                             fontSize: 10,
                                             fontWeight: 700,
-                                            color: 'white'
+                                            color: "var(--text-primary)"
                                           }}
                                         >
                                           {member.user?.profileImage ? (
@@ -1546,14 +1514,14 @@ export default function Broadcast() {
                                           )}
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                          <div style={{ color: 'white', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          <div style={{ color: "var(--text-primary)", fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {member.user?.name || 'Unknown'}
                                           </div>
-                                          <div style={{ color: 'rgba(148,163,184,0.6)', fontSize: 10 }}>
+                                          <div style={{ color: "var(--text-secondary)", fontSize: 10 }}>
                                             {member.school} • {member.class}
                                           </div>
                                         </div>
-                                        <div style={{ fontSize: 10, color: 'rgba(148,163,184,0.4)' }}>
+                                        <div style={{ fontSize: 10, color: "var(--text-muted)" }}>
                                           {new Date(member.joinedAt).toLocaleDateString()}
                                         </div>
                                       </div>
@@ -1563,7 +1531,7 @@ export default function Broadcast() {
                               )}
 
                               {stats.count === 0 && (
-                                <div style={{ textAlign: 'center', padding: '20px 0', color: 'rgba(148,163,184,0.5)', fontSize: 12 }}>
+                                <div style={{ textAlign: 'center', padding: '20px 0', color: "var(--text-tertiary)", fontSize: 12 }}>
                                   No students enrolled yet
                                 </div>
                               )}
@@ -1581,7 +1549,7 @@ export default function Broadcast() {
                     transition={{ delay: 0.1 }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                      <h2 style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0 }}>Channel Access Codes</h2>
+                      <h2 style={{ color: "var(--text-primary)", fontSize: 22, fontWeight: 700, margin: 0 }}>Channel Access Codes</h2>
                       <button
                         onClick={loadAdminData}
                         style={{
@@ -1589,7 +1557,7 @@ export default function Broadcast() {
                           borderRadius: 12,
                           border: 'none',
                           background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                          color: 'white',
+                          color: "var(--text-primary)",
                           fontWeight: 600,
                           fontSize: 13,
                           cursor: 'pointer',
@@ -1618,7 +1586,7 @@ export default function Broadcast() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: index * 0.1 }}
                             style={{
-                              background: 'rgba(10,8,30,0.8)',
+                              background: "var(--bg-tertiary)",
                               border: `1px solid ${channel.color}30`,
                               borderRadius: 20,
                               padding: 24,
@@ -1657,8 +1625,8 @@ export default function Broadcast() {
                                 {channel.icon}
                               </div>
                               <div>
-                                <h3 style={{ color: 'white', fontWeight: 700, fontSize: 18, margin: 0 }}>{channel.name}</h3>
-                                <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 12, margin: 0 }}>{channel.desc}</p>
+                                <h3 style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 18, margin: 0 }}>{channel.name}</h3>
+                                <p style={{ color: "var(--text-secondary)", fontSize: 12, margin: 0 }}>{channel.desc}</p>
                               </div>
                             </div>
 
@@ -1675,8 +1643,8 @@ export default function Broadcast() {
                                       padding: '10px 12px',
                                       borderRadius: 10,
                                       background: 'rgba(255,255,255,0.06)',
-                                      border: '1px solid rgba(99,102,241,0.2)',
-                                      color: 'white',
+                                      border: "1px solid var(--border-primary)",
+                                      color: "var(--text-primary)",
                                       fontFamily: 'monospace',
                                       fontSize: 13
                                     }}
@@ -1726,8 +1694,8 @@ export default function Broadcast() {
                                   padding: '10px 12px',
                                   borderRadius: 10,
                                   background: 'rgba(255,255,255,0.06)',
-                                  border: '1px solid rgba(99,102,241,0.2)',
-                                  color: 'white',
+                                  border: "1px solid var(--border-primary)",
+                                  color: "var(--text-primary)",
                                   fontSize: 13,
                                   outline: 'none',
                                   boxSizing: 'border-box'
@@ -1749,7 +1717,7 @@ export default function Broadcast() {
                                 background: hasChanges && newCode.trim() && !isSaving 
                                   ? channel.gradient 
                                   : 'rgba(75,85,99,0.5)',
-                                color: 'white',
+                                color: "var(--text-primary)",
                                 fontWeight: 700,
                                 cursor: hasChanges && newCode.trim() && !isSaving ? 'pointer' : 'not-allowed',
                                 opacity: hasChanges && newCode.trim() && !isSaving ? 1 : 0.6,
@@ -1807,14 +1775,14 @@ export default function Broadcast() {
                       padding: 20,
                       borderRadius: 16,
                       background: 'rgba(10,8,30,0.6)',
-                      border: '1px solid rgba(99,102,241,0.2)',
+                      border: "1px solid var(--border-primary)",
                       backdropFilter: 'blur(16px)'
                     }}
                   >
-                    <h3 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <h3 style={{ color: "var(--text-primary)", fontSize: 16, fontWeight: 700, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
                       ⚙️ How it works
                     </h3>
-                    <ul style={{ color: 'rgba(148,163,184,0.7)', fontSize: 13, lineHeight: 1.6, margin: 0, paddingLeft: 20 }}>
+                    <ul style={{ color: "var(--text-secondary)", fontSize: 13, lineHeight: 1.6, margin: 0, paddingLeft: 20 }}>
                       <li>Set unique access codes for each broadcast channel</li>
                       <li>Students must enter the correct code to join a channel</li>
                       <li>Codes can be updated anytime - existing members stay enrolled</li>

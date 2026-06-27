@@ -895,10 +895,10 @@ export default function VideoCall() {
   // ── Loading screen ────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ height: '100vh', background: '#0a0a0f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ height: '100vh', background: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, border: '4px solid #6366f1', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Loading...</p>
+          <p className="text-theme-secondary" style={{ fontSize: 14 }}>Loading...</p>
         </div>
       </div>
     )
@@ -906,7 +906,7 @@ export default function VideoCall() {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ height: '100vh', background: '#0a0a0f', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ height: '100vh', background: 'var(--bg-primary)', overflow: 'hidden', position: 'relative' }}>
 
       <CallEndFeedbackModal
         isOpen={showFeedback}
@@ -925,7 +925,7 @@ export default function VideoCall() {
             position: 'absolute', inset: 0,
             width: '100%', height: '100%',
             objectFit: 'cover',
-            background: '#0a0a0f',
+            background: 'var(--bg-primary)',
             zIndex: 1,
             visibility: isConnected ? 'visible' : 'hidden',
           }}
@@ -947,7 +947,7 @@ export default function VideoCall() {
           position: 'absolute', inset: 0, zIndex: 2,
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          background: 'linear-gradient(160deg,#0f0c24 0%,#1a1535 100%)',
+          background: 'var(--bg-primary)',
           gap: 20,
         }}>
           {/* Pulsing audio rings */}
@@ -961,7 +961,7 @@ export default function VideoCall() {
             ))}
             <div style={{
               width: 100, height: 100, borderRadius: '50%',
-              background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+              background: '#6366f1',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               overflow: 'hidden', border: '3px solid rgba(99,102,241,0.5)',
               boxShadow: '0 0 40px rgba(99,102,241,0.4)',
@@ -971,8 +971,8 @@ export default function VideoCall() {
                 : <span style={{ color: 'white', fontWeight: 700, fontSize: 40 }}>{otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}</span>}
             </div>
           </div>
-          <p style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0 }}>{otherUser?.name}</p>
-          <p style={{ color: '#34d399', fontSize: 14, margin: 0, fontFamily: 'monospace' }}>● Voice call connected</p>
+          <p className="text-theme-primary" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{otherUser?.name}</p>
+          <p style={{ color: '#10b981', fontSize: 14, margin: 0 }}>● Voice call connected</p>
         </div>
       )}
 
@@ -982,14 +982,14 @@ export default function VideoCall() {
           position: 'absolute', inset: 0, zIndex: 2,
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(10,10,20,0.95)', gap: 16,
+          background: 'var(--bg-primary)', gap: 16,
         }}>
           <motion.div
             animate={['calling','ringing','connecting'].includes(status) ? { scale: [1, 1.06, 1] } : {}}
             transition={{ repeat: Infinity, duration: 2 }}
             style={{
               width: 100, height: 100, borderRadius: '50%', overflow: 'hidden',
-              background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+              background: '#6366f1',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '3px solid rgba(99,102,241,0.6)',
               boxShadow: '0 0 40px rgba(99,102,241,0.35)',
@@ -998,8 +998,8 @@ export default function VideoCall() {
               ? <img src={otherUser.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : <span style={{ color: 'white', fontWeight: 700, fontSize: 40 }}>{otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}</span>}
           </motion.div>
-          <p style={{ color: 'white', fontSize: 22, fontWeight: 700, margin: 0 }}>{otherUser?.name || 'Unknown'}</p>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, margin: 0 }}>{statusLabel}</p>
+          <p className="text-theme-primary" style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{otherUser?.name || 'Unknown'}</p>
+          <p className="text-theme-tertiary" style={{ fontSize: 14, margin: 0 }}>{statusLabel}</p>
         </div>
       )}
 
@@ -1009,9 +1009,9 @@ export default function VideoCall() {
         position: 'absolute', top: 70, left: 16,
         width: 140, height: 105,
         borderRadius: 12, overflow: 'hidden',
-        border: '2px solid rgba(255,255,255,0.25)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
-        zIndex: 20, background: '#1a1a2e',
+        border: '2px solid var(--border-primary)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
+        zIndex: 20, background: 'var(--bg-secondary)',
       }}>
         <video
           ref={localVideoRef}
@@ -1019,14 +1019,14 @@ export default function VideoCall() {
           style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
         />
         {!videoEnabled && (
-          <div style={{ position: 'absolute', inset: 0, background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <VideoOff size={26} color="rgba(255,255,255,0.4)" />
+          <div style={{ position: 'absolute', inset: 0, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <VideoOff size={26} className="text-theme-tertiary" />
           </div>
         )}
-        <div style={{
+        <div className="text-theme-primary" style={{
           position: 'absolute', bottom: 4, left: 0, right: 0,
-          textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.7)',
-          fontWeight: 600, background: 'linear-gradient(transparent,rgba(0,0,0,0.5))', paddingBottom: 2,
+          textAlign: 'center', fontSize: 10,
+          fontWeight: 600, background: 'linear-gradient(transparent,rgba(0,0,0,0.3))', paddingBottom: 2,
         }}>
           {screenSharing ? '📺 Sharing' : 'You'}
         </div>
@@ -1040,7 +1040,7 @@ export default function VideoCall() {
         position: 'absolute', top: 0, left: 0, right: 0, zIndex: 30,
         padding: '10px 16px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'linear-gradient(to bottom,rgba(0,0,0,0.75),transparent)',
+        background: 'linear-gradient(to bottom,rgba(0,0,0,0.4),transparent)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <button onClick={() => navigate(`/chat/${roomId}`)} style={btnStyle}>
@@ -1048,9 +1048,9 @@ export default function VideoCall() {
           </button>
           <div style={{
             width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
-            background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+            background: '#6366f1',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, border: '2px solid rgba(255,255,255,0.25)',
+            flexShrink: 0, border: '2px solid rgba(99,102,241,0.5)',
           }}>
             {otherUser?.profileImage
               ? <img src={otherUser.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1058,7 +1058,7 @@ export default function VideoCall() {
           </div>
           <div>
             <p style={{ color: 'white', fontWeight: 700, fontSize: 14, margin: 0 }}>{otherUser?.name || 'Unknown'}</p>
-            <p style={{ fontSize: 11, margin: 0, color: isConnected ? '#34d399' : 'rgba(255,255,255,0.5)' }}>{statusLabel}</p>
+            <p style={{ fontSize: 11, margin: 0, color: isConnected ? '#10b981' : 'rgba(255,255,255,0.7)' }}>{statusLabel}</p>
           </div>
         </div>
         <button onClick={toggleFullscreen} style={btnStyle}>
@@ -1070,7 +1070,7 @@ export default function VideoCall() {
       {remoteScreenShare && isConnected && (
         <div style={{
           position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)',
-          background: '#3b82f6', color: 'white', padding: '5px 14px', borderRadius: 8,
+          background: '#6366f1', color: 'white', padding: '5px 14px', borderRadius: 8,
           fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, zIndex: 25,
         }}>
           <Monitor size={13} /> {otherUser?.name} is sharing screen
@@ -1083,7 +1083,7 @@ export default function VideoCall() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           style={{
             position: 'absolute', inset: 0, zIndex: 60,
-            background: 'rgba(0,0,0,0.88)',
+            background: 'rgba(0,0,0,0.9)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
           <div style={{ textAlign: 'center', padding: 32 }}>
@@ -1091,16 +1091,16 @@ export default function VideoCall() {
               animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}
               style={{
                 width: 88, height: 88, borderRadius: '50%',
-                background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                background: '#6366f1',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 margin: '0 auto 18px', fontSize: 36, color: 'white', fontWeight: 700,
               }}>
               {otherUser?.name?.charAt(0)?.toUpperCase() || 'U'}
             </motion.div>
             <p style={{ color: 'white', fontSize: 22, fontWeight: 700, marginBottom: 6 }}>{otherUser?.name}</p>
-            <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: 28, fontSize: 14 }}>Incoming video call...</p>
+            <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 28, fontSize: 14 }}>Incoming video call...</p>
             <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-              <button onClick={acceptCall} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 30px', background: '#22c55e', border: 'none', borderRadius: 50, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={acceptCall} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 30px', background: '#10b981', border: 'none', borderRadius: 50, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
                 <Phone size={20} /> Accept
               </button>
               <button onClick={rejectCall} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 30px', background: '#ef4444', border: 'none', borderRadius: 50, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
@@ -1125,7 +1125,7 @@ export default function VideoCall() {
             style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '12px 24px', borderRadius: 50,
-              background: 'linear-gradient(135deg,#f59e0b,#d97706)',
+              background: '#f59e0b',
               border: 'none', color: 'white', fontSize: 15, fontWeight: 700,
               cursor: 'pointer', boxShadow: '0 4px 20px rgba(245,158,11,0.5)',
               animation: 'pulse 1.5s infinite',
@@ -1141,7 +1141,7 @@ export default function VideoCall() {
         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 30,
         padding: '20px 24px 28px',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
-        background: 'linear-gradient(to top,rgba(0,0,0,0.85),transparent)',
+        background: 'linear-gradient(to top,rgba(0,0,0,0.5),transparent)',
       }}>
         {/* Mic + Video controls */}
         {(isConnected || ['calling','ringing','connecting'].includes(status)) && (
@@ -1165,7 +1165,7 @@ export default function VideoCall() {
                   width: 52, height: 52, borderRadius: '50%',
                   background: 'rgba(99,102,241,0.2)',
                   border: '1px solid rgba(99,102,241,0.4)',
-                  color: '#a5b4fc', cursor: 'pointer',
+                  color: '#6366f1', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
@@ -1184,7 +1184,7 @@ export default function VideoCall() {
         {/* Start Call — caller only, when idle */}
         {showStartBtn && (
           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={startCall}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '15px 36px', background: 'linear-gradient(135deg,#22c55e,#16a34a)', border: 'none', borderRadius: 50, color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 24px rgba(34,197,94,0.45)' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '15px 36px', background: '#10b981', border: 'none', borderRadius: 50, color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 24px rgba(16,185,129,0.45)' }}>
             <Phone size={22} /> Start Call
           </motion.button>
         )}
@@ -1211,9 +1211,9 @@ function CtrlBtn({ children, onClick, danger, accent }) {
         width: 56, height: 56, borderRadius: '50%',
         border: 'none', cursor: 'pointer',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: danger ? '#ef4444' : accent ? '#3b82f6' : 'rgba(255,255,255,0.15)',
+        background: danger ? '#ef4444' : accent ? '#6366f1' : 'rgba(255,255,255,0.2)',
         color: 'white',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.3)',
         backdropFilter: 'blur(8px)',
       }}>
       {children}
@@ -1224,7 +1224,7 @@ function CtrlBtn({ children, onClick, danger, accent }) {
 // ── Small icon button (header) ────────────────────────────────────────────────
 const btnStyle = {
   width: 34, height: 34, borderRadius: 9,
-  background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+  background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
   color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
   cursor: 'pointer', flexShrink: 0,
 }

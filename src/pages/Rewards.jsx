@@ -27,13 +27,13 @@ const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100]
 
 function XPBar({ pct, color = '#6366f1' }) {
   return (
-    <div className="h-3 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+    <div className="h-3 rounded-full overflow-hidden" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}>
       <motion.div
         initial={{ width: 0 }}
         animate={{ width: `${pct}%` }}
         transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
         className="h-full rounded-full"
-        style={{ background: `linear-gradient(90deg, ${color}, ${color}cc)`, boxShadow: `0 0 10px ${color}80` }}
+        style={{ background: color }}
       />
     </div>
   )
@@ -45,19 +45,18 @@ function StatCard({ icon, label, value, sub, color, delay = 0 }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="rounded-2xl p-4 relative overflow-hidden"
-      style={{ background: 'rgba(10,8,30,0.8)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(16px)' }}
+      className="rounded-lg p-4 relative overflow-hidden"
+      style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}
     >
-      <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(ellipse at top left, ${color}, transparent 70%)` }} />
       <div className="relative">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${color}20`, border: `1px solid ${color}40` }}>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${color}15` }}>
             <span style={{ fontSize: 16 }}>{icon}</span>
           </div>
-          <span style={{ color: 'rgba(148,163,184,0.6)', fontSize: '0.7rem', fontFamily: 'monospace' }}>{label}</span>
+          <span className="text-xs text-theme-tertiary">{label}</span>
         </div>
-        <p className="text-2xl font-bold text-white">{value}</p>
-        {sub && <p style={{ color: 'rgba(148,163,184,0.4)', fontSize: '0.65rem', fontFamily: 'monospace', marginTop: 2 }}>{sub}</p>}
+        <p className="text-2xl font-bold text-theme-primary">{value}</p>
+        {sub && <p className="text-xs text-theme-tertiary mt-1">{sub}</p>}
       </div>
     </motion.div>
   )
@@ -76,7 +75,6 @@ function StreakCalendar({ streak }) {
     <div className="flex gap-2 justify-center">
       {days.map((day, i) => {
         const isActive = lastActive && (() => {
-          // mark the last `current` consecutive days as active
           const diff = Math.round((new Date() - day.date) / 86400000)
           return diff < current
         })()
@@ -86,17 +84,16 @@ function StreakCalendar({ streak }) {
               initial={{ scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: i * 0.05 + 0.3 }}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold"
+              className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold"
               style={{
-                background: isActive ? 'linear-gradient(135deg,#f97316,#ef4444)' : 'rgba(255,255,255,0.05)',
-                border: isActive ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                color: isActive ? 'white' : 'rgba(148,163,184,0.3)',
-                boxShadow: isActive ? '0 0 12px rgba(249,115,22,0.5)' : 'none',
+                background: isActive ? '#f97316' : 'var(--bg-primary)',
+                border: isActive ? 'none' : '1px solid var(--border-primary)',
+                color: isActive ? 'white' : 'var(--text-tertiary)',
               }}
             >
               {isActive ? '🔥' : day.label}
             </motion.div>
-            <span style={{ color: 'rgba(148,163,184,0.35)', fontSize: '0.55rem', fontFamily: 'monospace' }}>{day.label}</span>
+            <span className="text-xs text-theme-tertiary">{day.label}</span>
           </div>
         )
       })}
@@ -115,10 +112,10 @@ function MiniBarChart({ data }) {
             initial={{ height: 0 }}
             animate={{ height: `${(val / max) * 52}px` }}
             transition={{ delay: i * 0.07 + 0.3, duration: 0.5 }}
-            className="w-full rounded-t-sm"
-            style={{ background: val > 0 ? 'linear-gradient(to top,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.04)', minHeight: 4, boxShadow: val > 0 ? '0 0 6px rgba(99,102,241,0.4)' : 'none' }}
+            className="w-full rounded-t"
+            style={{ background: val > 0 ? '#6366f1' : 'var(--bg-primary)', minHeight: 4 }}
           />
-          <span style={{ color: 'rgba(148,163,184,0.3)', fontSize: '0.5rem', fontFamily: 'monospace' }}>
+          <span className="text-xs text-theme-tertiary">
             {new Date(date).getDate()}
           </span>
         </div>
@@ -155,10 +152,10 @@ export default function Rewards() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#05030f' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p style={{ color: 'rgba(148,163,184,0.5)', fontFamily: 'monospace', fontSize: '0.75rem' }}>Loading rewards...</p>
+          <p className="text-theme-tertiary text-sm">Loading rewards...</p>
         </div>
       </div>
     )
@@ -172,7 +169,7 @@ export default function Rewards() {
   const nextMilestone = STREAK_MILESTONES.find(m => m > (streak?.current || 0))
 
   return (
-    <div className="min-h-screen" style={{ background: '#05030f', backgroundImage: 'radial-gradient(ellipse at 20% 10%, rgba(99,102,241,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.06) 0%, transparent 50%)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -181,56 +178,51 @@ export default function Rewards() {
         {/* ── HEADER ─────────────────────────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)' }}>
-              <Trophy style={{ width: '1.2rem', color: '#fbbf24' }} />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: '#fef3c7' }}>
+              <Trophy style={{ width: '1.2rem', color: '#f59e0b' }} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">XP & Rewards</h1>
-              <p style={{ color: 'rgba(148,163,184,0.5)', fontSize: '0.72rem', fontFamily: 'monospace' }}>// earn xp → unlock tokens → level up</p>
+              <h1 className="text-2xl font-bold text-theme-primary">XP & Rewards</h1>
+              <p className="text-sm text-theme-secondary">Earn XP, unlock tokens, and level up</p>
             </div>
           </div>
         </motion.div>
 
         {/* ── LEVEL CARD ─────────────────────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <div className="rounded-2xl p-6 relative overflow-hidden" style={{ background: 'rgba(10,8,30,0.85)', border: `1px solid ${lvl?.color || '#6366f1'}40`, backdropFilter: 'blur(20px)' }}>
-            <div className="absolute inset-0 opacity-15" style={{ background: `radial-gradient(ellipse at top right, ${lvl?.color || '#6366f1'}, transparent 65%)` }} />
+          <div className="rounded-lg p-6 relative overflow-hidden" style={{ background: 'var(--bg-secondary)', border: `1px solid var(--border-primary)` }}>
             <div className="relative z-10">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5">
                 {/* Level info */}
                 <div className="flex items-center gap-4">
-                  <motion.div
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
-                    style={{ background: `${lvl?.color || '#6366f1'}20`, border: `2px solid ${lvl?.color || '#6366f1'}50`, boxShadow: `0 0 24px ${lvl?.color || '#6366f1'}40` }}
-                  >
+                  <div className="w-16 h-16 rounded-lg flex items-center justify-center text-3xl"
+                    style={{ background: `${lvl?.color || '#6366f1'}15` }}>
                     {lvl?.icon || '🌱'}
-                  </motion.div>
+                  </div>
                   <div>
-                    <p style={{ color: 'rgba(148,163,184,0.5)', fontSize: '0.65rem', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Level {lvl?.level}</p>
-                    <p className="text-2xl font-bold text-white">{lvl?.name}</p>
-                    <p style={{ color: lvl?.color, fontSize: '0.72rem', fontFamily: 'monospace', marginTop: 2 }}>
+                    <p className="text-xs text-theme-tertiary">Level {lvl?.level}</p>
+                    <p className="text-2xl font-bold text-theme-primary">{lvl?.name}</p>
+                    <p className="text-sm text-theme-secondary mt-1">
                       {data?.xp?.toLocaleString() || 0} total XP
                     </p>
                   </div>
                 </div>
 
                 {/* Tokens */}
-                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl" style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)' }}>
-                  <motion.span className="text-2xl" animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 3, repeat: Infinity }}>🪙</motion.span>
+                <div className="flex items-center gap-3 px-5 py-3 rounded-lg" style={{ background: '#fef3c7' }}>
+                  <span className="text-2xl">🪙</span>
                   <div>
-                    <p style={{ color: 'rgba(245,158,11,0.6)', fontSize: '0.6rem', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Tokens</p>
-                    <p className="text-2xl font-bold" style={{ color: '#fbbf24' }}>{data?.tokens || 0}</p>
-                    <p style={{ color: 'rgba(148,163,184,0.4)', fontSize: '0.6rem', fontFamily: 'monospace' }}>1 token = 100 XP</p>
+                    <p className="text-xs text-amber-700">Tokens</p>
+                    <p className="text-2xl font-bold" style={{ color: '#f59e0b' }}>{data?.tokens || 0}</p>
+                    <p className="text-xs text-amber-600">1 token = 100 XP</p>
                   </div>
                 </div>
               </div>
 
               {/* XP Progress Bar */}
               <div className="space-y-2">
-                <div className="flex justify-between" style={{ fontSize: '0.68rem', fontFamily: 'monospace' }}>
-                  <span style={{ color: 'rgba(148,163,184,0.5)' }}>
+                <div className="flex justify-between text-xs">
+                  <span className="text-theme-tertiary">
                     {lvl?.nextLevel ? `Progress to ${lvl.nextLevel.name} ${lvl.nextLevel.icon}` : '🏆 Max Level Reached!'}
                   </span>
                   <span style={{ color: lvl?.color }}>
@@ -239,7 +231,7 @@ export default function Rewards() {
                 </div>
                 <XPBar pct={lvl?.progressPct || 0} color={lvl?.color || '#6366f1'} />
                 {lvl?.nextLevel && (
-                  <p style={{ color: 'rgba(148,163,184,0.35)', fontSize: '0.62rem', fontFamily: 'monospace' }}>
+                  <p className="text-xs text-theme-tertiary">
                     {(lvl.xpToNext ?? 0).toLocaleString()} XP until next level
                   </p>
                 )}
@@ -269,11 +261,11 @@ export default function Rewards() {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
                 style={{
-                  background: active ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)',
-                  border: active ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.07)',
-                  color: active ? '#818cf8' : 'rgba(148,163,184,0.5)',
+                  background: active ? '#e0e7ff' : 'var(--bg-primary)',
+                  border: `1px solid ${active ? '#e0e7ff' : 'var(--border-primary)'}`,
+                  color: active ? '#6366f1' : 'var(--text-tertiary)',
                 }}
               >
                 <Icon size={14} />
@@ -290,59 +282,54 @@ export default function Rewards() {
             <motion.div key="overview" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
               {/* Streak Card */}
-              <div className="rounded-2xl p-5" style={{ background: 'rgba(10,8,30,0.8)', border: '1px solid rgba(249,115,22,0.2)', backdropFilter: 'blur(16px)' }}>
+              <div className="rounded-lg p-5" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
                 <div className="flex items-center gap-2 mb-4">
                   <Flame size={16} style={{ color: '#f97316' }} />
-                  <h3 className="font-semibold text-white text-sm">Daily Streak</h3>
+                  <h3 className="font-semibold text-theme-primary text-sm">Daily Streak</h3>
                   {streak?.current >= 3 && (
-                    <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' }}>
+                    <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold" style={{ background: '#fed7aa', color: '#f97316' }}>
                       🔥 On Fire!
                     </span>
                   )}
                 </div>
                 <div className="text-center mb-4">
-                  <motion.p
-                    className="text-5xl font-bold"
-                    style={{ color: '#f97316' }}
-                    animate={{ scale: [1, 1.02, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
+                  <p className="text-5xl font-bold" style={{ color: '#f97316' }}>
                     {streak?.current || 0}
-                  </motion.p>
-                  <p style={{ color: 'rgba(148,163,184,0.5)', fontSize: '0.72rem', fontFamily: 'monospace' }}>day streak</p>
+                  </p>
+                  <p className="text-xs text-theme-tertiary mt-1">day streak</p>
                 </div>
                 <StreakCalendar streak={streak} />
                 {nextMilestone && (
-                  <div className="mt-4 p-3 rounded-xl" style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.15)' }}>
-                    <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: '0.68rem', fontFamily: 'monospace' }}>
-                      🎯 Next milestone: <span style={{ color: '#fb923c', fontWeight: 700 }}>{nextMilestone} days</span> — {nextMilestone - (streak?.current || 0)} more to go!
+                  <div className="mt-4 p-3 rounded-lg" style={{ background: '#fef3c7' }}>
+                    <p className="text-xs text-amber-700">
+                      🎯 Next milestone: <span className="font-bold">{nextMilestone} days</span> — {nextMilestone - (streak?.current || 0)} more to go!
                     </p>
                   </div>
                 )}
               </div>
 
               {/* Daily XP Chart */}
-              <div className="rounded-2xl p-5" style={{ background: 'rgba(10,8,30,0.8)', border: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(16px)' }}>
+              <div className="rounded-lg p-5" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
                 <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp size={16} style={{ color: '#818cf8' }} />
-                  <h3 className="font-semibold text-white text-sm">Last 7 Days XP</h3>
+                  <TrendingUp size={16} style={{ color: '#6366f1' }} />
+                  <h3 className="font-semibold text-theme-primary text-sm">Last 7 Days XP</h3>
                 </div>
                 <MiniBarChart data={dailyXP} />
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {Object.entries(dailyXP).slice(-2).map(([date, val]) => (
-                    <div key={date} className="rounded-lg px-3 py-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <p style={{ color: 'rgba(148,163,184,0.4)', fontSize: '0.6rem', fontFamily: 'monospace' }}>{new Date(date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
-                      <p className="font-bold text-white">{val} <span style={{ color: '#818cf8', fontSize: '0.65rem' }}>XP</span></p>
+                    <div key={date} className="rounded-lg px-3 py-2" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}>
+                      <p className="text-xs text-theme-tertiary">{new Date(date).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                      <p className="font-bold text-theme-primary">{val} <span className="text-xs" style={{ color: '#6366f1' }}>XP</span></p>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* XP Breakdown */}
-              <div className="rounded-2xl p-5 lg:col-span-2" style={{ background: 'rgba(10,8,30,0.8)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(16px)' }}>
+              <div className="rounded-lg p-5 lg:col-span-2" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
                 <div className="flex items-center gap-2 mb-4">
-                  <Target size={16} style={{ color: '#818cf8' }} />
-                  <h3 className="font-semibold text-white text-sm">XP Breakdown</h3>
+                  <Target size={16} style={{ color: '#6366f1' }} />
+                  <h3 className="font-semibold text-theme-primary text-sm">XP Breakdown</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {Object.entries(ACTION_LABELS).map(([key, meta]) => {
@@ -351,12 +338,12 @@ export default function Rewards() {
                       <motion.div
                         key={key}
                         whileHover={{ scale: 1.03 }}
-                        className="rounded-xl p-3"
-                        style={{ background: `${meta.color}0d`, border: `1px solid ${meta.color}25` }}
+                        className="rounded-lg p-3"
+                        style={{ background: `${meta.color}10`, border: `1px solid ${meta.color}30` }}
                       >
                         <div className="text-xl mb-1">{meta.icon}</div>
-                        <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: '0.65rem', fontFamily: 'monospace', marginBottom: 4 }}>{meta.label}</p>
-                        <p className="font-bold text-white">{earned.toLocaleString()} <span style={{ color: meta.color, fontSize: '0.65rem' }}>XP</span></p>
+                        <p className="text-xs text-theme-secondary mb-1">{meta.label}</p>
+                        <p className="font-bold text-theme-primary">{earned.toLocaleString()} <span className="text-xs" style={{ color: meta.color }}>XP</span></p>
                       </motion.div>
                     )
                   })}
@@ -364,22 +351,22 @@ export default function Rewards() {
               </div>
 
               {/* How to Earn */}
-              <div className="rounded-2xl p-5 lg:col-span-2" style={{ background: 'rgba(10,8,30,0.8)', border: '1px solid rgba(34,197,94,0.2)', backdropFilter: 'blur(16px)' }}>
+              <div className="rounded-lg p-5 lg:col-span-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
                 <div className="flex items-center gap-2 mb-4">
                   <Gift size={16} style={{ color: '#22c55e' }} />
-                  <h3 className="font-semibold text-white text-sm">How to Earn XP</h3>
+                  <h3 className="font-semibold text-theme-primary text-sm">How to Earn XP</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {Object.entries(data?.xpRewards || {}).map(([key, amt]) => {
                     const meta = ACTION_LABELS[key]
                     if (!meta) return null
                     return (
-                      <div key={key} className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div key={key} className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}>
                         <span className="text-base">{meta.icon}</span>
                         <div className="flex-1 min-w-0">
-                          <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: '0.62rem', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta.label}</p>
+                          <p className="text-xs text-theme-secondary truncate">{meta.label}</p>
                         </div>
-                        <span className="font-bold text-sm" style={{ color: meta.color, whiteSpace: 'nowrap' }}>+{amt} XP</span>
+                        <span className="font-bold text-sm whitespace-nowrap" style={{ color: meta.color }}>+{amt} XP</span>
                       </div>
                     )
                   })}
@@ -387,34 +374,34 @@ export default function Rewards() {
               </div>
 
               {/* All Levels */}
-              <div className="rounded-2xl p-5 lg:col-span-2" style={{ background: 'rgba(10,8,30,0.8)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(16px)' }}>
+              <div className="rounded-lg p-5 lg:col-span-2" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
                 <div className="flex items-center gap-2 mb-4">
-                  <Medal size={16} style={{ color: '#818cf8' }} />
-                  <h3 className="font-semibold text-white text-sm">All Levels</h3>
+                  <Medal size={16} style={{ color: '#6366f1' }} />
+                  <h3 className="font-semibold text-theme-primary text-sm">All Levels</h3>
                 </div>
                 <div className="space-y-2">
                   {(data?.allLevels || []).map(lvlItem => {
                     const isCurrent = lvlItem.level === lvl?.level
                     const isUnlocked = (data?.xp || 0) >= lvlItem.min
                     return (
-                      <div key={lvlItem.level} className="flex items-center gap-3 rounded-xl px-4 py-3 transition-all"
+                      <div key={lvlItem.level} className="flex items-center gap-3 rounded-lg px-4 py-3 transition-all"
                         style={{
-                          background: isCurrent ? `${lvlItem.color}15` : 'rgba(255,255,255,0.02)',
-                          border: isCurrent ? `1px solid ${lvlItem.color}40` : '1px solid rgba(255,255,255,0.06)',
+                          background: isCurrent ? `${lvlItem.color}10` : 'var(--bg-primary)',
+                          border: isCurrent ? `1px solid ${lvlItem.color}40` : '1px solid var(--border-primary)',
                         }}
                       >
                         <span className="text-xl w-8 text-center">{isUnlocked ? lvlItem.icon : '🔒'}</span>
                         <div className="flex-1">
-                          <p className="font-semibold text-sm" style={{ color: isUnlocked ? 'white' : 'rgba(148,163,184,0.3)' }}>
+                          <p className="font-semibold text-sm" style={{ color: isUnlocked ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
                             Lv.{lvlItem.level} {lvlItem.name}
                             {isCurrent && <span className="ml-2 px-2 py-0.5 rounded-full text-xs" style={{ background: `${lvlItem.color}30`, color: lvlItem.color }}>Current</span>}
                           </p>
-                          <p style={{ color: 'rgba(148,163,184,0.35)', fontSize: '0.62rem', fontFamily: 'monospace' }}>
+                          <p className="text-xs text-theme-tertiary">
                             {(lvlItem.min ?? 0).toLocaleString()} {(lvlItem.max != null && lvlItem.max !== Infinity && isFinite(lvlItem.max)) ? `– ${lvlItem.max.toLocaleString()}` : '+'} XP
                           </p>
                         </div>
                         {isCurrent && (
-                          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: lvlItem.color, boxShadow: `0 0 8px ${lvlItem.color}` }} />
+                          <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: lvlItem.color }} />
                         )}
                       </div>
                     )
@@ -427,17 +414,16 @@ export default function Rewards() {
           {/* ── LEADERBOARD TAB ──────────────────────────────────────────── */}
           {tab === 'leaderboard' && (
             <motion.div key="leaderboard" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(10,8,30,0.8)', border: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(16px)' }}>
-                <div className="px-5 py-4 border-b" style={{ borderColor: 'rgba(99,102,241,0.15)' }}>
+              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+                <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-primary)' }}>
                   <div className="flex items-center gap-2">
-                    <Crown size={16} style={{ color: '#fbbf24' }} />
-                    <h3 className="font-semibold text-white text-sm">Top Learners</h3>
+                    <Crown size={16} style={{ color: '#f59e0b' }} />
+                    <h3 className="font-semibold text-theme-primary text-sm">Top Learners</h3>
                   </div>
                 </div>
-                <div className="divide-y" style={{ divideColor: 'rgba(255,255,255,0.04)' }}>
+                <div className="divide-y" style={{ divideColor: 'var(--border-primary)' }}>
                   {lb.map((entry, i) => {
                     const isMe = String(entry._id) === String(user?._id)
-                    const rankColors = ['#fbbf24', '#94a3b8', '#cd7c39']
                     const rankIcons  = ['🥇', '🥈', '🥉']
                     return (
                       <motion.div
@@ -446,31 +432,31 @@ export default function Rewards() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.05 }}
                         className="flex items-center gap-4 px-5 py-3"
-                        style={{ background: isMe ? 'rgba(99,102,241,0.08)' : 'transparent', borderLeft: isMe ? '3px solid #818cf8' : '3px solid transparent' }}
+                        style={{ background: isMe ? '#e0e7ff' : 'transparent', borderLeft: isMe ? '3px solid #6366f1' : '3px solid transparent' }}
                       >
                         <div className="w-8 text-center font-bold text-lg">
-                          {i < 3 ? rankIcons[i] : <span style={{ color: 'rgba(148,163,184,0.4)', fontSize: '0.8rem' }}>#{entry.rank}</span>}
+                          {i < 3 ? rankIcons[i] : <span className="text-sm text-theme-tertiary">#{entry.rank}</span>}
                         </div>
-                        <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: `2px solid ${entry.level.color}40` }}>
+                        <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ background: entry.level.color, border: `2px solid ${entry.level.color}40` }}>
                           {entry.profileImage
                             ? <img src={entry.profileImage} alt="" className="w-full h-full object-cover" />
                             : <div className="w-full h-full flex items-center justify-center text-white font-bold text-sm">{entry.name?.charAt(0)?.toUpperCase()}</div>}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm text-white truncate">
-                            {entry.name} {isMe && <span style={{ color: '#818cf8', fontSize: '0.65rem' }}>(you)</span>}
+                          <p className="font-semibold text-sm text-theme-primary truncate">
+                            {entry.name} {isMe && <span className="text-xs" style={{ color: '#6366f1' }}>(you)</span>}
                           </p>
-                          <p style={{ color: entry.level.color, fontSize: '0.65rem', fontFamily: 'monospace' }}>
+                          <p className="text-xs" style={{ color: entry.level.color }}>
                             {entry.level.icon} {entry.level.name}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-white text-sm">{entry.xp.toLocaleString()} <span style={{ color: '#818cf8', fontSize: '0.65rem' }}>XP</span></p>
-                          <p style={{ color: 'rgba(245,158,11,0.7)', fontSize: '0.62rem', fontFamily: 'monospace' }}>🪙 {entry.tokens}</p>
+                          <p className="font-bold text-theme-primary text-sm">{entry.xp.toLocaleString()} <span className="text-xs" style={{ color: '#6366f1' }}>XP</span></p>
+                          <p className="text-xs text-amber-600">🪙 {entry.tokens}</p>
                         </div>
                         {entry.streak > 0 && (
-                          <div className="px-2 py-1 rounded-lg" style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.2)' }}>
-                            <span style={{ color: '#fb923c', fontSize: '0.65rem', fontFamily: 'monospace' }}>🔥{entry.streak}</span>
+                          <div className="px-2 py-1 rounded-lg" style={{ background: '#fed7aa' }}>
+                            <span className="text-xs text-orange-700">🔥{entry.streak}</span>
                           </div>
                         )}
                       </motion.div>
@@ -484,20 +470,20 @@ export default function Rewards() {
           {/* ── HISTORY TAB ──────────────────────────────────────────────── */}
           {tab === 'history' && (
             <motion.div key="history" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(10,8,30,0.8)', border: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(16px)' }}>
-                <div className="px-5 py-4 border-b" style={{ borderColor: 'rgba(99,102,241,0.15)' }}>
+              <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+                <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border-primary)' }}>
                   <div className="flex items-center gap-2">
-                    <Activity size={16} style={{ color: '#818cf8' }} />
-                    <h3 className="font-semibold text-white text-sm">Recent XP Activity</h3>
+                    <Activity size={16} style={{ color: '#6366f1' }} />
+                    <h3 className="font-semibold text-theme-primary text-sm">Recent XP Activity</h3>
                   </div>
                 </div>
                 {history.length === 0 ? (
                   <div className="py-12 text-center">
-                    <Sparkles size={32} className="mx-auto mb-3" style={{ color: 'rgba(99,102,241,0.3)' }} />
-                    <p style={{ color: 'rgba(148,163,184,0.4)', fontFamily: 'monospace', fontSize: '0.75rem' }}>No XP activity yet. Start posting!</p>
+                    <Sparkles size={32} className="mx-auto mb-3" style={{ color: '#cbd5e1' }} />
+                    <p className="text-sm text-theme-tertiary">No XP activity yet. Start posting!</p>
                   </div>
                 ) : (
-                  <div className="divide-y" style={{ divideColor: 'rgba(255,255,255,0.04)' }}>
+                  <div className="divide-y" style={{ divideColor: 'var(--border-primary)' }}>
                     {history.map((h, i) => {
                       const meta = ACTION_LABELS[h.action] || { label: h.action, icon: '⚡', color: '#6366f1' }
                       return (
@@ -508,13 +494,13 @@ export default function Rewards() {
                           transition={{ delay: i * 0.03 }}
                           className="flex items-center gap-3 px-5 py-3"
                         >
-                          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base flex-shrink-0"
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
                             style={{ background: `${meta.color}15`, border: `1px solid ${meta.color}30` }}>
                             {meta.icon}
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-white">{meta.label}</p>
-                            <p style={{ color: 'rgba(148,163,184,0.4)', fontSize: '0.62rem', fontFamily: 'monospace' }}>
+                            <p className="text-sm font-medium text-theme-primary">{meta.label}</p>
+                            <p className="text-xs text-theme-tertiary">
                               {new Date(h.createdAt).toLocaleString('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                             </p>
                           </div>

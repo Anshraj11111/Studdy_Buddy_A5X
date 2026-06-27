@@ -41,7 +41,7 @@ export default function Sidebar({ isOpen = false, onClose }) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 z-[55] lg:hidden"
+            className="fixed inset-0 bg-black/60 dark:bg-black/60 z-[55] lg:hidden"
             style={{ top: '64px' }}
           />
         )}
@@ -50,9 +50,8 @@ export default function Sidebar({ isOpen = false, onClose }) {
       {/* Sidebar */}
       <aside
         style={{
-          background: 'rgba(5,3,20,0.95)',
-          borderRight: '1px solid rgba(99,102,241,0.15)',
-          backdropFilter: 'blur(20px)',
+          background: 'var(--bg-primary)',
+          borderRight: '1px solid var(--border-primary)',
           zIndex: 60,
         }}
         className={`fixed left-0 top-16 bottom-0 w-[240px] flex flex-col transition-transform duration-300 ease-out lg:translate-x-0 ${
@@ -63,9 +62,9 @@ export default function Sidebar({ isOpen = false, onClose }) {
         {onClose && (
           <button
             onClick={onClose}
-            className="lg:hidden absolute top-4 right-4 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition z-10"
+            className="lg:hidden absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition z-10"
           >
-            <X size={20} className="text-gray-400" />
+            <X size={20} className="text-theme-tertiary" />
           </button>
         )}
 
@@ -81,20 +80,15 @@ export default function Sidebar({ isOpen = false, onClose }) {
                 <Link
                   to={item.path}
                   onClick={handleLinkClick}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
-                  style={{
-                    background: active ? 'rgba(99,102,241,0.2)' : 'transparent',
-                    color: active ? '#a5b4fc' : 'rgba(148,163,184,0.75)',
-                    borderLeft: active ? '3px solid #6366f1' : '3px solid transparent',
-                  }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    active 
+                      ? 'bg-[#e0e7ff] dark:bg-indigo-500/20 text-[#6366f1] dark:text-indigo-300' 
+                      : 'text-theme-secondary hover:bg-gray-100 dark:hover:bg-white/5'
+                  }`}
                 >
                   <Icon
-                    style={{
-                      width: '1.1rem',
-                      height: '1.1rem',
-                      color: active ? '#818cf8' : 'rgba(148,163,184,0.5)',
-                      flexShrink: 0
-                    }}
+                    size={18}
+                    className={active ? 'text-[#6366f1] dark:text-indigo-400' : 'text-theme-tertiary'}
                   />
                   <span className="text-sm">{item.label}</span>
                 </Link>
@@ -105,31 +99,31 @@ export default function Sidebar({ isOpen = false, onClose }) {
 
         {/* Upgrade Card */}
         <div
-          className="mx-3 mb-4 p-5 rounded-2xl text-center hidden lg:block"
+          className="mx-3 mb-4 p-5 rounded-lg text-center hidden lg:block"
           style={{
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.2))',
-            border: '1px solid rgba(99,102,241,0.3)'
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-primary)'
           }}
         >
           <div
-            className="w-12 h-12 mx-auto mb-2 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            className="w-12 h-12 mx-auto mb-3 rounded-lg flex items-center justify-center"
+            style={{ 
+              background: '#6366f1'
+            }}
           >
-            <Sparkles style={{ width: '1.2rem', height: '1.2rem', color: 'white' }} />
+            <Sparkles size={20} className="text-white" />
           </div>
-          <p className="text-white text-sm font-bold mb-1">Upgrade to Pro</p>
-          <p
-            className="text-xs mb-3 leading-snug"
-            style={{ color: 'rgba(148,163,184,0.7)' }}
-          >
+          <p className="text-theme-primary text-sm font-bold mb-1">Upgrade to Pro</p>
+          <p className="text-theme-tertiary text-xs mb-3 leading-snug">
             Unlock premium features and grow faster.
           </p>
           <button
-            className="w-full py-2 rounded-lg text-sm font-semibold text-white"
+            className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-colors"
             style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              boxShadow: '0 4px 12px rgba(99,102,241,0.4)'
+              background: '#6366f1',
             }}
+            onMouseEnter={(e) => e.target.style.background = '#5558e3'}
+            onMouseLeave={(e) => e.target.style.background = '#6366f1'}
           >
             Upgrade Now
           </button>

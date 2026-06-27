@@ -178,7 +178,7 @@ export default function Login() {
                 Welcome Back
               </motion.h1>
               <motion.p 
-                className="text-gray-400 text-sm"
+                className="text-theme-tertiary text-sm"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
@@ -191,16 +191,16 @@ export default function Login() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">Email</label>
+                <label className="block text-sm font-medium mb-2 text-theme-secondary">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary" size={18} />
                   <input
                     type="email"
                     name="email"
                     placeholder="you@example.com"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                   />
                 </div>
                 {errors.email && (
@@ -212,16 +212,16 @@ export default function Login() {
 
               {/* Password */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">Password</label>
+                <label className="block text-sm font-medium mb-2 text-theme-secondary">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary" size={18} />
                   <input
                     type="password"
                     name="password"
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                   />
                 </div>
                 {errors.password && (
@@ -233,17 +233,17 @@ export default function Login() {
 
               {/* Role */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">I am a</label>
+                <label className="block text-sm font-medium mb-2 text-theme-secondary">I am a</label>
                 <div className="relative">
-                  <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                  <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary" size={18} />
                   <select
                     name="role"
                     value={formData.role}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer"
+                    className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-theme-primary focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none cursor-pointer"
                   >
-                    <option value="student" className="bg-gray-800">Student</option>
-                    <option value="mentor" className="bg-gray-800">Mentor</option>
+                    <option value="student" className="bg-theme-card">Student</option>
+                    <option value="mentor" className="bg-theme-card">Mentor</option>
                   </select>
                 </div>
               </div>
@@ -255,14 +255,14 @@ export default function Login() {
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                 >
-                  <label className="block text-sm font-medium mb-2 text-gray-300">Mentor Code</label>
+                  <label className="block text-sm font-medium mb-2 text-theme-secondary">Mentor Code</label>
                   <input
                     type="text"
                     name="mentorCode"
                     placeholder="Enter your mentor code"
                     value={formData.mentorCode}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-theme-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                   />
                   {errors.mentorCode && (
                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
@@ -289,7 +289,7 @@ export default function Login() {
               <motion.button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-theme-primary font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{ scale: loading ? 1 : 1.02 }}
                 whileTap={{ scale: loading ? 1 : 0.98 }}
               >
@@ -310,7 +310,7 @@ export default function Login() {
               {loading && (
                 <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3 }}
                   className="text-center text-xs mt-2"
-                  style={{ color: 'rgba(148,163,184,0.6)' }}>
+                  style={{ color: "var(--text-secondary)" }}>
                   ⚡ Server is waking up, please wait a moment...
                 </motion.p>
               )}
@@ -322,18 +322,18 @@ export default function Login() {
               <div className="mb-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex-1 h-px" style={{ background: 'rgba(99,102,241,0.2)' }} />
-                  <span className="text-xs text-gray-500">or continue with</span>
+                  <span className="text-xs text-theme-muted">or continue with</span>
                   <div className="flex-1 h-px" style={{ background: 'rgba(99,102,241,0.2)' }} />
                 </div>
                 <div ref={googleBtnRef} className="flex justify-center" />
                 {googleLoading && (
                   <div className="flex items-center justify-center gap-2 mt-2">
                     <Loader2 size={14} className="animate-spin text-indigo-400" />
-                    <span className="text-xs text-gray-400">Signing in with Google...</span>
+                    <span className="text-xs text-theme-tertiary">Signing in with Google...</span>
                   </div>
                 )}
               </div>
-              <p className="text-gray-400 text-sm">
+              <p className="text-theme-tertiary text-sm">
                 Don't have an account?{' '}
                 <Link 
                   to="/signup" 

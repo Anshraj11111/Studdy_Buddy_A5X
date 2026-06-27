@@ -36,15 +36,15 @@ const getSkillColor = (skill) => {
 
 const glassCard = {
   background: 'rgba(10,8,30,0.7)',
-  border: '1px solid rgba(99,102,241,0.15)',
+  border: "1px solid var(--border-secondary)",
   backdropFilter: 'blur(20px)',
   borderRadius: '16px',
 }
 
 const inputStyle = {
   background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(99,102,241,0.2)',
-  color: 'white',
+  border: "1px solid var(--border-primary)",
+  color: "var(--text-primary)",
   borderRadius: '12px',
   padding: '10px 14px',
   fontSize: '0.85rem',
@@ -53,7 +53,7 @@ const inputStyle = {
 }
 
 const SOCIAL_FIELDS = [
-  { key: 'github', label: 'GitHub', icon: Github, placeholder: 'https://github.com/username', color: '#e2e8f0' },
+  { key: 'github', label: 'GitHub', icon: Github, placeholder: 'https://github.com/username', color: "var(--text-primary)" },
   { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, placeholder: 'https://linkedin.com/in/username', color: '#60a5fa' },
   { key: 'instagram', label: 'Instagram', icon: Instagram, placeholder: 'https://instagram.com/username', color: '#f472b6' },
   { key: 'website', label: 'Website / Portfolio', icon: Globe, placeholder: 'https://yourwebsite.com', color: '#34d399' },
@@ -175,7 +175,7 @@ function LocationInput({ value, onChange }) {
 
       <PortalDropdown anchorRect={showDrop ? rect : null}>
         {loading && (
-          <div className="flex items-center gap-2 px-4 py-3 text-xs" style={{ color: 'rgba(148,163,184,0.6)' }}>
+          <div className="flex items-center gap-2 px-4 py-3 text-xs" style={{ color: "var(--text-secondary)" }}>
             <Loader2 size={12} className="animate-spin" /> Searching...
           </div>
         )}
@@ -265,7 +265,7 @@ function SkillsInput({ skills, onChange }) {
       </div>
 
       <PortalDropdown anchorRect={showDrop ? rect : null}>
-        <p className="px-3 pt-2 pb-1 text-xs" style={{ color: 'rgba(148,163,184,0.5)' }}>Suggestions</p>
+        <p className="px-3 pt-2 pb-1 text-xs" style={{ color: "var(--text-tertiary)" }}>Suggestions</p>
         <div className="flex flex-wrap gap-1.5 px-3 pb-3" style={{ maxHeight: '160px', overflowY: 'auto' }}>
           {filtered.map(s => {
             const c = getSkillColor(s)
@@ -282,7 +282,7 @@ function SkillsInput({ skills, onChange }) {
         </div>
       </PortalDropdown>
 
-      <p className="text-xs mt-1.5" style={{ color: 'rgba(148,163,184,0.4)' }}>
+      <p className="text-xs mt-1.5" style={{ color: "var(--text-muted)" }}>
         Press Enter or click Add to add custom skills. Backspace removes the last one.
       </p>
     </>
@@ -415,7 +415,7 @@ export default function Settings() {
               border: '1px solid rgba(52,211,153,0.4)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 24px rgba(52,211,153,0.25)',
               backdropFilter: 'blur(16px)',
-              color: 'white', fontWeight: 700, fontSize: '0.9rem',
+              color: "var(--text-primary)", fontWeight: 700, fontSize: '0.9rem',
               whiteSpace: 'nowrap',
             }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -439,7 +439,7 @@ export default function Settings() {
               border: '1px solid rgba(248,113,113,0.4)',
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
               backdropFilter: 'blur(16px)',
-              color: 'white', fontWeight: 700, fontSize: '0.9rem',
+              color: "var(--text-primary)", fontWeight: 700, fontSize: '0.9rem',
               maxWidth: '80vw',
             }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -449,7 +449,7 @@ export default function Settings() {
             </svg>
             <span>Save failed: {error}</span>
             <button onClick={() => setError('')}
-              style={{ marginLeft: 8, opacity: 0.7, cursor: 'pointer', background: 'none', border: 'none', color: 'white' }}>
+              style={{ marginLeft: 8, opacity: 0.7, cursor: 'pointer', background: 'none', border: 'none', color: "var(--text-primary)" }}>
               <X size={14} />
             </button>
           </motion.div>
@@ -478,7 +478,7 @@ export default function Settings() {
                 style={{ background: 'linear-gradient(135deg,#a5b4fc,#818cf8,#c4b5fd)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Settings
               </h1>
-              <p style={{ color: 'rgba(148,163,184,0.7)', fontSize: '0.8rem', fontFamily: 'monospace' }}>Manage your profile and preferences</p>
+              <p style={{ color: "var(--text-secondary)", fontSize: '0.8rem', fontFamily: 'monospace' }}>Manage your profile and preferences</p>
             </div>
           </motion.div>
 
@@ -496,14 +496,14 @@ export default function Settings() {
               )}
             </div>
             <div className="flex items-center gap-4 mb-5">
-              <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-2xl flex-shrink-0"
+              <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-theme-primary font-bold text-2xl flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 20px rgba(99,102,241,0.4)' }}>
                 {preview ? <img src={preview} alt={user?.name} className="w-full h-full object-cover" /> : user?.name?.charAt(0).toUpperCase()}
               </div>
               <div>
-                <p className="font-bold text-white text-lg leading-tight">{user?.name}</p>
+                <p className="font-bold text-theme-primary text-lg leading-tight">{user?.name}</p>
                 {user?.headline && <p className="text-xs mt-0.5" style={{ color: '#a5b4fc' }}>{user.headline}</p>}
-                <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.5)' }}>{user?.email}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--text-tertiary)" }}>{user?.email}</p>
                 <span className="inline-flex items-center gap-1 mt-1 text-xs px-2 py-0.5 rounded-full capitalize font-semibold"
                   style={{ background: user?.role === 'mentor' ? 'rgba(196,181,253,0.15)' : 'rgba(96,165,250,0.15)', border: user?.role === 'mentor' ? '1px solid rgba(196,181,253,0.3)' : '1px solid rgba(96,165,250,0.3)', color: user?.role === 'mentor' ? '#c4b5fd' : '#93c5fd' }}>
                   <Shield size={10} /> {user?.role}
@@ -518,8 +518,8 @@ export default function Settings() {
               ].map(s => { const Icon = s.icon; return (
                 <div key={s.label} className="rounded-2xl p-3 text-center" style={{ background: `${s.color}12`, border: `1px solid ${s.color}30` }}>
                   <Icon size={16} className="mx-auto mb-1" style={{ color: s.color }} />
-                  <p className="text-xl font-bold text-white">{s.value}</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'rgba(148,163,184,0.6)' }}>{s.label}</p>
+                  <p className="text-xl font-bold text-theme-primary">{s.value}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{s.label}</p>
                 </div>
               )})}
             </div>
@@ -535,15 +535,15 @@ export default function Settings() {
                 <ImageIcon size={14} /> Banner Image
               </h2>
               <div className="relative w-full h-32 rounded-xl overflow-hidden mb-4 cursor-pointer"
-                style={{ background: bannerPreview ? `url(${bannerPreview}) center/cover no-repeat` : 'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1))', border: '1px solid rgba(99,102,241,0.2)' }}
+                style={{ background: bannerPreview ? `url(${bannerPreview}) center/cover no-repeat` : 'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1))', border: "1px solid var(--border-primary)" }}
                 onClick={() => bannerPreview && setZoomedBanner(true)}>
-                {!bannerPreview && <div className="absolute inset-0 flex flex-col items-center justify-center gap-1"><ImageIcon size={24} style={{ color: 'rgba(148,163,184,0.3)' }} /><span style={{ color: 'rgba(148,163,184,0.4)', fontSize: '0.75rem' }}>No banner uploaded</span></div>}
-                {bannerPreview && <div className="absolute inset-0 opacity-0 hover:opacity-100 transition flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)' }}><ZoomIn size={22} className="text-white" /></div>}
-                {uploadingBanner && <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}><Loader2 size={22} className="animate-spin text-white" /></div>}
+                {!bannerPreview && <div className="absolute inset-0 flex flex-col items-center justify-center gap-1"><ImageIcon size={24} style={{ color: 'rgba(148,163,184,0.3)' }} /><span style={{ color: "var(--text-muted)", fontSize: '0.75rem' }}>No banner uploaded</span></div>}
+                {bannerPreview && <div className="absolute inset-0 opacity-0 hover:opacity-100 transition flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)' }}><ZoomIn size={22} className="text-theme-primary" /></div>}
+                {uploadingBanner && <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}><Loader2 size={22} className="animate-spin text-theme-primary" /></div>}
               </div>
               <div className="flex gap-2 flex-wrap">
                 <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner}
-                  className="px-4 py-2 text-sm font-medium text-white rounded-xl" style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)' }}>
+                  className="px-4 py-2 text-sm font-medium text-theme-primary rounded-xl" style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)' }}>
                   {uploadingBanner ? 'Uploading...' : 'Upload Banner'}
                 </motion.button>
                 {bannerPreview && (
@@ -553,7 +553,7 @@ export default function Settings() {
                   </motion.button>
                 )}
               </div>
-              <p className="text-xs mt-2" style={{ color: 'rgba(148,163,184,0.4)' }}>Recommended: 1500×500px, max 10MB.</p>
+              <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>Recommended: 1500×500px, max 10MB.</p>
               <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
             </motion.div>
 
@@ -568,19 +568,19 @@ export default function Settings() {
                 <div className="relative flex-shrink-0">
                   <motion.div whileHover={{ scale: 1.05 }} className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center cursor-pointer"
                     style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 24px rgba(99,102,241,0.4)' }} onClick={() => preview && setZoomed(true)}>
-                    {preview ? (<><img src={preview} alt="Profile" className="w-full h-full object-cover" /><div className="absolute inset-0 rounded-full opacity-0 hover:opacity-100 transition flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}><ZoomIn size={20} className="text-white" /></div></>) : (<span className="text-white text-3xl font-bold">{user?.name?.charAt(0).toUpperCase()}</span>)}
+                    {preview ? (<><img src={preview} alt="Profile" className="w-full h-full object-cover" /><div className="absolute inset-0 rounded-full opacity-0 hover:opacity-100 transition flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}><ZoomIn size={20} className="text-theme-primary" /></div></>) : (<span className="text-theme-primary text-3xl font-bold">{user?.name?.charAt(0).toUpperCase()}</span>)}
                   </motion.div>
                   <motion.button type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => !uploading && fileInputRef.current?.click()} disabled={uploading}
-                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center text-white shadow-lg"
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center text-theme-primary shadow-lg"
                     style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: '2px solid rgba(10,8,30,0.9)' }}>
                     {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
                   </motion.button>
                 </div>
                 <div className="text-center sm:text-left">
-                  <p className="text-sm mb-3" style={{ color: 'rgba(148,163,184,0.7)' }}>{uploading ? 'Uploading...' : 'Upload a profile photo (max 10MB)'}</p>
+                  <p className="text-sm mb-3" style={{ color: "var(--text-secondary)" }}>{uploading ? 'Uploading...' : 'Upload a profile photo (max 10MB)'}</p>
                   <div className="flex gap-2 justify-center sm:justify-start flex-wrap">
                     <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 text-sm font-medium text-white rounded-xl" style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)' }}>
+                      className="px-4 py-2 text-sm font-medium text-theme-primary rounded-xl" style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)' }}>
                       Choose Photo
                     </motion.button>
                     {preview && (
@@ -604,44 +604,44 @@ export default function Settings() {
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>Full Name</label>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Full Name</label>
                   <input value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} placeholder="Your name" style={inputStyle}
                     onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'} onBlur={e => e.target.style.borderColor = 'rgba(99,102,241,0.2)'} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
                     <span className="flex items-center gap-1"><Type size={12} /> Headline</span>
                   </label>
                   <input value={formData.headline} onChange={e => setFormData(p => ({ ...p, headline: e.target.value }))} maxLength={120}
                     placeholder="e.g., Full-Stack Developer | AI Enthusiast" style={inputStyle}
                     onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'} onBlur={e => e.target.style.borderColor = 'rgba(99,102,241,0.2)'} />
-                  <p className="text-xs text-right mt-1" style={{ color: 'rgba(148,163,184,0.4)' }}>{formData.headline.length}/120</p>
+                  <p className="text-xs text-right mt-1" style={{ color: "var(--text-muted)" }}>{formData.headline.length}/120</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>Email</label>
-                  <div className="px-4 py-2.5 rounded-xl text-sm" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(148,163,184,0.6)' }}>{user?.email}</div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Email</label>
+                  <div className="px-4 py-2.5 rounded-xl text-sm" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: "var(--text-secondary)" }}>{user?.email}</div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>Role</label>
-                  <div className="px-4 py-2.5 rounded-xl text-sm capitalize flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(148,163,184,0.6)' }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Role</label>
+                  <div className="px-4 py-2.5 rounded-xl text-sm capitalize flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: "var(--text-secondary)" }}>
                     <Shield size={13} style={{ color: user?.role === 'mentor' ? '#c4b5fd' : '#93c5fd' }} />{user?.role}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
                     <span className="flex items-center gap-1"><FileText size={12} /> Bio</span>
                   </label>
                   <textarea value={formData.bio} onChange={e => setFormData(p => ({ ...p, bio: e.target.value }))} maxLength={300} rows={3}
                     placeholder="Tell others about yourself..." style={{ ...inputStyle, resize: 'none' }}
                     onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'} onBlur={e => e.target.style.borderColor = 'rgba(99,102,241,0.2)'} />
-                  <p className="text-xs text-right mt-1" style={{ color: 'rgba(148,163,184,0.4)' }}>{formData.bio.length}/300</p>
+                  <p className="text-xs text-right mt-1" style={{ color: "var(--text-muted)" }}>{formData.bio.length}/300</p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
                     <span className="flex items-center gap-1"><MapPin size={12} /> Location (Public)</span>
                   </label>
                   <LocationInput value={formData.address} onChange={val => setFormData(p => ({ ...p, address: val }))} />
-                  <p className="text-xs mt-1" style={{ color: 'rgba(148,163,184,0.4)' }}>
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
                     Shown on your public profile. Click <Navigation size={10} style={{ display: 'inline' }} /> to auto-detect.
                   </p>
                 </div>
@@ -655,11 +655,11 @@ export default function Settings() {
               <h2 className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#a5b4fc', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 <Link2 size={14} /> Social Links
               </h2>
-              <p className="text-xs mb-4" style={{ color: 'rgba(148,163,184,0.5)' }}>Add your profiles so others can connect with you</p>
+              <p className="text-xs mb-4" style={{ color: "var(--text-tertiary)" }}>Add your profiles so others can connect with you</p>
               <div className="space-y-3">
                 {SOCIAL_FIELDS.map(({ key, label, icon: Icon, placeholder, color }) => (
                   <div key={key}>
-                    <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>
+                    <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: "var(--text-secondary)" }}>
                       <Icon size={12} style={{ color }} /> {label}
                     </label>
                     <div className="relative">
@@ -680,7 +680,7 @@ export default function Settings() {
               <h2 className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#a5b4fc', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 <Check size={14} /> {user?.role === 'mentor' ? 'Expertise / Skills' : 'Skills'}
               </h2>
-              <p className="text-xs mb-4" style={{ color: 'rgba(148,163,184,0.5)' }}>Add any skill — pick from suggestions or type your own</p>
+              <p className="text-xs mb-4" style={{ color: "var(--text-tertiary)" }}>Add any skill — pick from suggestions or type your own</p>
               <SkillsInput skills={formData.skills} onChange={skills => setFormData(p => ({ ...p, skills }))} />
             </motion.div>
 
@@ -694,7 +694,7 @@ export default function Settings() {
                 style={{ color: user?.role === 'mentor' ? '#c4b5fd' : '#6ee7b7', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 {user?.role === 'mentor' ? '🏢' : '🎓'} {user?.role === 'mentor' ? 'Work Experience' : 'Education'}
               </h2>
-              <p className="text-xs mb-4" style={{ color: 'rgba(148,163,184,0.5)' }}>
+              <p className="text-xs mb-4" style={{ color: "var(--text-tertiary)" }}>
                 {user?.role === 'mentor' ? 'Add your company, role, and professional background' : 'Add your school, college, or institution details'}
               </p>
 
@@ -705,7 +705,7 @@ export default function Settings() {
                     { key: 'role', label: 'Role / Designation', placeholder: 'e.g., Senior Engineer, Research Scientist' },
                   ].map(({ key, label, placeholder }) => (
                     <div key={key}>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>{label}</label>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>{label}</label>
                       <input value={formData.experience[key]} onChange={e => setFormData(p => ({ ...p, experience: { ...p.experience, [key]: e.target.value } }))}
                         placeholder={placeholder} style={{ ...inputStyle, borderColor: 'rgba(139,92,246,0.2)' }}
                         onFocus={e => e.target.style.borderColor = 'rgba(139,92,246,0.5)'}
@@ -715,7 +715,7 @@ export default function Settings() {
                   <div className="grid grid-cols-2 gap-3">
                     {[{ key: 'startYear', label: 'Start Year', placeholder: '2018' }, { key: 'endYear', label: 'End Year', placeholder: 'Present' }].map(({ key, label, placeholder }) => (
                       <div key={key}>
-                        <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>{label}</label>
+                        <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>{label}</label>
                         <input value={formData.experience[key]} onChange={e => setFormData(p => ({ ...p, experience: { ...p.experience, [key]: e.target.value } }))}
                           placeholder={placeholder} style={{ ...inputStyle, borderColor: 'rgba(139,92,246,0.2)' }}
                           onFocus={e => e.target.style.borderColor = 'rgba(139,92,246,0.5)'}
@@ -724,13 +724,13 @@ export default function Settings() {
                     ))}
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>Description</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Description</label>
                     <textarea value={formData.experience.description} onChange={e => setFormData(p => ({ ...p, experience: { ...p.experience, description: e.target.value } }))}
                       maxLength={500} rows={3} placeholder="Briefly describe your role and responsibilities..."
                       style={{ ...inputStyle, resize: 'none', borderColor: 'rgba(139,92,246,0.2)' }}
                       onFocus={e => e.target.style.borderColor = 'rgba(139,92,246,0.5)'}
                       onBlur={e => e.target.style.borderColor = 'rgba(139,92,246,0.2)'} />
-                    <p className="text-xs text-right mt-1" style={{ color: 'rgba(148,163,184,0.4)' }}>{formData.experience.description.length}/500</p>
+                    <p className="text-xs text-right mt-1" style={{ color: "var(--text-muted)" }}>{formData.experience.description.length}/500</p>
                   </div>
                 </div>
               ) : (
@@ -741,7 +741,7 @@ export default function Settings() {
                     { key: 'field', label: 'Field of Study / Stream', placeholder: 'e.g., Computer Science, PCM, Electronics' },
                   ].map(({ key, label, placeholder }) => (
                     <div key={key}>
-                      <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>{label}</label>
+                      <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>{label}</label>
                       <input value={formData.education[key]} onChange={e => setFormData(p => ({ ...p, education: { ...p.education, [key]: e.target.value } }))}
                         placeholder={placeholder} style={{ ...inputStyle, borderColor: 'rgba(52,211,153,0.2)' }}
                         onFocus={e => e.target.style.borderColor = 'rgba(52,211,153,0.5)'}
@@ -751,7 +751,7 @@ export default function Settings() {
                   <div className="grid grid-cols-2 gap-3">
                     {[{ key: 'startYear', label: 'Start Year', placeholder: '2021' }, { key: 'endYear', label: 'End Year', placeholder: '2025' }].map(({ key, label, placeholder }) => (
                       <div key={key}>
-                        <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>{label}</label>
+                        <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>{label}</label>
                         <input value={formData.education[key]} onChange={e => setFormData(p => ({ ...p, education: { ...p.education, [key]: e.target.value } }))}
                           placeholder={placeholder} style={{ ...inputStyle, borderColor: 'rgba(52,211,153,0.2)' }}
                           onFocus={e => e.target.style.borderColor = 'rgba(52,211,153,0.5)'}
@@ -760,13 +760,13 @@ export default function Settings() {
                     ))}
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>Description</label>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Description</label>
                     <textarea value={formData.education.description} onChange={e => setFormData(p => ({ ...p, education: { ...p.education, description: e.target.value } }))}
                       maxLength={500} rows={3} placeholder="Clubs, achievements, projects, activities..."
                       style={{ ...inputStyle, resize: 'none', borderColor: 'rgba(52,211,153,0.2)' }}
                       onFocus={e => e.target.style.borderColor = 'rgba(52,211,153,0.5)'}
                       onBlur={e => e.target.style.borderColor = 'rgba(52,211,153,0.2)'} />
-                    <p className="text-xs text-right mt-1" style={{ color: 'rgba(148,163,184,0.4)' }}>{formData.education.description.length}/500</p>
+                    <p className="text-xs text-right mt-1" style={{ color: "var(--text-muted)" }}>{formData.education.description.length}/500</p>
                   </div>
                 </div>
               )}
@@ -784,10 +784,10 @@ export default function Settings() {
                   Only you
                 </span>
               </div>
-              <p className="text-xs mb-4" style={{ color: 'rgba(148,163,184,0.5)' }}>This information is private and will never be shown to other users.</p>
+              <p className="text-xs mb-4" style={{ color: "var(--text-tertiary)" }}>This information is private and will never be shown to other users.</p>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
                     <span className="flex items-center gap-1"><Phone size={12} /> Phone Number</span>
                   </label>
                   <div className="relative">
@@ -798,13 +798,13 @@ export default function Settings() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: 'rgba(148,163,184,0.7)' }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
                     <span className="flex items-center gap-1"><MapPin size={12} /> Full Address (Private)</span>
                   </label>
                   <textarea value={formData.privateAddress} onChange={e => setFormData(p => ({ ...p, privateAddress: e.target.value }))} maxLength={300} rows={3}
                     placeholder="Flat no., Street, City, State, PIN..." style={{ ...inputStyle, resize: 'none', borderColor: 'rgba(251,191,36,0.2)' }}
                     onFocus={e => e.target.style.borderColor = 'rgba(251,191,36,0.5)'} onBlur={e => e.target.style.borderColor = 'rgba(251,191,36,0.2)'} />
-                  <p className="text-xs text-right mt-1" style={{ color: 'rgba(148,163,184,0.4)' }}>{formData.privateAddress.length}/300</p>
+                  <p className="text-xs text-right mt-1" style={{ color: "var(--text-muted)" }}>{formData.privateAddress.length}/300</p>
                 </div>
               </div>
             </motion.div>
@@ -817,7 +817,7 @@ export default function Settings() {
             )}
 
             <motion.button type="submit" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3.5 text-white font-semibold rounded-xl transition disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3.5 text-theme-primary font-semibold rounded-xl transition disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
               {saved ? <><Check size={18} /> Saved!</> : loading ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : <><Save size={18} /> Save Changes</>}
             </motion.button>
@@ -833,7 +833,7 @@ export default function Settings() {
             style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={() => setZoomed(false)}>
             <motion.div initial={{ scale: 0.7 }} animate={{ scale: 1 }} exit={{ scale: 0.7 }} className="relative w-full max-w-sm" onClick={e => e.stopPropagation()}>
               <img src={preview} alt="Profile" className="w-full rounded-2xl shadow-2xl object-cover" style={{ boxShadow: '0 0 40px rgba(99,102,241,0.4)' }} />
-              <button onClick={() => setZoomed(false)} className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center text-white"
+              <button onClick={() => setZoomed(false)} className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center text-theme-primary"
                 style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)' }}><X size={16} /></button>
             </motion.div>
           </motion.div>
@@ -848,7 +848,7 @@ export default function Settings() {
             style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={() => setZoomedBanner(false)}>
             <motion.div initial={{ scale: 0.85 }} animate={{ scale: 1 }} exit={{ scale: 0.85 }} className="relative w-full max-w-2xl" onClick={e => e.stopPropagation()}>
               <img src={bannerPreview} alt="Banner" className="w-full rounded-2xl shadow-2xl object-cover" style={{ boxShadow: '0 0 40px rgba(99,102,241,0.4)', maxHeight: '60vh' }} />
-              <button onClick={() => setZoomedBanner(false)} className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center text-white"
+              <button onClick={() => setZoomedBanner(false)} className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center text-theme-primary"
                 style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)' }}><X size={16} /></button>
             </motion.div>
           </motion.div>

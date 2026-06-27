@@ -188,56 +188,47 @@ export default function Chat() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ position: 'relative' }}>
-        <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.85)' }} />
-        <div className="text-center" style={{ position: 'relative', zIndex: 2 }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
+        <div className="text-center">
           <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
-            <Loader2 size={36} style={{ color: '#818cf8' }} />
+            <Loader2 size={36} className="text-indigo-500" />
           </motion.div>
-          <p className="mt-3 text-sm" style={{ color: 'rgba(148,163,184,0.6)', fontFamily: 'monospace' }}>Loading chat...</p>
+          <p className="mt-3 text-sm text-theme-secondary">Loading chat...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-
-      {/* Background */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.88)' }} />
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
 
       {/* ── Chat Header — sits below navbar (mt-16 = 64px) ── */}
       <div style={{
         position: 'relative',
         zIndex: 20,
-        marginTop: '64px',           // below the app navbar
+        marginTop: '64px',
         flexShrink: 0,
-        background: 'rgba(10,8,30,0.95)',
-        borderBottom: '1px solid rgba(99,102,241,0.25)',
-        backdropFilter: 'blur(20px)',
+        background: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-primary)',
       }}>
-        {/* top accent line */}
-        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', gap: 12 }}>
 
           {/* Left: back + avatar + name */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
             <Link to="/chats">
-              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                style={{ padding: '8px', borderRadius: 10, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                <ArrowLeft size={18} />
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition"
+                style={{ color: '#6366f1', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                <ArrowLeft size={20} />
               </motion.button>
             </Link>
 
             {/* Avatar */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <div style={{
-                width: 40, height: 40, borderRadius: '50%',
-                background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                boxShadow: '0 0 14px rgba(99,102,241,0.45)',
+                width: 44, height: 44, borderRadius: '50%',
+                background: '#6366f1',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: 'white', fontWeight: 700, fontSize: 16, overflow: 'hidden',
               }}>
@@ -247,20 +238,20 @@ export default function Chat() {
               </div>
               {/* Online dot */}
               <div style={{
-                position: 'absolute', bottom: 1, right: 1,
-                width: 11, height: 11, borderRadius: '50%',
-                background: isOtherOnline ? '#34d399' : '#6b7280',
-                border: '2px solid rgba(10,8,30,0.95)',
+                position: 'absolute', bottom: 0, right: 0,
+                width: 12, height: 12, borderRadius: '50%',
+                background: isOtherOnline ? '#10b981' : '#9ca3af',
+                border: '2px solid var(--bg-secondary)',
               }} />
             </div>
 
             {/* Name + status */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ color: 'white', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p className="text-theme-primary font-bold text-sm truncate">
                 {otherUser?.name || 'Unknown User'}
               </p>
-              <p style={{ fontSize: 11, fontFamily: 'monospace', color: isOtherOnline ? '#34d399' : 'rgba(148,163,184,0.5)', marginTop: 1 }}>
-                {isOtherOnline ? '● Online' : '○ Offline'}
+              <p style={{ fontSize: 12, color: isOtherOnline ? '#10b981' : '#9ca3af', marginTop: 2 }}>
+                {isOtherOnline ? 'Online' : 'Offline'}
               </p>
             </div>
           </div>
@@ -269,14 +260,16 @@ export default function Chat() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               onClick={() => initiateCall('audio')}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-              <Phone size={14} />
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition"
+              style={{ background: '#6366f1' }}>
+              <Phone size={16} />
               <span>Call</span>
             </motion.button>
             <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               onClick={() => initiateCall('video')}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, background: 'linear-gradient(135deg,#059669,#047857)', boxShadow: '0 2px 10px rgba(5,150,105,0.4)', color: 'white', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-              <Video size={14} />
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition"
+              style={{ background: '#10b981' }}>
+              <Video size={16} />
               <span>Video</span>
             </motion.button>
           </div>
@@ -284,15 +277,16 @@ export default function Chat() {
       </div>
 
       {/* ── Messages area ── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', position: 'relative', zIndex: 5 }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px', position: 'relative' }}>
         {messages.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
             <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity }}
-              style={{ width: 64, height: 64, borderRadius: 16, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Send size={24} style={{ color: 'rgba(99,102,241,0.6)' }} />
+              className="w-16 h-16 rounded-lg flex items-center justify-center"
+              style={{ background: '#e0e7ff' }}>
+              <Send size={24} className="text-indigo-500" />
             </motion.div>
-            <p style={{ color: 'rgba(148,163,184,0.6)', fontSize: 13 }}>No messages yet. Start the conversation!</p>
+            <p className="text-theme-secondary text-sm">No messages yet. Start the conversation!</p>
           </motion.div>
         ) : (
           messages.map((msg, index) => {
@@ -306,13 +300,13 @@ export default function Chat() {
                 initial={{ opacity: 0, y: 8, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                style={{ display: 'flex', alignItems: 'flex-end', gap: 8, justifyContent: isOwn ? 'flex-end' : 'flex-start', marginBottom: 6 }}>
+                style={{ display: 'flex', alignItems: 'flex-end', gap: 8, justifyContent: isOwn ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
 
                 {/* Other user avatar */}
                 {!isOwn && (
-                  <div style={{ flexShrink: 0, width: 28, height: 28 }}>
+                  <div style={{ flexShrink: 0, width: 32, height: 32 }}>
                     {showAvatar ? (
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 11, overflow: 'hidden' }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 12, overflow: 'hidden' }}>
                         {otherUser?.profileImage
                           ? <img src={otherUser.profileImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           : otherUser?.name?.charAt(0).toUpperCase() || 'U'}
@@ -323,26 +317,19 @@ export default function Chat() {
 
                 {/* Bubble */}
                 <div style={{ maxWidth: '70%' }}>
-                  {!isOwn && showAvatar && (
-                    <p style={{ color: '#a5b4fc', fontSize: 11, fontWeight: 600, marginBottom: 3, marginLeft: 4 }}>
-                      {otherUser?.name || 'Unknown'}
-                    </p>
-                  )}
-                  <div style={isOwn ? {
-                    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                    borderRadius: '18px 18px 4px 18px',
+                  <div className={isOwn ? '' : ''} style={isOwn ? {
+                    background: '#6366f1',
+                    borderRadius: '16px 16px 4px 16px',
                     padding: '10px 14px',
-                    boxShadow: '0 2px 12px rgba(99,102,241,0.35)',
                     opacity: msg.temp ? 0.7 : 1,
                   } : {
-                    background: 'rgba(255,255,255,0.08)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    backdropFilter: 'blur(12px)',
-                    borderRadius: '18px 18px 18px 4px',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: '16px 16px 16px 4px',
                     padding: '10px 14px',
                   }}>
-                    <p style={{ color: 'white', fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word', margin: 0 }}>{msg.content}</p>
-                    <p style={{ color: isOwn ? 'rgba(255,255,255,0.55)' : 'rgba(148,163,184,0.45)', fontSize: 10, marginTop: 4, textAlign: isOwn ? 'right' : 'left' }}>
+                    <p className={isOwn ? 'text-white' : 'text-theme-primary'} style={{ fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word', margin: 0 }}>{msg.content}</p>
+                    <p className={isOwn ? 'text-indigo-100' : 'text-theme-tertiary'} style={{ fontSize: 10, marginTop: 4, textAlign: isOwn ? 'right' : 'left' }}>
                       {time}{msg.temp ? ' ✓' : ''}
                     </p>
                   </div>
@@ -357,13 +344,13 @@ export default function Chat() {
           {typingUsers.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 6 }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
                 {otherUser?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px 18px 18px 4px', padding: '10px 16px' }}>
+              <div className="rounded-2xl px-4 py-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                   {[0, 0.15, 0.3].map((delay, i) => (
-                    <motion.div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: '#818cf8' }}
+                    <motion.div key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: '#6366f1' }}
                       animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay }} />
                   ))}
                 </div>
@@ -376,14 +363,14 @@ export default function Chat() {
       </div>
 
       {/* ── Input area ── */}
-      <div style={{ position: 'relative', zIndex: 20, flexShrink: 0, background: 'rgba(10,8,30,0.95)', borderTop: '1px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
+      <div style={{ position: 'relative', zIndex: 20, flexShrink: 0, background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-primary)' }}>
         {/* Blocked message warning */}
         {blockedWarning && (
           <div style={{
             padding: '8px 16px',
-            background: 'rgba(239,68,68,0.15)',
-            borderTop: '1px solid rgba(239,68,68,0.3)',
-            color: '#f87171',
+            background: 'rgba(239,68,68,0.1)',
+            borderTop: '1px solid rgba(239,68,68,0.2)',
+            color: '#ef4444',
             fontSize: 12,
             fontWeight: 600,
             display: 'flex',
@@ -393,30 +380,29 @@ export default function Chat() {
             🚫 {blockedWarning}
           </div>
         )}
-        <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 16px' }}>
+        <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '12px 16px' }}>
           <input
             type="text"
             placeholder="Type a message..."
             value={content}
             onChange={handleTypingChange}
             autoComplete="off"
+            className="flex-1 px-4 py-3 text-sm rounded-lg outline-none transition text-theme-primary"
             style={{
-              flex: 1, padding: '10px 16px', fontSize: 13, color: 'white',
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(99,102,241,0.2)',
-              borderRadius: 12, outline: 'none',
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-primary)',
             }}
-            onFocus={e => e.target.style.border = '1px solid rgba(99,102,241,0.5)'}
-            onBlur={e => e.target.style.border = '1px solid rgba(99,102,241,0.2)'}
+            onFocus={e => e.target.style.border = '1px solid #6366f1'}
+            onBlur={e => e.target.style.border = '1px solid var(--border-primary)'}
           />
           <motion.button type="submit" disabled={!content.trim()}
-            whileHover={{ scale: content.trim() ? 1.08 : 1 }}
-            whileTap={{ scale: content.trim() ? 0.92 : 1 }}
+            whileHover={{ scale: content.trim() ? 1.05 : 1 }}
+            whileTap={{ scale: content.trim() ? 0.95 : 1 }}
+            className="w-11 h-11 flex items-center justify-center rounded-lg text-white transition"
             style={{
-              width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              borderRadius: 12, color: 'white', border: 'none', cursor: content.trim() ? 'pointer' : 'default',
-              background: content.trim() ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(99,102,241,0.2)',
-              boxShadow: content.trim() ? '0 2px 12px rgba(99,102,241,0.4)' : 'none',
-              opacity: content.trim() ? 1 : 0.4, flexShrink: 0,
+              cursor: content.trim() ? 'pointer' : 'default',
+              background: content.trim() ? '#6366f1' : '#e5e7eb',
+              opacity: content.trim() ? 1 : 0.5,
             }}>
             <Send size={18} />
           </motion.button>
