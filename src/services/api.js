@@ -151,6 +151,10 @@ export const resourceAPI = {
   download: (id) =>
     api.post(`/resources/${id}/download`),
 
+  // Request a short-lived signed token to watch a YouTube resource
+  getVideoToken: (id) =>
+    api.post(`/resources/${id}/token`),
+
   delete: (id) =>
     api.delete(`/resources/${id}`),
 };
