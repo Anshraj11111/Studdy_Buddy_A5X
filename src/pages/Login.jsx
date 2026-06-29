@@ -5,22 +5,11 @@ import { LogIn, Mail, Lock, UserCircle, Loader2, AlertCircle, Sparkles, Eye, Eye
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import ThemeToggle from '../components/ThemeToggle'
+import loginBgDark from '../assets/login-signup.png'
+// login-light.png — use same image until the light version is added to assets
+import loginBgLight from '../assets/login-signup.png'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
-
-// Floating background icon element
-function FloatingIcon({ icon, style }) {
-  return (
-    <motion.div
-      className="absolute opacity-[0.07] dark:opacity-[0.12] pointer-events-none select-none"
-      style={style}
-      animate={{ y: [0, -12, 0], rotate: [0, 5, 0] }}
-      transition={{ duration: 6 + Math.random() * 3, repeat: Infinity, ease: 'easeInOut', delay: Math.random() * 3 }}
-    >
-      {icon}
-    </motion.div>
-  )
-}
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '', role: 'student', mentorCode: '' })
@@ -80,18 +69,13 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
       style={{ background: isDark ? '#0a0814' : '#f0f2ff' }}>
 
-      {/* Floating background icons */}
-      <FloatingIcon icon={<span style={{ fontSize: 80 }}>🎓</span>} style={{ top: '5%', left: '5%' }} />
-      <FloatingIcon icon={<span style={{ fontSize: 64 }}>📖</span>} style={{ bottom: '15%', left: '8%' }} />
-      <FloatingIcon icon={<span style={{ fontSize: 70 }}>⚙️</span>} style={{ bottom: '10%', right: '5%' }} />
-      <FloatingIcon icon={<span style={{ fontSize: 60 }}>🤖</span>} style={{ top: '10%', right: '8%' }} />
-      <FloatingIcon icon={<span style={{ fontSize: 50 }}>🌐</span>} style={{ top: '40%', left: '2%' }} />
-      <FloatingIcon icon={<span style={{ fontSize: 50 }}>💡</span>} style={{ top: '30%', right: '3%' }} />
-
-      {/* Subtle dot grid background */}
+      {/* Full-page background image based on theme */}
       <div className="absolute inset-0 pointer-events-none" style={{
-        backgroundImage: `radial-gradient(${isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.2)'} 1px, transparent 1px)`,
-        backgroundSize: '32px 32px',
+        backgroundImage: `url(${isDark ? loginBgDark : loginBgLight})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        opacity: isDark ? 0.85 : 0.9,
       }} />
 
       {/* Theme Toggle — top right */}

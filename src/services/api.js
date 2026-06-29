@@ -136,27 +136,22 @@ export const doubtAPI = {
 
 export const resourceAPI = {
   create: (data) => api.post("/resources", data),
-
-  list: (page = 1, limit = 10) =>
-    api.get(`/resources?page=${page}&limit=${limit}`),
-
+  list: (page = 1, limit = 10) => api.get(`/resources?page=${page}&limit=${limit}`),
   getById: (id) => api.get(`/resources/${id}`),
+  search: (query) => api.get(`/resources/search?keyword=${encodeURIComponent(query)}`),
+  getByTopic: (topic, page = 1) => api.get(`/resources/topic/${topic}?page=${page}`),
+  download: (id) => api.post(`/resources/${id}/download`),
+  getVideoToken: (id) => api.post(`/resources/${id}/token`),
+  delete: (id) => api.delete(`/resources/${id}`),
+};
 
-  search: (query) =>
-    api.get(`/resources/search?keyword=${encodeURIComponent(query)}`),
-
-  getByTopic: (topic, page = 1) =>
-    api.get(`/resources/topic/${topic}?page=${page}`),
-
-  download: (id) =>
-    api.post(`/resources/${id}/download`),
-
-  // Request a short-lived signed token to watch a YouTube resource
-  getVideoToken: (id) =>
-    api.post(`/resources/${id}/token`),
-
-  delete: (id) =>
-    api.delete(`/resources/${id}`),
+/* ---------------- PLAYLISTS ---------------- */
+export const playlistAPI = {
+  create: (data) => api.post('/playlists', data),
+  list: (params = {}) => api.get('/playlists', { params }),
+  getById: (id) => api.get(`/playlists/${id}`),
+  getVideoToken: (playlistId, videoId) => api.post(`/playlists/${playlistId}/videos/${videoId}/token`),
+  delete: (id) => api.delete(`/playlists/${id}`),
 };
 
 /* ---------------- COMMUNITIES ---------------- */
