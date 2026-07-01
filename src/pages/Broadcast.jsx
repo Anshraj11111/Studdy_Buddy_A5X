@@ -195,7 +195,7 @@ function MessageBubble({ msg, isOwn, isMentor, onDelete, channelColor }) {
         )}
         <div style={{
           position: 'relative', padding: '9px 13px',
-          background: isOwn ? `linear-gradient(135deg,${channelColor},${channelColor}cc)` : 'rgba(255,255,255,0.07)',
+          background: isOwn ? `linear-gradient(135deg,${channelColor},${channelColor}cc)` : 'var(--bg-secondary)',
           border: isOwn ? 'none' : `1px solid ${channelColor}22`,
           borderRadius: isOwn ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
           opacity: msg.temp ? 0.7 : 1,
@@ -1189,9 +1189,9 @@ export default function Broadcast() {
         {view === 'chat' && currentChannel && (
           <>
             {/* Chat header */}
-            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(8,6,24,0.9)', borderBottom: '1px solid rgba(99,102,241,0.12)', backdropFilter: 'blur(16px)' }}>
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-primary)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button onClick={() => setView('home')} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: "var(--text-primary)", cursor: 'pointer', padding: '6px 8px', display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => setView('home')} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: 8, color: "var(--text-primary)", cursor: 'pointer', padding: '6px 8px', display: 'flex', alignItems: 'center' }}>
                   <ArrowLeft size={16} />
                 </button>
                 <div style={{ width: 42, height: 42, borderRadius: 12, background: `${CHANNELS.find(c => c.id === currentChannel)?.color}18`, border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{CHANNELS.find(c => c.id === currentChannel)?.icon}</div>
@@ -1278,18 +1278,18 @@ export default function Broadcast() {
             </div>
 
             {/* Input bar */}
-            <div style={{ flexShrink: 0, padding: '10px 12px', background: 'rgba(8,6,24,0.9)', borderTop: '1px solid rgba(99,102,241,0.1)', backdropFilter: 'blur(16px)' }}>
+            <div style={{ flexShrink: 0, padding: '10px 12px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-primary)' }}>
               {isMentor ? (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', maxWidth: 780, margin: '0 auto' }}>
                   <Avatar user={user} size={36} />
                   <div style={{ flex: 1, position: 'relative' }}>
                     <textarea ref={inputRef} value={input} onChange={handleInputChange} onKeyDown={handleKeyDown}
                       placeholder={`Send a message to ${CHANNELS.find(c => c.id === currentChannel)?.name}...`} rows={1}
-                      style={{ width: '100%', resize: 'none', overflowY: 'auto', padding: '10px 44px 10px 14px', background: 'rgba(255,255,255,0.07)', border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}30`, borderRadius: 14, color: "var(--text-primary)", fontSize: 13, outline: 'none', fontFamily: 'inherit', maxHeight: 120, boxSizing: 'border-box' }}
+                      style={{ width: '100%', resize: 'none', overflowY: 'auto', padding: '10px 44px 10px 14px', background: 'var(--bg-primary)', border: `1px solid ${CHANNELS.find(c => c.id === currentChannel)?.color}30`, borderRadius: 14, color: "var(--text-primary)", fontSize: 13, outline: 'none', fontFamily: 'inherit', maxHeight: 120, boxSizing: 'border-box' }}
                       onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }} />
                   </div>
                   <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }} onClick={handleSend} disabled={!input.trim()}
-                    style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0, background: input.trim() ? CHANNELS.find(c => c.id === currentChannel)?.gradient : 'rgba(255,255,255,0.07)', color: input.trim() ? 'white' : 'rgba(148,163,184,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                    style={{ width: 44, height: 44, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0, background: input.trim() ? CHANNELS.find(c => c.id === currentChannel)?.gradient : 'var(--bg-primary)', color: input.trim() ? 'white' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
                     <Send size={18} />
                   </motion.button>
                 </div>
