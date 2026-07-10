@@ -99,10 +99,10 @@ function YouTubeModal({ resource, onClose }) {
           borderRadius: isFullscreen ? 0 : 16,
           overflow: 'hidden',
           boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
-          width: isFullscreen ? '100vw' : undefined,
-          height: isFullscreen ? '100vh' : undefined,
-          maxWidth: isFullscreen ? '100vw' : 960,
-          maxHeight: isFullscreen ? '100vh' : 'calc(100vh - 32px)',
+          ...(isFullscreen 
+            ? { width: '100vw', height: '100vh' }
+            : { maxWidth: 960, maxHeight: 'calc(100vh - 32px)' }
+          ),
         }}
         onClick={e => e.stopPropagation()}>
 
