@@ -32,6 +32,8 @@ const Rewards = lazy(() => import('./pages/Rewards'))
 const GeneralGroup = lazy(() => import('./pages/GeneralGroup'))
 const Broadcast = lazy(() => import('./pages/Broadcast'))
 const BroadcastLive = lazy(() => import('./pages/BroadcastLive'))
+const SchoolChannel = lazy(() => import('./pages/SchoolChannel'))
+const SchoolChannelAdmin = lazy(() => import('./pages/SchoolChannelAdmin'))
 
 // Minimal page-level skeleton shown while a lazy chunk loads
 function PageLoader() {
@@ -120,6 +122,8 @@ function AppShell() {
           <Route path="/general-group" element={<ProtectedRoute><GeneralGroup /></ProtectedRoute>} />
           <Route path="/broadcast" element={<ProtectedRoute><Broadcast /></ProtectedRoute>} />
           <Route path="/broadcast-live" element={<ProtectedRoute><BroadcastLive /></ProtectedRoute>} />
+          <Route path="/school-channel" element={<ProtectedRoute><SchoolChannel /></ProtectedRoute>} />
+          <Route path="/school-channel-admin" element={<ProtectedRoute><SchoolChannelAdmin /></ProtectedRoute>} />
 
           {/* Admin — standalone, no navbar */}
           <Route path="/admin" element={<AdminPanel />} />

@@ -14,7 +14,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-
 
 export default function Signup() {
   const [formData, setFormData] = useState({
-    name: '', email: '', password: '', confirmPassword: '', role: 'student', mentorCode: '', skills: [],
+    name: '', email: '', password: '', confirmPassword: '', role: 'student', mentorCode: '', skills: [], schoolName: '', city: '',
   })
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
@@ -52,6 +52,10 @@ export default function Signup() {
     if (!formData.password) e.password = 'Password is required'
     if (formData.password.length < 6) e.password = 'Password must be at least 6 characters'
     if (formData.password !== formData.confirmPassword) e.confirmPassword = 'Passwords do not match'
+    if (formData.role === 'student') {
+      if (!formData.schoolName) e.schoolName = 'School name is required'
+      if (!formData.city) e.city = 'City is required'
+    }
     if (formData.role === 'mentor' && !formData.mentorCode) e.mentorCode = 'Mentor code is required'
     return e
   }
@@ -61,7 +65,7 @@ export default function Signup() {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     try {
-      await register(formData.email, formData.password, formData.name, formData.role, formData.mentorCode, formData.skills)
+      await register(formData.email, formData.password, formData.name, formData.role, formData.mentorCode, formData.skills, formData.schoolName, formData.city)
       navigate(formData.role === 'mentor' ? '/mentor-dashboard' : '/dashboard', { replace: true })
     } catch (err) { setErrors({ submit: err.message || 'Registration failed' }) }
   }
@@ -189,6 +193,29 @@ export default function Signup() {
                 </select>
               </div>
             </div>
+
+            {/* Student-only fields (School & City) */}
+            <AnimatePresence>
+              {formData.role === 'student' && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }} className="space-y-3.5 overflow-hidden">
+                  <div>
+                    <label className={labelClass} style={labelStyle}>School Name</label>
+                    <input type="text" name="schoolName" placeholder="Enter your school name" value={formData.schoolName}
+                      onChange={e => setFormData(p => ({ ...p, schoolName: e.target.value }))}
+                      className={inputClass.replace('pl-10', 'pl-4')} />
+                    {errEl(errors.schoolName)}
+                  </div>
+                  <div>
+                    <label className={labelClass} style={labelStyle}>City</label>
+                    <input type="text" name="city" placeholder="Enter your city" value={formData.city}
+                      onChange={e => setFormData(p => ({ ...p, city: e.target.value }))}
+                      className={inputClass.replace('pl-10', 'pl-4')} />
+                    {errEl(errors.city)}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Mentor-only fields */}
             <AnimatePresence>

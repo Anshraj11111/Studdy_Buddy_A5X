@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { adminAPI, broadcastAPI } from "../services/api"
-import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Radio, Check, X, Plus, Key, Settings } from "lucide-react"
+import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Radio, Check, X, Plus, Key, Settings, School, MapPin } from "lucide-react"
+import axios from 'axios'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || "H5"
 
 const CHANNELS = [
@@ -11,6 +13,360 @@ const CHANNELS = [
   { id: 'electronics', name: 'Electronics', icon: '⚡', color: '#3b82f6' },
   { id: 'renewable_energy', name: 'Renewable Energy', icon: '🌱', color: '#10b981' },
 ]
+
+// ── School Channel Management Component ──────────────────────────────────
+function SchoolChannelManagement({ showToast }) {
+  const [channels, setChannels] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newChannel, setNewChannel] = useState({ schoolName: '', city: '', description: '' })
+
+  const fetchChannels = async () => {
+    setLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const res = await axios.get(`${API_URL}/school-channel/admin/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setChannels(res.data.channels || [])
+    } catch (err) {
+      showToast('Failed to load channels', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchChannels()
+  }, [])
+
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    if (!newChannel.schoolName.trim() || !newChannel.city.trim()) {
+      showToast('School name and city are required', 'error')
+      return
+    }
+
+    setCreating(true)
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(`${API_URL}/school-channel/admin/create`, newChannel, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setNewChannel({ schoolName: '', city: '', description: '' })
+      fetchChannels()
+      showToast('School channel created!', 'success')
+    } catch (err) {
+      showToast(err?.response?.data?.message || 'Failed to create channel', 'error')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleDelete = async (id, schoolName) => {
+    if (!window.confirm(`Delete channel "${schoolName}"? All students will lose access.`)) return
+    try {
+      const token = localStorage.getItem('token')
+      await axios.delete(`${API_URL}/school-channel/admin/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setChannels(prev => prev.filter(c => c._id !== id))
+      showToast('Channel deleted', 'success')
+    } catch (err) {
+      showToast('Failed to delete channel', 'error')
+    }
+  }
+
+  return (
+    <div>
+      {/* Create New Channel Form */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden',
+        marginBottom: 24
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#10b981,#059669,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(16,185,129,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
+        }}>
+          <Plus size={18} color="#10b981" />
+          <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>Create New School Channel</span>
+        </div>
+        <form onSubmit={handleCreate} style={{ padding: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                School Name *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Delhi Public School"
+                value={newChannel.schoolName}
+                onChange={e => setNewChannel(p => ({ ...p, schoolName: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid var(--border-primary)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                City *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Delhi"
+                value={newChannel.city}
+                onChange={e => setNewChannel(p => ({ ...p, city: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid var(--border-primary)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none'
+                }}
+              />
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+              Description (Optional)
+            </label>
+            <textarea
+              placeholder="Add a description for this school channel..."
+              value={newChannel.description}
+              onChange={e => setNewChannel(p => ({ ...p, description: e.target.value }))}
+              rows={3}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid var(--border-primary)',
+                color: "var(--text-primary)",
+                fontSize: 14,
+                outline: 'none',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+            />
+          </div>
+          <motion.button
+            type="submit"
+            disabled={creating}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              padding: '12px 24px',
+              borderRadius: 10,
+              border: 'none',
+              background: 'linear-gradient(135deg,#10b981,#059669)',
+              color: "var(--text-primary)",
+              cursor: creating ? 'not-allowed' : 'pointer',
+              fontSize: 14,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              opacity: creating ? 0.6 : 1
+            }}
+          >
+            {creating ? (
+              <>
+                <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Plus size={16} />
+                Create Channel
+              </>
+            )}
+          </motion.button>
+        </form>
+      </div>
+
+      {/* Existing Channels List */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden'
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(99,102,241,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <School size={18} color="#818cf8" />
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>Active School Channels</span>
+            {channels.length > 0 && (
+              <span style={{
+                background: 'rgba(99,102,241,0.2)',
+                color: '#818cf8',
+                borderRadius: 99,
+                padding: '2px 10px',
+                fontSize: 11,
+                fontWeight: 700
+              }}>
+                {channels.length}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={fetchChannels}
+            style={{
+              background: 'rgba(99,102,241,0.15)',
+              border: "1px solid var(--border-primary)",
+              borderRadius: 8,
+              color: '#a5b4fc',
+              cursor: 'pointer',
+              padding: '6px 10px',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <RefreshCw size={14} />
+          </button>
+        </div>
+        <div style={{ padding: '16px', maxHeight: 500, overflowY: 'auto' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Loader2 size={28} style={{ color: '#818cf8', animation: 'spin 1s linear infinite' }} />
+              <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 12 }}>Loading channels...</p>
+            </div>
+          ) : channels.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <School size={48} style={{ color: 'rgba(148,163,184,0.3)', marginBottom: 12 }} />
+              <p style={{ color: "var(--text-muted)", fontSize: 14 }}>No school channels created yet</p>
+              <p style={{ color: "var(--text-tertiary)", fontSize: 12, marginTop: 4 }}>
+                Create a channel above to get started
+              </p>
+            </div>
+          ) : (
+            channels.map((channel, i) => (
+              <motion.div
+                key={channel._id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                style={{
+                  padding: '16px',
+                  borderRadius: 14,
+                  marginBottom: 12,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(99,102,241,0.15)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+                  <div style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.25))',
+                    border: '1px solid rgba(99,102,241,0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 22,
+                    flexShrink: 0
+                  }}>
+                    🏫
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{
+                      color: "var(--text-primary)",
+                      fontSize: 16,
+                      fontWeight: 700,
+                      margin: 0,
+                      marginBottom: 4
+                    }}>
+                      {channel.schoolName}
+                    </h3>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      marginBottom: 8,
+                      flexWrap: 'wrap'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                        <MapPin size={14} color="#60a5fa" />
+                        <span style={{ color: "var(--text-secondary)" }}>{channel.city}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                        <Users size={14} color="#34d399" />
+                        <span style={{ color: "var(--text-secondary)" }}>
+                          {channel.memberCount || 0} {channel.memberCount === 1 ? 'student' : 'students'}
+                        </span>
+                      </div>
+                    </div>
+                    {channel.description && (
+                      <p style={{
+                        color: "var(--text-tertiary)",
+                        fontSize: 12,
+                        margin: '8px 0',
+                        lineHeight: 1.5
+                      }}>
+                        {channel.description}
+                      </p>
+                    )}
+                    <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: 'monospace', marginTop: 8 }}>
+                      Created {new Date(channel.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleDelete(channel._id, channel.schoolName)}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: 8,
+                      border: '1px solid rgba(239,68,68,0.4)',
+                      background: 'rgba(239,68,68,0.12)',
+                      color: '#f87171',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      flexShrink: 0
+                    }}
+                  >
+                    <Trash2 size={13} />
+                    Delete
+                  </motion.button>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ── Per-channel code row with inline edit ────────────────────────────────────
 function ChannelCodeRow({ ch, existing, onSave }) {
@@ -318,6 +674,7 @@ export default function AdminPanel() {
           {[
             { id: 'users', label: 'User Management', icon: <Users size={14} /> },
             { id: 'broadcast', label: '📡 Broadcast Channels', icon: <Radio size={14} /> },
+            { id: 'schools', label: '🏫 School Channels', icon: <Settings size={14} /> },
           ].map(t => (
             <button key={t.id} onClick={() => setMainTab(t.id)}
               style={{
@@ -523,6 +880,11 @@ export default function AdminPanel() {
           </div>
         )}
         </> /* end users tab */}
+
+        {/* ── SCHOOL CHANNELS TAB ────────────────────────────────────────── */}
+        {mainTab === 'schools' && (
+          <SchoolChannelManagement showToast={showToast} />
+        )}
 
         {/* ── BROADCAST TAB ──────────────────────────────────────────────── */}
         {mainTab === 'broadcast' && (

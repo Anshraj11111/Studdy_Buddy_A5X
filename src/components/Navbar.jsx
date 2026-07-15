@@ -53,7 +53,7 @@ export default function Navbar({ onMenuClick }) {
         { to: '/doubts', label: 'My Doubts' },
         { to: '/mentors', label: 'Mentors' },
         { to: '/chats', label: 'Chats' },
-        { to: '/broadcast', label: '📡 Broadcast' },
+        { to: '/school-channel', label: '🏫 My School' },
         { to: '/resources', label: 'Resources' },
         { to: '/communities', label: 'Communities' },
         { to: '/rewards', label: '⚡ Rewards' },
@@ -61,7 +61,8 @@ export default function Navbar({ onMenuClick }) {
     : [
         { to: '/mentor-dashboard', label: 'Dashboard' },
         { to: '/chats', label: 'Chats' },
-        { to: '/broadcast', label: '📡 Broadcast' },
+        { to: '/school-channel', label: '🏫 Schools' },
+        { to: '/school-channel-admin', label: '⚙️ Manage Schools' },
         { to: '/resources', label: 'Resources' },
         { to: '/communities', label: 'Communities' },
         { to: '/rewards', label: '⚡ Rewards' },
