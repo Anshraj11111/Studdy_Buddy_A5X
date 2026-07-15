@@ -283,46 +283,63 @@ export default function SchoolChannel() {
     <div className="min-h-screen" style={{ background: isDark ? '#0a0814' : '#f5f0ff' }}>
       <Navbar />
       
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
+      <div className="container mx-auto px-4 py-8 max-w-6xl" style={{ paddingTop: '100px' }}>
         {/* Channel Header */}
-        <div className="rounded-2xl p-6 mb-6"
+        <div className="rounded-2xl p-6 mb-6 shadow-xl"
           style={{
-            background: isDark ? 'rgba(15,12,31,0.9)' : '#ffffff',
-            border: isDark ? '1px solid rgba(139,92,246,0.2)' : '1px solid #e2e8f0',
+            background: isDark ? 'rgba(15,12,31,0.95)' : '#ffffff',
+            border: isDark ? '1px solid rgba(139,92,246,0.3)' : '1px solid #e2e8f0',
+            backdropFilter: 'blur(20px)',
           }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+          <div className="flex items-start justify-between flex-wrap gap-4">
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              <div className="w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg"
                 style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)' }}>
-                <School size={32} className="text-white" />
+                <School size={36} className="text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold" style={{ color: isDark ? '#fff' : '#0f172a' }}>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-3xl font-bold mb-2 break-words" style={{ color: isDark ? '#fff' : '#0f172a' }}>
                   {channel.schoolName}
                 </h1>
-                <p className="text-sm" style={{ color: isDark ? 'rgba(148,163,184,0.7)' : '#64748b' }}>
-                  {channel.city} • {channel.stats.totalMembers} members
-                </p>
+                <div className="flex items-center gap-3 flex-wrap text-sm mb-3">
+                  <span className="flex items-center gap-1 px-3 py-1 rounded-full"
+                    style={{ 
+                      background: isDark ? 'rgba(139,92,246,0.15)' : '#f3e8ff',
+                      color: isDark ? '#c4b5fd' : '#7c3aed'
+                    }}>
+                    📍 {channel.city}
+                  </span>
+                  <span className="flex items-center gap-1 px-3 py-1 rounded-full"
+                    style={{ 
+                      background: isDark ? 'rgba(34,197,94,0.15)' : '#dcfce7',
+                      color: isDark ? '#86efac' : '#16a34a'
+                    }}>
+                    <Users size={14} />
+                    {channel.stats.totalMembers} members
+                  </span>
+                </div>
+                {channel.description && (
+                  <p className="text-sm leading-relaxed break-words" 
+                    style={{ color: isDark ? 'rgba(148,163,184,0.8)' : '#64748b' }}>
+                    {channel.description}
+                  </p>
+                )}
               </div>
             </div>
             
             <button
               onClick={() => setShowMembers(!showMembers)}
-              className="px-4 py-2 rounded-xl flex items-center gap-2 transition-colors"
+              className="px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all hover:scale-105 flex-shrink-0 shadow-md"
               style={{
-                background: isDark ? 'rgba(139,92,246,0.1)' : '#f3e8ff',
+                background: isDark ? 'rgba(139,92,246,0.2)' : '#f3e8ff',
                 color: '#8b5cf6',
+                border: isDark ? '1px solid rgba(139,92,246,0.3)' : '1px solid #e9d5ff',
+                fontWeight: '600',
               }}>
               <Users size={18} />
-              Members
+              {showMembers ? 'Hide' : 'Show'} Members
             </button>
           </div>
-          
-          {channel.description && (
-            <p className="mt-4 text-sm" style={{ color: isDark ? 'rgba(148,163,184,0.7)' : '#64748b' }}>
-              {channel.description}
-            </p>
-          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

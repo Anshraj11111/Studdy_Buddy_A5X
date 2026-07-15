@@ -20,19 +20,49 @@ function SchoolChannelManagement({ showToast }) {
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newChannel, setNewChannel] = useState({ schoolName: '', city: '', description: '' })
+  const [expandedChannel, setExpandedChannel] = useState(null)
+  const [channelMembers, setChannelMembers] = useState({})
+  const [loadingMembers, setLoadingMembers] = useState({})
 
   const fetchChannels = async () => {
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
+      console.log('Fetching channels from:', `${API_URL}/school-channel/admin/all`)
       const res = await axios.get(`${API_URL}/school-channel/admin/all`, {
         headers: { Authorization: `Bearer ${token}` }
       })
+      console.log('Channels response:', res.data)
       setChannels(res.data.channels || [])
     } catch (err) {
-      showToast('Failed to load channels', 'error')
+      console.error('Error fetching channels:', err)
+      console.error('Error response:', err.response?.data)
+      showToast(err.response?.data?.error?.message || 'Failed to load channels', 'error')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchChannelMembers = async (channelId) => {
+    if (channelMembers[channelId]) {
+      // Already loaded
+      setExpandedChannel(expandedChannel === channelId ? null : channelId)
+      return
+    }
+
+    setLoadingMembers(prev => ({ ...prev, [channelId]: true }))
+    try {
+      const token = localStorage.getItem('token')
+      const res = await axios.get(`${API_URL}/school-channel/admin/${channelId}/members`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setChannelMembers(prev => ({ ...prev, [channelId]: res.data.members || [] }))
+      setExpandedChannel(channelId)
+    } catch (err) {
+      console.error('Error fetching members:', err)
+      showToast('Failed to load members', 'error')
+    } finally {
+      setLoadingMembers(prev => ({ ...prev, [channelId]: false }))
     }
   }
 
@@ -57,7 +87,8 @@ function SchoolChannelManagement({ showToast }) {
       fetchChannels()
       showToast('School channel created!', 'success')
     } catch (err) {
-      showToast(err?.response?.data?.message || 'Failed to create channel', 'error')
+      console.error('Error creating channel:', err)
+      showToast(err?.response?.data?.error?.message || 'Failed to create channel', 'error')
     } finally {
       setCreating(false)
     }
@@ -73,6 +104,7 @@ function SchoolChannelManagement({ showToast }) {
       setChannels(prev => prev.filter(c => c._id !== id))
       showToast('Channel deleted', 'success')
     } catch (err) {
+      console.error('Error deleting channel:', err)
       showToast('Failed to delete channel', 'error')
     }
   }
@@ -271,94 +303,222 @@ function SchoolChannelManagement({ showToast }) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                style={{
-                  padding: '16px',
-                  borderRadius: 14,
-                  marginBottom: 12,
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(99,102,241,0.15)'
-                }}
               >
-                <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
-                  <div style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    background: 'linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.25))',
-                    border: '1px solid rgba(99,102,241,0.4)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 22,
-                    flexShrink: 0
-                  }}>
-                    🏫
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{
-                      color: "var(--text-primary)",
-                      fontSize: 16,
-                      fontWeight: 700,
-                      margin: 0,
-                      marginBottom: 4
-                    }}>
-                      {channel.schoolName}
-                    </h3>
+                <div
+                  onClick={() => fetchChannelMembers(channel._id)}
+                  style={{
+                    padding: '16px',
+                    borderRadius: 14,
+                    marginBottom: 12,
+                    background: expandedChannel === channel._id ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.04)',
+                    border: expandedChannel === channel._id ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(99,102,241,0.15)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
                     <div style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: 'linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.25))',
+                      border: '1px solid rgba(99,102,241,0.4)',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 12,
-                      marginBottom: 8,
-                      flexWrap: 'wrap'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                        <MapPin size={14} color="#60a5fa" />
-                        <span style={{ color: "var(--text-secondary)" }}>{channel.city}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                        <Users size={14} color="#34d399" />
-                        <span style={{ color: "var(--text-secondary)" }}>
-                          {channel.memberCount || 0} {channel.memberCount === 1 ? 'student' : 'students'}
-                        </span>
-                      </div>
-                    </div>
-                    {channel.description && (
-                      <p style={{
-                        color: "var(--text-tertiary)",
-                        fontSize: 12,
-                        margin: '8px 0',
-                        lineHeight: 1.5
-                      }}>
-                        {channel.description}
-                      </p>
-                    )}
-                    <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: 'monospace', marginTop: 8 }}>
-                      Created {new Date(channel.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleDelete(channel._id, channel.schoolName)}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: 8,
-                      border: '1px solid rgba(239,68,68,0.4)',
-                      background: 'rgba(239,68,68,0.12)',
-                      color: '#f87171',
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
+                      justifyContent: 'center',
+                      fontSize: 22,
                       flexShrink: 0
-                    }}
-                  >
-                    <Trash2 size={13} />
-                    Delete
-                  </motion.button>
+                    }}>
+                      🏫
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 style={{
+                        color: "var(--text-primary)",
+                        fontSize: 16,
+                        fontWeight: 700,
+                        margin: 0,
+                        marginBottom: 4
+                      }}>
+                        {channel.schoolName}
+                      </h3>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        marginBottom: 8,
+                        flexWrap: 'wrap'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                          <MapPin size={14} color="#60a5fa" />
+                          <span style={{ color: "var(--text-secondary)" }}>{channel.city}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                          <Users size={14} color="#34d399" />
+                          <span style={{ color: "var(--text-secondary)" }}>
+                            {channel.memberCount || 0} {channel.memberCount === 1 ? 'student' : 'students'}
+                          </span>
+                        </div>
+                      </div>
+                      {channel.description && (
+                        <p style={{
+                          color: "var(--text-tertiary)",
+                          fontSize: 12,
+                          margin: '8px 0',
+                          lineHeight: 1.5
+                        }}>
+                          {channel.description}
+                        </p>
+                      )}
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: 'monospace', marginTop: 8 }}>
+                        Created {new Date(channel.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(channel._id, channel.schoolName)
+                      }}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 8,
+                        border: '1px solid rgba(239,68,68,0.4)',
+                        background: 'rgba(239,68,68,0.12)',
+                        color: '#f87171',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        flexShrink: 0
+                      }}
+                    >
+                      <Trash2 size={13} />
+                      Delete
+                    </motion.button>
+                  </div>
                 </div>
+
+                {/* Expanded Members List */}
+                <AnimatePresence>
+                  {expandedChannel === channel._id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      style={{
+                        overflow: 'hidden',
+                        marginTop: -8,
+                        marginBottom: 12,
+                        marginLeft: 60,
+                        marginRight: 12
+                      }}
+                    >
+                      <div style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(99,102,241,0.1)',
+                        borderRadius: 12,
+                        padding: 16,
+                        marginTop: 8
+                      }}>
+                        <h4 style={{
+                          color: "var(--text-primary)",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          marginBottom: 12,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}>
+                          <Users size={16} color="#818cf8" />
+                          Channel Members ({channelMembers[channel._id]?.length || 0})
+                        </h4>
+
+                        {loadingMembers[channel._id] ? (
+                          <div style={{ textAlign: 'center', padding: 20 }}>
+                            <Loader2 size={20} style={{ color: '#818cf8', animation: 'spin 1s linear infinite' }} />
+                          </div>
+                        ) : channelMembers[channel._id]?.length === 0 ? (
+                          <p style={{ color: "var(--text-muted)", fontSize: 13, textAlign: 'center', padding: 20 }}>
+                            No students have joined yet
+                          </p>
+                        ) : (
+                          <div style={{ display: 'grid', gap: 10, maxHeight: 300, overflowY: 'auto' }}>
+                            {channelMembers[channel._id]?.map((member) => (
+                              <div key={member._id} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: 12,
+                                background: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(99,102,241,0.1)',
+                                borderRadius: 10
+                              }}>
+                                {member.profileImage ? (
+                                  <img
+                                    src={member.profileImage}
+                                    alt={member.name}
+                                    style={{
+                                      width: 40,
+                                      height: 40,
+                                      borderRadius: 10,
+                                      objectFit: 'cover',
+                                      border: '2px solid rgba(99,102,241,0.3)'
+                                    }}
+                                  />
+                                ) : (
+                                  <div style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 10,
+                                    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: 16,
+                                    fontWeight: 700,
+                                    color: '#fff'
+                                  }}>
+                                    {member.name[0]?.toUpperCase()}
+                                  </div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                                    <span style={{ color: "var(--text-primary)", fontSize: 14, fontWeight: 600 }}>
+                                      {member.name}
+                                    </span>
+                                    {member.role === 'mentor' && (
+                                      <span style={{
+                                        background: 'rgba(139,92,246,0.2)',
+                                        color: '#c4b5fd',
+                                        padding: '2px 8px',
+                                        borderRadius: 6,
+                                        fontSize: 10,
+                                        fontWeight: 700
+                                      }}>
+                                        ADMIN
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>
+                                    {member.email}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: 11, color: "var(--text-tertiary)" }}>
+                                    <span>XP: {member.xp || 0}</span>
+                                    <span>•</span>
+                                    <span>Joined {new Date(member.createdAt).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             ))
           )}
