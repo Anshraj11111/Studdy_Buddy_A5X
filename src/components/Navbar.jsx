@@ -53,19 +53,19 @@ export default function Navbar({ onMenuClick }) {
         { to: '/doubts', label: 'My Doubts' },
         { to: '/mentors', label: 'Mentors' },
         { to: '/chats', label: 'Chats' },
-        { to: '/school-channel', label: '🏫 My School' },
+        { to: '/school-channel', label: 'My School' },
         { to: '/resources', label: 'Resources' },
         { to: '/communities', label: 'Communities' },
-        { to: '/rewards', label: '⚡ Rewards' },
+        { to: '/rewards', label: 'Rewards' },
       ]
     : [
         { to: '/mentor-dashboard', label: 'Dashboard' },
         { to: '/chats', label: 'Chats' },
-        { to: '/school-channel', label: '🏫 Schools' },
-        { to: '/school-channel-admin', label: '⚙️ Manage Schools' },
+        { to: '/school-channel', label: 'Schools' },
+        { to: '/school-channel-admin', label: 'Manage Schools' },
         { to: '/resources', label: 'Resources' },
         { to: '/communities', label: 'Communities' },
-        { to: '/rewards', label: '⚡ Rewards' },
+        { to: '/rewards', label: 'Rewards' },
       ]
 
   const isActive = (path) => location.pathname === path
@@ -78,11 +78,11 @@ export default function Navbar({ onMenuClick }) {
         <div className="flex justify-between items-center h-16">
 
           {/* Left: Hamburger + Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             {user && onMenuClick && (
               <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                 onClick={onMenuClick}
-                className="lg:hidden p-2 rounded-lg transition hover:bg-gray-100"
+                className="lg:hidden p-2 rounded-lg transition hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                 style={{ color: '#6366f1' }}>
                 <Menu size={20} />
               </motion.button>
@@ -93,21 +93,21 @@ export default function Navbar({ onMenuClick }) {
                 style={{ background: '#6366f1' }}>
                 <span className="text-white font-bold text-sm">SB</span>
               </div>
-              <span className="font-bold text-lg hidden sm:inline text-theme-primary">
+              <span className="font-bold text-lg hidden lg:inline text-theme-primary whitespace-nowrap">
                 Studdy Buddy
               </span>
             </Link>
           </div>
 
           {/* Center: Nav Links */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-2 flex-1 justify-center px-4">
             {user && navLinks.map(({ to, label }) => (
               <Link key={to} to={to}>
-                <div className="relative px-3 py-2 rounded-lg transition-all text-sm font-medium"
-                  style={{ 
-                    color: isActive(to) ? '#6366f1' : 'var(--text-tertiary)',
-                    background: isActive(to) ? '#e0e7ff' : 'transparent'
-                  }}>
+                <div className={`relative px-4 py-2 rounded-lg transition-all text-sm font-medium whitespace-nowrap ${
+                  isActive(to) 
+                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' 
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30'
+                }`}>
                   <span className="relative z-10">{label}</span>
                 </div>
               </Link>
@@ -115,14 +115,14 @@ export default function Navbar({ onMenuClick }) {
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {user ? (
               <>
                 {/* Notifications */}
                 <div className="relative" ref={notifRef}>
                   <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
                     onClick={openNotif}
-                    className="relative p-2 rounded-lg transition hover:bg-gray-100"
+                    className="relative p-2 rounded-lg transition hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                     style={{ color: notifOpen ? '#6366f1' : 'var(--text-tertiary)' }}>
                     <Bell size={17} />
                     {unreadCount > 0 && (
@@ -157,7 +157,7 @@ export default function Navbar({ onMenuClick }) {
                             </div>
                           ) : notifications.map(n => (
                             <div key={n._id}
-                              className="flex items-start gap-3 px-4 py-3 transition hover:bg-gray-50"
+                              className="flex items-start gap-3 px-4 py-3 transition hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                               style={{ 
                                 borderBottom: '1px solid var(--border-primary)', 
                                 background: !n.read ? '#f0f4ff' : 'transparent',
@@ -195,7 +195,7 @@ export default function Navbar({ onMenuClick }) {
                 {/* Settings icon */}
                 <Link to="/settings" className="hidden sm:flex">
                   <motion.div whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
-                    className="p-2 rounded-lg transition hover:bg-gray-100"
+                    className="p-2 rounded-lg transition hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                     style={{ color: 'var(--text-tertiary)' }}>
                     <Settings size={17} />
                   </motion.div>
@@ -204,7 +204,7 @@ export default function Navbar({ onMenuClick }) {
                 {/* User profile chip */}
                 <Link to="/settings" className="hidden sm:flex">
                   <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition hover:bg-gray-100"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                     style={{ border: '1px solid var(--border-primary)' }}>
                     <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
                       style={{ background: '#6366f1' }}>
@@ -228,7 +228,7 @@ export default function Navbar({ onMenuClick }) {
             ) : (
               <>
                 <Link to="/login">
-                  <motion.div whileHover={{ scale: 1.05 }} className="px-4 py-2 text-sm font-medium rounded-lg transition text-theme-tertiary hover:bg-gray-100">
+                  <motion.div whileHover={{ scale: 1.05 }} className="px-4 py-2 text-sm font-medium rounded-lg transition text-theme-tertiary hover:bg-indigo-50 dark:hover:bg-indigo-950/30">
                     Login
                   </motion.div>
                 </Link>
@@ -244,7 +244,7 @@ export default function Navbar({ onMenuClick }) {
             {/* Mobile menu toggle */}
             <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
               onClick={() => setIsOpen(!isOpen)}
-              className="md:hidden p-2 rounded-lg transition hover:bg-gray-100"
+              className="md:hidden p-2 rounded-lg transition hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
               style={{ color: '#6366f1' }}>
               {isOpen
                 ? <X size={20} />
@@ -300,7 +300,7 @@ export default function Navbar({ onMenuClick }) {
                   ))}
 
                   <Link to="/settings" onClick={() => setIsOpen(false)}>
-                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition text-sm font-medium text-theme-tertiary hover:bg-gray-100">
+                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition text-sm font-medium text-theme-tertiary hover:bg-indigo-50 dark:hover:bg-indigo-950/30">
                       <Settings size={15} /> Settings
                     </div>
                   </Link>

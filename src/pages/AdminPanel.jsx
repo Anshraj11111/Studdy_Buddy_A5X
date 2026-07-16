@@ -1,20 +1,14 @@
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { adminAPI, broadcastAPI } from "../services/api"
-import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Radio, Check, X, Plus, Key, Settings, School, MapPin } from "lucide-react"
+import { adminAPI } from "../services/api"
+import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus } from "lucide-react"
 import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || "H5"
 
-const CHANNELS = [
-  { id: 'robotics', name: 'Robotics', icon: '🤖', color: '#6366f1' },
-  { id: 'aiml', name: 'AI & ML', icon: '🧠', color: '#8b5cf6' },
-  { id: 'electronics', name: 'Electronics', icon: '⚡', color: '#3b82f6' },
-  { id: 'renewable_energy', name: 'Renewable Energy', icon: '🌱', color: '#10b981' },
-]
 
-// ── School Channel Management Component ──────────────────────────────────
+// â”€â”€ School Channel Management Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SchoolChannelManagement({ showToast }) {
   const [channels, setChannels] = useState([])
   const [loading, setLoading] = useState(false)
@@ -23,6 +17,12 @@ function SchoolChannelManagement({ showToast }) {
   const [expandedChannel, setExpandedChannel] = useState(null)
   const [channelMembers, setChannelMembers] = useState({})
   const [loadingMembers, setLoadingMembers] = useState({})
+  
+  // Broadcast message state
+  const [showBroadcast, setShowBroadcast] = useState(false)
+  const [broadcastMessage, setBroadcastMessage] = useState('')
+  const [selectedChannels, setSelectedChannels] = useState([])
+  const [broadcasting, setBroadcasting] = useState(false)
 
   const fetchChannels = async () => {
     setLoading(true)
@@ -109,8 +109,164 @@ function SchoolChannelManagement({ showToast }) {
     }
   }
 
+  const handleBroadcastMessage = async () => {
+    if (!broadcastMessage.trim()) {
+      showToast('Please enter a message', 'error')
+      return
+    }
+    if (selectedChannels.length === 0) {
+      showToast('Please select at least one school', 'error')
+      return
+    }
+
+    setBroadcasting(true)
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(`${API_URL}/school-channel/admin/broadcast`, {
+        message: broadcastMessage,
+        channelIds: selectedChannels
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      setBroadcastMessage('')
+      setSelectedChannels([])
+      setShowBroadcast(false)
+      showToast(`Message sent to ${selectedChannels.length} school(s)!`, 'success')
+    } catch (err) {
+      console.error('Error broadcasting:', err)
+      showToast('Failed to send broadcast message', 'error')
+    } finally {
+      setBroadcasting(false)
+    }
+  }
+
+  const toggleChannelSelection = (channelId) => {
+    setSelectedChannels(prev => 
+      prev.includes(channelId) 
+        ? prev.filter(id => id !== channelId)
+        : [...prev, channelId]
+    )
+  }
+
+  const selectAllChannels = () => {
+    setSelectedChannels(channels.map(c => c._id))
+  }
+
+  const deselectAllChannels = () => {
+    setSelectedChannels([])
+  }
+
   return (
     <div>
+      {/* Broadcast Message Section */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden',
+        marginBottom: 24
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#ec4899,#f43f5e,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: showBroadcast ? '1px solid rgba(236,72,153,0.1)' : 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: 'pointer'
+        }} onClick={() => setShowBroadcast(!showBroadcast)}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Radio size={18} color="#ec4899" />
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>Broadcast Message to Schools</span>
+          </div>
+          <motion.div
+            animate={{ rotate: showBroadcast ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 6L8 10L12 6" stroke="#ec4899" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </motion.div>
+        </div>
+        
+        <AnimatePresence>
+          {showBroadcast && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{ padding: '20px' }}>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                    Broadcast Message *
+                  </label>
+                  <textarea
+                    placeholder="Type your message to send to selected schools..."
+                    value={broadcastMessage}
+                    onChange={e => setBroadcastMessage(e.target.value)}
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--border-primary)',
+                      color: "var(--text-primary)",
+                      fontSize: 14,
+                      outline: 'none',
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <label style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 600 }}>
+                      Select Schools ({selectedChannels.length} selected)
+                    </label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" onClick={selectAllChannels} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(236,72,153,0.3)', background: 'rgba(236,72,153,0.1)', color: '#ec4899', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        Select All
+                      </button>
+                      <button type="button" onClick={deselectAllChannels} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(148,163,184,0.1)', color: '#94a3b8', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 10, padding: 8 }}>
+                    {channels.length === 0 ? (
+                      <p style={{ color: "var(--text-muted)", fontSize: 13, textAlign: 'center', padding: 20 }}>
+                        No channels available. Create channels first.
+                      </p>
+                    ) : (
+                      channels.map(channel => (
+                        <label key={channel._id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', background: selectedChannels.includes(channel._id) ? 'rgba(236,72,153,0.15)' : 'transparent', marginBottom: 4, transition: 'background 0.2s' }}>
+                          <input type="checkbox" checked={selectedChannels.includes(channel._id)} onChange={() => toggleChannelSelection(channel._id)} style={{ cursor: 'pointer', width: 16, height: 16 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ color: "var(--text-primary)", fontSize: 13, fontWeight: 600 }}>{channel.schoolName}</div>
+                            <div style={{ color: "var(--text-secondary)", fontSize: 11 }}>{channel.city} â€¢ {channel.memberCount || 0} students</div>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <motion.button type="button" onClick={handleBroadcastMessage} disabled={broadcasting || !broadcastMessage.trim() || selectedChannels.length === 0} whileHover={{ scale: broadcasting ? 1 : 1.02 }} whileTap={{ scale: broadcasting ? 1 : 0.98 }} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: broadcasting || !broadcastMessage.trim() || selectedChannels.length === 0 ? 'rgba(148,163,184,0.3)' : 'linear-gradient(135deg,#ec4899,#f43f5e)', color: "var(--text-primary)", cursor: broadcasting || !broadcastMessage.trim() || selectedChannels.length === 0 ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, opacity: broadcasting || !broadcastMessage.trim() || selectedChannels.length === 0 ? 0.5 : 1 }}>
+                  {broadcasting ? (<><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />Sending...</>) : (<><Radio size={16} />Send Broadcast Message</>)}
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
       {/* Create New Channel Form */}
       <div style={{
         borderRadius: 18,
@@ -329,7 +485,7 @@ function SchoolChannelManagement({ showToast }) {
                       fontSize: 22,
                       flexShrink: 0
                     }}>
-                      🏫
+                      <School size={28} color="#818cf8" />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h3 style={{
@@ -507,7 +663,7 @@ function SchoolChannelManagement({ showToast }) {
                                   </div>
                                   <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: 11, color: "var(--text-tertiary)" }}>
                                     <span>XP: {member.xp || 0}</span>
-                                    <span>•</span>
+                                    <span>â€¢</span>
                                     <span>Joined {new Date(member.createdAt).toLocaleDateString()}</span>
                                   </div>
                                 </div>
@@ -528,69 +684,486 @@ function SchoolChannelManagement({ showToast }) {
   )
 }
 
-// ── Per-channel code row with inline edit ────────────────────────────────────
-function ChannelCodeRow({ ch, existing, onSave }) {
-  const [editing, setEditing] = useState(false)
-  const [val, setVal] = useState(existing?.code || '')
-  const [saving, setSaving] = useState(false)
+// â”€â”€ Message Monitoring Dashboard Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function MessageMonitoringDashboard({ showToast }) {
+  const [messages, setMessages] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [channels, setChannels] = useState([])
+  const [filters, setFilters] = useState({
+    channelId: '',
+    search: '',
+    dateFrom: '',
+    dateTo: '',
+  })
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [deleting, setDeleting] = useState(null)
+  const [expandedMessage, setExpandedMessage] = useState(null)
 
-  // Sync when existing changes (after fetch)
-  useState(() => { setVal(existing?.code || '') }, [existing])
+  const fetchChannels = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const res = await axios.get(`${API_URL}/school-channel/admin/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setChannels(res.data.channels || [])
+    } catch (err) {
+      console.error('Error fetching channels:', err)
+    }
+  }
 
-  const handleSave = async () => {
-    setSaving(true)
-    await onSave(val)
-    setSaving(false)
-    setEditing(false)
+  const fetchMessages = async (reset = false) => {
+    setLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const params = new URLSearchParams({
+        limit: '50',
+        skip: reset ? '0' : String(page * 50),
+        ...(filters.channelId && { channelId: filters.channelId }),
+        ...(filters.search && { search: filters.search }),
+        ...(filters.dateFrom && { dateFrom: filters.dateFrom }),
+        ...(filters.dateTo && { dateTo: filters.dateTo }),
+      })
+
+      const res = await axios.get(`${API_URL}/school-channel/admin/messages/all?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      const data = res.data.data
+      setMessages(reset ? data.messages : [...messages, ...data.messages])
+      setHasMore(data.hasMore)
+      if (reset) setPage(0)
+    } catch (err) {
+      console.error('Error fetching messages:', err)
+      showToast('Failed to load messages', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchChannels()
+  }, [])
+
+  useEffect(() => {
+    fetchMessages(true)
+  }, [filters])
+
+  const handleDeleteMessage = async (messageId, channelName) => {
+    if (!window.confirm(`Delete this message from ${channelName}? This cannot be undone.`)) return
+
+    setDeleting(messageId)
+    try {
+      const token = localStorage.getItem('token')
+      await axios.delete(`${API_URL}/school-channel/admin/messages/${messageId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setMessages(prev => prev.filter(m => m._id !== messageId))
+      showToast('Message deleted successfully', 'success')
+    } catch (err) {
+      console.error('Error deleting message:', err)
+      showToast('Failed to delete message', 'error')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  const loadMore = () => {
+    setPage(p => p + 1)
+    fetchMessages(false)
+  }
+
+  const resetFilters = () => {
+    setFilters({
+      channelId: '',
+      search: '',
+      dateFrom: '',
+      dateTo: '',
+    })
   }
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 12,
-      padding: '12px 14px', borderRadius: 12, marginBottom: 10,
-      background: 'rgba(255,255,255,0.04)',
-      border: `1px solid ${existing ? ch.color + '30' : 'rgba(99,102,241,0.1)'}`,
-    }}>
-      {/* Channel icon + name */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: 140, flexShrink: 0 }}>
-        <span style={{ fontSize: 20 }}>{ch.icon}</span>
-        <span style={{ color: ch.color, fontWeight: 700, fontSize: 13 }}>{ch.name}</span>
+    <div>
+      {/* Filters Section */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden',
+        marginBottom: 24
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#f59e0b,#d97706,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(245,158,11,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Filter size={18} color="#fbbf24" />
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>Filter Messages</span>
+          </div>
+          <button
+            onClick={resetFilters}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 8,
+              border: '1px solid rgba(148,163,184,0.3)',
+              background: 'rgba(148,163,184,0.1)',
+              color: '#94a3b8',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Clear Filters
+          </button>
+        </div>
+        <div style={{ padding: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                Filter by School Channel
+              </label>
+              <select
+                value={filters.channelId}
+                onChange={e => setFilters(p => ({ ...p, channelId: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(15,10,40,0.6)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="" style={{ background: '#1a1625', color: "var(--text-primary)" }}>All Channels</option>
+                {channels.map(ch => (
+                  <option key={ch._id} value={ch._id} style={{ background: '#1a1625', color: "var(--text-primary)" }}>
+                    {ch.schoolName} - {ch.city}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                Search Messages
+              </label>
+              <input
+                type="text"
+                placeholder="Search message content..."
+                value={filters.search}
+                onChange={e => setFilters(p => ({ ...p, search: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(15,10,40,0.6)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={e => e.target.style.borderColor = 'rgba(245,158,11,0.6)'}
+                onBlur={e => e.target.style.borderColor = 'rgba(245,158,11,0.3)'}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                From Date
+              </label>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={e => setFilters(p => ({ ...p, dateFrom: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(15,10,40,0.6)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  colorScheme: 'dark'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                To Date
+              </label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={e => setFilters(p => ({ ...p, dateTo: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(15,10,40,0.6)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  colorScheme: 'dark'
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Code display / input */}
-      {editing ? (
-        <input
-          autoFocus value={val} onChange={e => setVal(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') { setEditing(false); setVal(existing?.code || '') } }}
-          placeholder="Enter access code..."
-          style={{ flex: 1, padding: '7px 12px', background: 'rgba(255,255,255,0.08)', border: `1px solid ${ch.color}50`, borderRadius: 8, color: "var(--text-primary)", fontSize: 13, outline: 'none', fontFamily: 'monospace' }}
-        />
-      ) : (
-        <div style={{ flex: 1 }}>
-          {existing?.code
-            ? <span style={{ color: "var(--text-primary)", fontFamily: 'monospace', fontSize: 14, fontWeight: 600, letterSpacing: '0.5px' }}>{existing.code}</span>
-            : <span style={{ color: 'rgba(148,163,184,0.35)', fontSize: 12, fontStyle: 'italic' }}>No code set — students can't join</span>}
+      {/* Messages List */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden'
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#ef4444,#dc2626,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(239,68,68,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <MessageSquare size={18} color="#f87171" />
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>All Messages</span>
+            {messages.length > 0 && (
+              <span style={{
+                background: 'rgba(239,68,68,0.2)',
+                color: '#f87171',
+                borderRadius: 99,
+                padding: '2px 10px',
+                fontSize: 11,
+                fontWeight: 700
+              }}>
+                {messages.length}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => fetchMessages(true)}
+            style={{
+              background: 'rgba(239,68,68,0.15)',
+              border: "1px solid var(--border-primary)",
+              borderRadius: 8,
+              color: '#fca5a5',
+              cursor: 'pointer',
+              padding: '6px 10px',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <RefreshCw size={14} />
+          </button>
         </div>
-      )}
+        <div style={{ padding: '16px', maxHeight: 600, overflowY: 'auto' }}>
+          {loading && messages.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Loader2 size={28} style={{ color: '#f87171', animation: 'spin 1s linear infinite' }} />
+              <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 12 }}>Loading messages...</p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <MessageSquare size={48} style={{ color: 'rgba(148,163,184,0.3)', marginBottom: 12 }} />
+              <p style={{ color: "var(--text-muted)", fontSize: 14 }}>No messages found</p>
+              <p style={{ color: "var(--text-tertiary)", fontSize: 12, marginTop: 4 }}>
+                Try adjusting your filters
+              </p>
+            </div>
+          ) : (
+            <>
+              {messages.map((message, i) => (
+                <motion.div
+                  key={message._id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  style={{
+                    padding: '16px',
+                    borderRadius: 14,
+                    marginBottom: 12,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(239,68,68,0.15)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+                    {/* Sender Avatar */}
+                    {message.sender?.profileImage ? (
+                      <img
+                        src={message.sender.profileImage}
+                        alt={message.sender.name}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 10,
+                          objectFit: 'cover',
+                          border: '2px solid rgba(239,68,68,0.3)',
+                          flexShrink: 0
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: '#fff',
+                        flexShrink: 0
+                      }}>
+                        {message.sender?.name?.[0]?.toUpperCase() || '?'}
+                      </div>
+                    )}
 
-      {/* Action buttons */}
-      {editing ? (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={handleSave} disabled={saving}
-            style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg,${ch.color},${ch.color}cc)`, color: "var(--text-primary)", cursor: 'pointer', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-            {saving ? '...' : '✓ Save'}
-          </button>
-          <button onClick={() => { setEditing(false); setVal(existing?.code || '') }}
-            style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.2)', background: 'transparent', color: "var(--text-secondary)", cursor: 'pointer', fontSize: 12 }}>
-            Cancel
-          </button>
+                    {/* Message Content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Sender + Channel Info */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                        <span style={{ color: "var(--text-primary)", fontSize: 14, fontWeight: 700 }}>
+                          {message.sender?.name || 'Unknown'}
+                        </span>
+                        {message.sender?.role === 'mentor' && (
+                          <span style={{
+                            background: 'rgba(139,92,246,0.2)',
+                            color: '#c4b5fd',
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            fontSize: 10,
+                            fontWeight: 700
+                          }}>
+                            ADMIN
+                          </span>
+                        )}
+                        <span style={{ color: "var(--text-tertiary)", fontSize: 12 }}>â†’</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <School size={12} color="#60a5fa" />
+                          <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>
+                            {message.channel?.schoolName} ({message.channel?.city})
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Message Text */}
+                      <p style={{
+                        color: "var(--text-primary)",
+                        fontSize: 13,
+                        lineHeight: 1.6,
+                        marginBottom: 8,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                      }}>
+                        {message.content}
+                      </p>
+
+                      {/* Metadata */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, color: "var(--text-tertiary)" }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Calendar size={11} />
+                          {new Date(message.createdAt).toLocaleString()}
+                        </div>
+                        {message.reactions && message.reactions.length > 0 && (
+                          <span>â€¢ {message.reactions.length} reactions</span>
+                        )}
+                        {message.isPinned && (
+                          <span style={{ color: '#fbbf24' }}>â€¢ ðŸ“Œ Pinned</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Delete Button */}
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleDeleteMessage(message._id, `${message.channel?.schoolName} (${message.channel?.city})`)}
+                      disabled={deleting === message._id}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 8,
+                        border: '1px solid rgba(239,68,68,0.4)',
+                        background: 'rgba(239,68,68,0.12)',
+                        color: '#f87171',
+                        cursor: deleting === message._id ? 'not-allowed' : 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        flexShrink: 0,
+                        opacity: deleting === message._id ? 0.5 : 1
+                      }}
+                    >
+                      {deleting === message._id ? (
+                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                      ) : (
+                        <Trash2 size={13} />
+                      )}
+                      Delete
+                    </motion.button>
+                  </div>
+                </motion.div>
+              ))}
+
+              {/* Load More Button */}
+              {hasMore && (
+                <div style={{ textAlign: 'center', marginTop: 16 }}>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={loadMore}
+                    disabled={loading}
+                    style={{
+                      padding: '10px 24px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(239,68,68,0.3)',
+                      background: 'rgba(239,68,68,0.12)',
+                      color: '#f87171',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      opacity: loading ? 0.5 : 1
+                    }}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Eye size={14} />
+                        Load More Messages
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      ) : (
-        <button onClick={() => { setEditing(true); setVal(existing?.code || '') }}
-          style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${ch.color}40`, background: `${ch.color}12`, color: ch.color, cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
-          {existing ? '✏️ Change' : '+ Set Code'}
-        </button>
-      )}
+      </div>
     </div>
   )
 }
@@ -608,13 +1181,7 @@ export default function AdminPanel() {
   const [page, setPage] = useState(1)
   const [actionLoading, setActionLoading] = useState(null)
   const [toast, setToast] = useState(null)
-  const [mainTab, setMainTab] = useState("users") // "users" | "broadcast"
-
-  // Broadcast state
-  const [bRequests, setBRequests] = useState([])
-  const [bCodes, setBCodes] = useState([])
-  const [bLoading, setBLoading] = useState(false)
-  const [enrollmentStats, setEnrollmentStats] = useState(null)
+  const [mainTab, setMainTab] = useState("users")
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type })
@@ -651,68 +1218,9 @@ export default function AdminPanel() {
     }
   }, [tab, search, page])
 
-  const fetchBroadcastData = useCallback(async () => {
-    setBLoading(true)
-    try {
-      const [reqRes, codeRes, statsRes] = await Promise.all([
-        broadcastAPI.getRequests(),
-        broadcastAPI.getCodes(),
-        broadcastAPI.getAllEnrollments(),
-      ])
-      setBRequests(reqRes.data.requests || [])
-      setBCodes(codeRes.data.codes || [])
-      setEnrollmentStats(statsRes.data)
-    } catch (err) {
-      showToast('Failed to load broadcast data', 'error')
-    } finally { setBLoading(false) }
-  }, [])
-
   useEffect(() => {
     if (authed) fetchData()
   }, [authed, fetchData])
-
-  useEffect(() => {
-    if (authed && mainTab === 'broadcast') fetchBroadcastData()
-  }, [authed, mainTab, fetchBroadcastData])
-
-  const handleAcceptRequest = async (id) => {
-    setActionLoading(id + '_accept')
-    try {
-      await broadcastAPI.acceptRequest(id)
-      setBRequests(prev => prev.filter(r => r._id !== id))
-      showToast('Request accepted!')
-    } catch { showToast('Failed', 'error') }
-    finally { setActionLoading(null) }
-  }
-
-  const handleRejectRequest = async (id) => {
-    setActionLoading(id + '_reject')
-    try {
-      await broadcastAPI.rejectRequest(id)
-      setBRequests(prev => prev.filter(r => r._id !== id))
-      showToast('Request rejected')
-    } catch { showToast('Failed', 'error') }
-    finally { setActionLoading(null) }
-  }
-
-  const handleAddCode = async (e) => {
-    e.preventDefault()
-    if (!newCode.code.trim()) { showToast('Enter a code', 'error'); return }
-    try {
-      await broadcastAPI.addCode({ channel: newCode.channel, code: newCode.code.trim() })
-      setNewCode(p => ({ ...p, code: '' }))
-      fetchBroadcastData()
-      showToast('Code added!')
-    } catch (err) { showToast(err?.response?.data?.message || 'Failed', 'error') }
-  }
-
-  const handleDeleteCode = async (id) => {
-    try {
-      await broadcastAPI.deleteCode(id)
-      setBCodes(prev => prev.filter(c => c._id !== id))
-      showToast('Code deleted')
-    } catch { showToast('Failed', 'error') }
-  }
 
   const handleToggle = async (id) => {
     setActionLoading(id + "_toggle")
@@ -833,8 +1341,8 @@ export default function AdminPanel() {
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
           {[
             { id: 'users', label: 'User Management', icon: <Users size={14} /> },
-            { id: 'broadcast', label: '📡 Broadcast Channels', icon: <Radio size={14} /> },
-            { id: 'schools', label: '🏫 School Channels', icon: <Settings size={14} /> },
+            { id: 'schools', label: 'School Channels', icon: <School size={14} /> },
+            { id: 'messages', label: 'Message Monitor', icon: <MessageSquare size={14} /> },
           ].map(t => (
             <button key={t.id} onClick={() => setMainTab(t.id)}
               style={{
@@ -850,7 +1358,7 @@ export default function AdminPanel() {
           ))}
         </div>
 
-        {/* ── USERS TAB ─────────────────────────────────────────────────── */}
+        {/* â”€â”€ USERS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {mainTab === 'users' && <>
         {/* Stats */}
         {stats && (
@@ -1041,361 +1549,14 @@ export default function AdminPanel() {
         )}
         </> /* end users tab */}
 
-        {/* ── SCHOOL CHANNELS TAB ────────────────────────────────────────── */}
+        {/* â”€â”€ SCHOOL CHANNELS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {mainTab === 'schools' && (
           <SchoolChannelManagement showToast={showToast} />
         )}
 
-        {/* ── BROADCAST TAB ──────────────────────────────────────────────── */}
-        {mainTab === 'broadcast' && (
-          <div>
-            {bLoading ? (
-              <div style={{ textAlign: 'center', padding: 60 }}>
-                <Loader2 size={32} style={{ color: '#818cf8', animation: 'spin 1s linear infinite' }} />
-              </div>
-            ) : (
-              <>
-                {/* Enrollment Statistics Dashboard */}
-                {enrollmentStats && (
-                  <div style={{ marginBottom: 24 }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between',
-                      marginBottom: 16
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: 12,
-                          background: 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(5,150,105,0.2))',
-                          border: '1px solid rgba(16,185,129,0.3)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 20
-                        }}>
-                          📊
-                        </div>
-                        <div>
-                          <h2 style={{ color: "var(--text-primary)", fontSize: 18, fontWeight: 700, margin: 0 }}>
-                            Channel Enrollment Statistics
-                          </h2>
-                          <p style={{ color: "var(--text-secondary)", fontSize: 12, margin: 0 }}>
-                            Total enrollments across all channels
-                          </p>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>Total Students</div>
-                        <div style={{ fontSize: 28, fontWeight: 700, color: "var(--text-primary)" }}>
-                          {enrollmentStats.totalEnrollments}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-                      gap: 16,
-                      marginBottom: 24 
-                    }}>
-                      {CHANNELS.map((channel) => {
-                        const stats = enrollmentStats.channelStats[channel.id] || { count: 0, members: [] }
-                        return (
-                          <div
-                            key={channel.id}
-                            style={{
-                              background: "var(--bg-tertiary)",
-                              border: `1px solid ${channel.color}30`,
-                              borderRadius: 16,
-                              padding: 18,
-                              backdropFilter: 'blur(20px)',
-                              position: 'relative',
-                              overflow: 'hidden'
-                            }}
-                          >
-                            {/* Top gradient bar */}
-                            <div 
-                              style={{ 
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: 3,
-                                background: `linear-gradient(90deg,${channel.color},${channel.color}cc)`
-                              }} 
-                            />
-
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div 
-                                  style={{
-                                    width: 36,
-                                    height: 36,
-                                    borderRadius: 10,
-                                    background: `${channel.color}18`,
-                                    border: `1px solid ${channel.color}40`,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    fontSize: 18
-                                  }}
-                                >
-                                  {channel.icon}
-                                </div>
-                                <div>
-                                  <h4 style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: 14, margin: 0 }}>
-                                    {channel.name}
-                                  </h4>
-                                  <p style={{ color: "var(--text-tertiary)", fontSize: 11, margin: 0 }}>
-                                    {stats.count} {stats.count === 1 ? 'student' : 'students'}
-                                  </p>
-                                </div>
-                              </div>
-                              <div 
-                                style={{ 
-                                  fontSize: 24, 
-                                  fontWeight: 700,
-                                  color: channel.color 
-                                }}
-                              >
-                                {stats.count}
-                              </div>
-                            </div>
-
-                            {stats.count > 0 && (
-                              <div style={{ 
-                                maxHeight: 200, 
-                                overflowY: 'auto',
-                                marginTop: 12,
-                                paddingRight: 4
-                              }}>
-                                {stats.members.map((member) => (
-                                  <div 
-                                    key={member.id} 
-                                    style={{ 
-                                      display: 'flex', 
-                                      alignItems: 'center', 
-                                      gap: 8, 
-                                      fontSize: 11, 
-                                      background: 'rgba(255,255,255,0.03)', 
-                                      borderRadius: 8, 
-                                      padding: '8px 10px', 
-                                      marginBottom: 6,
-                                      border: '1px solid rgba(255,255,255,0.05)'
-                                    }}
-                                  >
-                                    <div 
-                                      style={{
-                                        width: 22,
-                                        height: 22,
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: 9,
-                                        fontWeight: 700,
-                                        color: "var(--text-primary)",
-                                        flexShrink: 0
-                                      }}
-                                    >
-                                      {member.user?.profileImage ? (
-                                        <img 
-                                          src={member.user.profileImage} 
-                                          alt="" 
-                                          style={{ 
-                                            width: '100%', 
-                                            height: '100%', 
-                                            objectFit: 'cover', 
-                                            borderRadius: '50%' 
-                                          }} 
-                                        />
-                                      ) : (
-                                        member.user?.name?.charAt(0)?.toUpperCase() || '?'
-                                      )}
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ 
-                                        color: "var(--text-primary)", 
-                                        fontWeight: 600, 
-                                        overflow: 'hidden', 
-                                        textOverflow: 'ellipsis', 
-                                        whiteSpace: 'nowrap',
-                                        fontSize: 12
-                                      }}>
-                                        {member.user?.name || 'Unknown'}
-                                      </div>
-                                      <div style={{ color: "var(--text-tertiary)", fontSize: 10 }}>
-                                        {member.school} • {member.class}
-                                      </div>
-                                    </div>
-                                    <div style={{ fontSize: 9, color: 'rgba(148,163,184,0.35)', flexShrink: 0 }}>
-                                      {new Date(member.joinedAt).toLocaleDateString()}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {stats.count === 0 && (
-                              <div style={{ 
-                                textAlign: 'center', 
-                                padding: '24px 0', 
-                                color: "var(--text-muted)", 
-                                fontSize: 11 
-                              }}>
-                                No students enrolled yet
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-
-                {/* ── Pending Join Requests ── */}
-                <div style={{ borderRadius: 18, background: "var(--bg-tertiary)", border: "1px solid var(--border-secondary)", backdropFilter: 'blur(20px)', overflow: 'hidden' }}>
-                  <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
-                  <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Users size={16} color="#818cf8" />
-                      <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 14 }}>Join Requests</span>
-                      {bRequests.length > 0 && (
-                        <span style={{ background: '#ef4444', color: "var(--text-primary)", borderRadius: 99, padding: '1px 8px', fontSize: 11, fontWeight: 700 }}>{bRequests.length}</span>
-                      )}
-                    </div>
-                    <button onClick={fetchBroadcastData} style={{ background: 'rgba(99,102,241,0.15)', border: "1px solid var(--border-primary)", borderRadius: 8, color: '#a5b4fc', cursor: 'pointer', padding: '5px 8px', display: 'flex', alignItems: 'center' }}>
-                      <RefreshCw size={13} />
-                    </button>
-                  </div>
-                  <div style={{ padding: '12px 16px', maxHeight: 420, overflowY: 'auto' }}>
-                    {bRequests.length === 0 ? (
-                      <p style={{ color: "var(--text-muted)", textAlign: 'center', padding: '30px 0', fontSize: 13 }}>No pending requests</p>
-                    ) : bRequests.map((req, i) => {
-                      const chCurrent  = CHANNELS.find(c => c.id === req.currentChannel)
-                      const chRequested = CHANNELS.find(c => c.id === req.requestedChannel)
-                      return (
-                        <motion.div key={req._id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                          style={{ padding: '14px', borderRadius: 14, marginBottom: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.1)' }}>
-                          
-                          {/* User Info Header */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                            {req.user?.profileImage
-                              ? <img src={req.user.profileImage} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(99,102,241,0.3)' }} />
-                              : <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: "var(--text-primary)", fontWeight: 700, fontSize: 14, border: '2px solid rgba(99,102,241,0.3)' }}>{req.user?.name?.[0]?.toUpperCase()}</div>}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <p style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 14, margin: 0 }}>{req.user?.name}</p>
-                              <p style={{ color: "var(--text-secondary)", fontSize: 12, margin: 0 }}>{req.user?.email}</p>
-                            </div>
-                            <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: 'monospace' }}>
-                              {new Date(req.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-
-                          {/* Student Details */}
-                          <div style={{ 
-                            background: 'rgba(255,255,255,0.02)', 
-                            border: '1px solid rgba(99,102,241,0.08)',
-                            borderRadius: 8, padding: '10px', marginBottom: 10 
-                          }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
-                              <div>
-                                <span style={{ color: "var(--text-tertiary)" }}>School: </span>
-                                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{req.school}</span>
-                              </div>
-                              <div>
-                                <span style={{ color: "var(--text-tertiary)" }}>Class: </span>
-                                <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{req.class}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Channel Switch Info */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, fontSize: 13 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: `${chCurrent?.color}15`, border: `1px solid ${chCurrent?.color}30` }}>
-                              <span style={{ fontSize: 16 }}>{chCurrent?.icon}</span>
-                              <span style={{ color: chCurrent?.color, fontWeight: 600 }}>{chCurrent?.name}</span>
-                            </div>
-                            <span style={{ color: "var(--text-muted)", fontSize: 16 }}>→</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 10px', borderRadius: 8, background: `${chRequested?.color}15`, border: `1px solid ${chRequested?.color}30` }}>
-                              <span style={{ fontSize: 16 }}>{chRequested?.icon}</span>
-                              <span style={{ color: chRequested?.color, fontWeight: 600 }}>{chRequested?.name}</span>
-                            </div>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div style={{ display: 'flex', gap: 8 }}>
-                            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                              onClick={() => handleAcceptRequest(req._id)}
-                              disabled={actionLoading === req._id + '_accept'}
-                              style={{ 
-                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, 
-                                padding: '9px', borderRadius: 10, border: '1px solid rgba(52,211,153,0.4)', 
-                                background: 'rgba(52,211,153,0.12)', color: '#34d399', cursor: 'pointer', 
-                                fontSize: 12, fontWeight: 700 
-                              }}>
-                              {actionLoading === req._id + '_accept' ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />} 
-                              Accept Request
-                            </motion.button>
-                            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                              onClick={() => handleRejectRequest(req._id)}
-                              disabled={actionLoading === req._id + '_reject'}
-                              style={{ 
-                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, 
-                                padding: '9px', borderRadius: 10, border: '1px solid rgba(239,68,68,0.4)', 
-                                background: 'rgba(239,68,68,0.12)', color: '#f87171', cursor: 'pointer', 
-                                fontSize: 12, fontWeight: 700 
-                              }}>
-                              {actionLoading === req._id + '_reject' ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <X size={14} />} 
-                              Reject Request
-                            </motion.button>
-                          </div>
-                        </motion.div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* ── Access Codes Management — one code per channel ── */}
-                <div style={{ borderRadius: 18, background: "var(--bg-tertiary)", border: "1px solid var(--border-secondary)", backdropFilter: 'blur(20px)', overflow: 'hidden' }}>
-                  <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
-                  <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Key size={16} color="#818cf8" />
-                      <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 14 }}>Channel Access Codes</span>
-                    </div>
-                    <span style={{ color: 'rgba(148,163,184,0.45)', fontSize: 11, fontFamily: 'monospace' }}>one code per channel</span>
-                  </div>
-                  <div style={{ padding: '16px' }}>
-                    {CHANNELS.map((ch) => {
-                      const existing = bCodes.find(c => c.channel === ch.id)
-                      return (
-                        <ChannelCodeRow key={ch.id} ch={ch} existing={existing}
-                          onSave={async (code) => {
-                            try {
-                              // Delete old codes for this channel first
-                              const oldCodes = bCodes.filter(c => c.channel === ch.id)
-                              await Promise.all(oldCodes.map(c => broadcastAPI.deleteCode(c._id)))
-                              if (code.trim()) await broadcastAPI.addCode({ channel: ch.id, code: code.trim() })
-                              fetchBroadcastData()
-                              showToast(`${ch.name} code updated!`)
-                            } catch (err) { showToast(err?.response?.data?.message || 'Failed', 'error') }
-                          }}
-                        />
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-              </>
-            )}
-          </div>
+        {/* â”€â”€ MESSAGE MONITORING TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {mainTab === 'messages' && (
+          <MessageMonitoringDashboard showToast={showToast} />
         )}
       </div>
     </div>

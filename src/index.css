@@ -192,6 +192,7 @@
   /* Theme-aware backgrounds */
   .bg-theme-card { background: var(--bg-card) !important; }
   .bg-theme-hover { background: var(--bg-hover) !important; }
+  .hover\:bg-theme-hover:hover { background: var(--bg-hover) !important; }
   .bg-theme-sidebar { background: var(--bg-sidebar) !important; }
   
   /* Theme-aware borders */

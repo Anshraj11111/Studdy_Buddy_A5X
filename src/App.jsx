@@ -5,7 +5,6 @@ import { useThemeStore } from './store/themeStore'
 import { useNotificationStore } from './store/notificationStore'
 import { initSocket, disconnectSocket, onNotification, offNotification } from './services/socket'
 import Navbar from './components/Navbar'
-import bgImage from './assets/image.png'
 import IncomingCallModal from './components/IncomingCallModal'
 
 // Eagerly load auth pages (always needed on first visit)
@@ -165,7 +164,12 @@ function StudentRoute({ children }) {
 
 export default function App() {
   return (
-    <Router>
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       <ScrollToTop />
       <AppShell />
     </Router>

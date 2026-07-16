@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { Send, Users, Pin, Smile, Trash2, School } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Users, Pin, Smile, Trash2, School, Shield } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
@@ -9,6 +9,9 @@ import { io } from 'socket.io-client';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 let socket;
+
+// WhatsApp-style emoji reactions
+const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 export default function SchoolChannel() {
   const { theme } = useThemeStore();
@@ -22,6 +25,7 @@ export default function SchoolChannel() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(null); // messageId for which to show picker
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -87,6 +91,20 @@ export default function SchoolChannel() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Close reaction picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (showReactionPicker && !e.target.closest('.reaction-picker-container')) {
+        setShowReactionPicker(null);
+      }
+    };
+    
+    if (showReactionPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showReactionPicker]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -195,6 +213,8 @@ export default function SchoolChannel() {
         );
         setMessages(messages.map((m) => (m._id === messageId ? response.data.data.message : m)));
       }
+      // Close picker after selection
+      setShowReactionPicker(null);
     } catch (error) {
       console.error('Error adding reaction:', error);
     }
@@ -403,46 +423,80 @@ export default function SchoolChannel() {
                         </span>
                       </div>
                       
-                      <div className="p-3 rounded-xl inline-block"
+                      <div className="p-3 rounded-xl inline-block relative"
                         style={{
                           background: isDark ? 'rgba(139,92,246,0.1)' : '#f3e8ff',
                         }}>
                         <p className="text-sm" style={{ color: isDark ? '#fff' : '#0f172a' }}>
                           {message.content}
                         </p>
-                      </div>
-
-                      {/* Reactions */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <button
-                          onClick={() => handleReaction(message._id, '👍')}
-                          className="text-xs px-2 py-1 rounded hover:opacity-80"
-                          style={{
-                            background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9',
-                          }}>
-                          👍 {message.reactions?.filter(r => r.emoji === '👍').length || 0}
-                        </button>
-                        <button
-                          onClick={() => handleReaction(message._id, '❤️')}
-                          className="text-xs px-2 py-1 rounded hover:opacity-80"
-                          style={{
-                            background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9',
-                          }}>
-                          ❤️ {message.reactions?.filter(r => r.emoji === '❤️').length || 0}
-                        </button>
                         
-                        {message.sender._id === user?._id && (
-                          <button
-                            onClick={() => handleDeleteMessage(message._id)}
-                            className="text-xs px-2 py-1 rounded hover:opacity-80 ml-auto"
+                        {/* Reaction button (Smile icon) */}
+                        <button
+                          onClick={() => setShowReactionPicker(showReactionPicker === message._id ? null : message._id)}
+                          className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                          style={{
+                            background: isDark ? 'rgba(139,92,246,0.3)' : '#e9d5ff',
+                            border: `2px solid ${isDark ? '#0a0814' : '#f5f0ff'}`
+                          }}
+                        >
+                          <Smile size={14} style={{ color: '#8b5cf6' }} />
+                        </button>
+
+                        {/* WhatsApp-style Reaction Picker */}
+                        {showReactionPicker === message._id && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className="reaction-picker-container absolute top-full right-0 mt-2 px-2 py-1.5 rounded-full shadow-2xl flex items-center gap-1"
                             style={{
-                              background: 'rgba(239,68,68,0.1)',
-                              color: '#ef4444',
-                            }}>
-                            <Trash2 size={12} />
-                          </button>
+                              background: isDark ? 'rgba(15,12,31,0.98)' : '#ffffff',
+                              border: isDark ? '1px solid rgba(139,92,246,0.3)' : '1px solid #e2e8f0',
+                              zIndex: 10
+                            }}
+                          >
+                            {EMOJI_REACTIONS.map((emoji) => (
+                              <button
+                                key={emoji}
+                                onClick={() => handleReaction(message._id, emoji)}
+                                className="w-9 h-9 rounded-full hover:scale-125 transition-transform flex items-center justify-center"
+                                style={{
+                                  background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc'
+                                }}
+                              >
+                                <span className="text-xl">{emoji}</span>
+                              </button>
+                            ))}
+                          </motion.div>
                         )}
                       </div>
+
+                      {/* Show existing reactions */}
+                      {message.reactions && message.reactions.length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                          {Object.entries(
+                            message.reactions.reduce((acc, r) => {
+                              acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                              return acc;
+                            }, {})
+                          ).map(([emoji, count]) => (
+                            <button
+                              key={emoji}
+                              onClick={() => handleReaction(message._id, emoji)}
+                              className="px-2.5 py-1 rounded-full text-sm flex items-center gap-1.5 hover:scale-105 transition-all"
+                              style={{
+                                background: isDark ? 'rgba(139,92,246,0.2)' : '#e9d5ff',
+                                border: isDark ? '1px solid rgba(139,92,246,0.4)' : '1px solid #c4b5fd',
+                                color: isDark ? '#e9d5ff' : '#7c3aed'
+                              }}
+                            >
+                              <span className="text-base">{emoji}</span>
+                              <span className="font-bold text-xs">{count}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 ))
@@ -451,33 +505,49 @@ export default function SchoolChannel() {
             </div>
 
             {/* Message Input */}
-            <form onSubmit={handleSendMessage} className="p-4 border-t"
-              style={{ borderColor: isDark ? 'rgba(139,92,246,0.2)' : '#e2e8f0' }}>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 px-4 py-2 rounded-xl outline-none"
-                  style={{
-                    background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9',
-                    color: isDark ? '#fff' : '#0f172a',
-                  }}
-                />
-                <button
-                  type="submit"
-                  disabled={!newMessage.trim() || sending}
-                  className="px-6 py-2 rounded-xl flex items-center gap-2 disabled:opacity-50"
-                  style={{
-                    background: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
-                    color: '#fff',
-                  }}>
-                  <Send size={18} />
-                  {sending ? 'Sending...' : 'Send'}
-                </button>
+            {(channel?.createdBy?._id || channel?.createdBy) === user?._id ? (
+              // Admin can send messages
+              <form onSubmit={handleSendMessage} className="p-4 border-t"
+                style={{ borderColor: isDark ? 'rgba(139,92,246,0.2)' : '#e2e8f0' }}>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-1 px-4 py-2 rounded-xl outline-none"
+                    style={{
+                      background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9',
+                      color: isDark ? '#fff' : '#0f172a',
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newMessage.trim() || sending}
+                    className="px-6 py-2 rounded-xl flex items-center gap-2 disabled:opacity-50"
+                    style={{
+                      background: 'linear-gradient(135deg,#8b5cf6,#6366f1)',
+                      color: '#fff',
+                    }}>
+                    <Send size={18} />
+                    {sending ? 'Sending...' : 'Send'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              // Non-admin sees read-only message
+              <div className="p-4 border-t text-center"
+                style={{ 
+                  borderColor: isDark ? 'rgba(139,92,246,0.2)' : '#e2e8f0',
+                  background: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc'
+                }}>
+                <div className="flex items-center justify-center gap-2 text-sm"
+                  style={{ color: isDark ? 'rgba(148,163,184,0.7)' : '#64748b' }}>
+                  <Shield size={16} />
+                  <span>Only the channel admin can post messages</span>
+                </div>
               </div>
-            </form>
+            )}
           </div>
 
           {/* Members Sidebar */}
