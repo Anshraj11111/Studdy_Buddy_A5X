@@ -1,29 +1,41 @@
 import axios from "axios";
+import loadBalancer from "../config/loadBalancer.js";
 
-// Always use the correct backend URL with /api
-const BASE = "https://studdy-buddy-backend-a5x.onrender.com";
-const envUrl = import.meta.env.VITE_API_URL;
+// Check if we're in development or production
+const isLocalDev = import.meta.env.DEV || import.meta.env.VITE_API_URL?.includes('localhost');
 
-// Ensure URL always ends with /api
-const API_BASE_URL = (() => {
-  const url = envUrl || `${BASE}/api`;
-  if (url.endsWith('/api')) return url;
-  if (url.endsWith('/')) return url + 'api';
-  return url + '/api';
-})();
+// Use load balancer in production, localhost in development
+const API_BASE_URL = isLocalDev 
+  ? (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
+  : loadBalancer.getApiUrl();
 
 // Log the URL being used so you can verify in the console
+console.log('🌐 API Mode:', isLocalDev ? 'Development (localhost)' : 'Production (Load Balanced)');
 console.log('🌐 API base URL:', API_BASE_URL);
 
-// Keep-alive ping — only ping Render if we're actually using it
-// Uses /ping instead of /health to avoid ad-blocker false positives
-const isLocalDev = API_BASE_URL.includes('localhost');
+// Keep-alive ping for all 3 Render servers to prevent cold starts
 if (!isLocalDev) {
-  const pingBackend = () => fetch(`${BASE}/ping`).catch(() => {});
-  pingBackend();
-  setTimeout(pingBackend, 15 * 1000);
-  setTimeout(pingBackend, 45 * 1000);
-  setInterval(pingBackend, 4 * 60 * 1000);
+  const servers = [
+    'https://studdy-buddy-backend-a5x.onrender.com',
+    'https://studdy-buddy-backend-a5x-ytip.onrender.com',
+    'https://studdy-buddy-backend-a5x-2dn7.onrender.com',
+  ];
+
+  const pingAllServers = () => {
+    servers.forEach(server => {
+      fetch(`${server}/ping`).catch(() => {});
+    });
+  };
+
+  // Initial ping burst
+  pingAllServers();
+  setTimeout(pingAllServers, 15 * 1000);
+  setTimeout(pingAllServers, 45 * 1000);
+  
+  // Regular pings every 4 minutes
+  setInterval(pingAllServers, 4 * 60 * 1000);
+  
+  console.log('🔥 Keep-alive enabled for all 3 servers');
 }
 
 // Simple in-memory cache for GET requests (5 min TTL)
@@ -47,27 +59,38 @@ const api = axios.create({
 
 // Attach JWT token
 api.interceptors.request.use((config) => {
-const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token");
 
-if (token) {
-config.headers.Authorization = `Bearer ${token}`;
-}
-
-// Check cache for GET requests
-if (config.method === 'get') {
-  const cacheKey = config.url + JSON.stringify(config.params || {});
-  const cached = getCached(cacheKey);
-  if (cached) {
-    config.adapter = () => Promise.resolve({ data: cached, status: 200, statusText: 'OK', headers: {}, config });
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-}
 
-return config;
+  // Check cache for GET requests
+  if (config.method === 'get') {
+    const cacheKey = config.url + JSON.stringify(config.params || {});
+    const cached = getCached(cacheKey);
+    if (cached) {
+      config.adapter = () => Promise.resolve({ data: cached, status: 200, statusText: 'OK', headers: {}, config });
+    }
+  }
+
+  // In production, dynamically get fresh API URL for each request
+  if (!isLocalDev) {
+    config.baseURL = loadBalancer.getApiUrl();
+  }
+
+  return config;
 });
 
-// Global error handler
+// Global error handler with retry logic
 api.interceptors.response.use(
   (response) => {
+    // Mark server as successful
+    if (!isLocalDev && response.config.baseURL) {
+      const serverUrl = response.config.baseURL.replace('/api', '');
+      loadBalancer.markServerSuccess(serverUrl);
+    }
+
     // Cache successful GET responses
     if (response.config.method === 'get' && response.status === 200) {
       const cacheKey = response.config.url + JSON.stringify(response.config.params || {});
@@ -75,7 +98,27 @@ api.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Mark server as failed in production
+    if (!isLocalDev && originalRequest.baseURL) {
+      const serverUrl = originalRequest.baseURL.replace('/api', '');
+      loadBalancer.markServerFailed(serverUrl);
+    }
+
+    // Retry logic for network errors in production
+    if (!isLocalDev && !originalRequest._retry && (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK' || !error.response)) {
+      originalRequest._retry = true;
+      
+      // Get a different server and retry
+      originalRequest.baseURL = loadBalancer.getApiUrl();
+      console.log('🔄 Retrying request with different server:', originalRequest.baseURL);
+      
+      return api(originalRequest);
+    }
+
+    // Handle 401 Unauthorized
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
       

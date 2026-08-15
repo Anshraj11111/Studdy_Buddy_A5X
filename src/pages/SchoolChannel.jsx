@@ -364,14 +364,15 @@ export default function SchoolChannel() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Messages Section */}
-          <div className="lg:col-span-2 rounded-2xl overflow-hidden"
+          <div className="lg:col-span-2 rounded-2xl"
             style={{
               background: isDark ? 'rgba(15,12,31,0.9)' : '#ffffff',
               border: isDark ? '1px solid rgba(139,92,246,0.2)' : '1px solid #e2e8f0',
+              overflow: 'visible'
             }}>
             
             {/* Messages List */}
-            <div className="h-[500px] overflow-y-auto p-6 space-y-4">
+            <div className="h-[500px] overflow-y-auto overflow-x-visible p-6 space-y-4" style={{ overflowX: 'visible' }}>
               {messages.length === 0 ? (
                 <div className="text-center py-12">
                   <p style={{ color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
@@ -384,7 +385,8 @@ export default function SchoolChannel() {
                     key={message._id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex gap-3">
+                    className="flex gap-3"
+                    style={{ overflow: 'visible' }}>
                     
                     {/* Avatar */}
                     <div className="flex-shrink-0">
@@ -405,7 +407,7 @@ export default function SchoolChannel() {
                     </div>
 
                     {/* Message Content */}
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-sm"
                           style={{ color: isDark ? '#fff' : '#0f172a' }}>
@@ -423,24 +425,27 @@ export default function SchoolChannel() {
                         </span>
                       </div>
                       
-                      <div className="p-3 rounded-xl inline-block relative"
-                        style={{
-                          background: isDark ? 'rgba(139,92,246,0.1)' : '#f3e8ff',
-                        }}>
-                        <p className="text-sm" style={{ color: isDark ? '#fff' : '#0f172a' }}>
-                          {message.content}
-                        </p>
+                      {/* Message bubble with reactions */}
+                      <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+                        <div className="p-3 rounded-xl"
+                          style={{
+                            background: isDark ? 'rgba(139,92,246,0.1)' : '#f3e8ff',
+                          }}>
+                          <p className="text-sm" style={{ color: isDark ? '#fff' : '#0f172a' }}>
+                            {message.content}
+                          </p>
+                        </div>
                         
                         {/* Reaction button (Smile icon) */}
                         <button
                           onClick={() => setShowReactionPicker(showReactionPicker === message._id ? null : message._id)}
-                          className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                          className="absolute -bottom-4 -right-3 w-8 h-8 rounded-full flex items-center justify-center hover:scale-110 transition-transform"
                           style={{
                             background: isDark ? 'rgba(139,92,246,0.3)' : '#e9d5ff',
                             border: `2px solid ${isDark ? '#0a0814' : '#f5f0ff'}`
                           }}
                         >
-                          <Smile size={14} style={{ color: '#8b5cf6' }} />
+                          <Smile size={16} style={{ color: '#8b5cf6' }} />
                         </button>
 
                         {/* WhatsApp-style Reaction Picker */}
@@ -449,23 +454,33 @@ export default function SchoolChannel() {
                             initial={{ opacity: 0, scale: 0.8, y: -10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.8 }}
-                            className="reaction-picker-container absolute top-full right-0 mt-2 px-2 py-1.5 rounded-full shadow-2xl flex items-center gap-1"
+                            className="reaction-picker-container absolute top-full left-0 mt-2 px-3 py-2 rounded-full shadow-2xl flex items-center gap-2"
                             style={{
                               background: isDark ? 'rgba(15,12,31,0.98)' : '#ffffff',
-                              border: isDark ? '1px solid rgba(139,92,246,0.3)' : '1px solid #e2e8f0',
-                              zIndex: 10
+                              border: isDark ? '1.5px solid rgba(139,92,246,0.4)' : '1.5px solid #e2e8f0',
+                              backdropFilter: 'blur(10px)',
+                              zIndex: 10,
+                              fontFamily: 'system-ui, -apple-system, "Segoe UI Emoji", "Apple Color Emoji", sans-serif',
+                              whiteSpace: 'nowrap',
+                              minWidth: 'fit-content',
+                              width: 'auto'
                             }}
                           >
                             {EMOJI_REACTIONS.map((emoji) => (
                               <button
                                 key={emoji}
                                 onClick={() => handleReaction(message._id, emoji)}
-                                className="w-9 h-9 rounded-full hover:scale-125 transition-transform flex items-center justify-center"
+                                className="w-10 h-10 rounded-full hover:scale-125 transition-transform flex items-center justify-center flex-shrink-0"
                                 style={{
-                                  background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc'
+                                  background: isDark ? 'rgba(255,255,255,0.08)' : '#f8fafc',
+                                  fontSize: '22px',
+                                  lineHeight: '1',
+                                  padding: 0
                                 }}
                               >
-                                <span className="text-xl">{emoji}</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {emoji}
+                                </span>
                               </button>
                             ))}
                           </motion.div>
@@ -474,7 +489,7 @@ export default function SchoolChannel() {
 
                       {/* Show existing reactions */}
                       {message.reactions && message.reactions.length > 0 && (
-                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-2 flex-wrap" style={{ marginLeft: '48px' }}>
                           {Object.entries(
                             message.reactions.reduce((acc, r) => {
                               acc[r.emoji] = (acc[r.emoji] || 0) + 1;
@@ -484,14 +499,23 @@ export default function SchoolChannel() {
                             <button
                               key={emoji}
                               onClick={() => handleReaction(message._id, emoji)}
-                              className="px-2.5 py-1 rounded-full text-sm flex items-center gap-1.5 hover:scale-105 transition-all"
+                              className="px-2.5 py-1 rounded-full text-sm flex items-center gap-1.5 hover:scale-105 transition-all shadow-sm"
                               style={{
-                                background: isDark ? 'rgba(139,92,246,0.2)' : '#e9d5ff',
-                                border: isDark ? '1px solid rgba(139,92,246,0.4)' : '1px solid #c4b5fd',
-                                color: isDark ? '#e9d5ff' : '#7c3aed'
+                                background: isDark ? 'rgba(139,92,246,0.25)' : '#ede9fe',
+                                border: isDark ? '1.5px solid rgba(168,85,247,0.4)' : '1.5px solid #c4b5fd',
+                                color: isDark ? '#e9d5ff' : '#7c3aed',
+                                minHeight: '32px',
+                                fontFamily: 'system-ui, -apple-system, "Segoe UI Emoji", "Apple Color Emoji", sans-serif'
                               }}
                             >
-                              <span className="text-base">{emoji}</span>
+                              <span className="text-lg leading-none" style={{ 
+                                fontSize: '18px',
+                                lineHeight: '1',
+                                display: 'inline-flex',
+                                alignItems: 'center'
+                              }}>
+                                {emoji}
+                              </span>
                               <span className="font-bold text-xs">{count}</span>
                             </button>
                           ))}

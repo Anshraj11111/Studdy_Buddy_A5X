@@ -1,13 +1,26 @@
 import io from 'socket.io-client'
+import loadBalancer from '../config/loadBalancer.js'
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
+// Check if we're in development or production
+const isLocalDev = import.meta.env.DEV || import.meta.env.VITE_SOCKET_URL?.includes('localhost')
+
+// Use load balancer in production, localhost in development
+const SOCKET_URL = isLocalDev
+  ? (import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000')
+  : loadBalancer.getSocketUrl()
+
+console.log('🔌 Socket Mode:', isLocalDev ? 'Development (localhost)' : 'Production (Load Balanced)')
+console.log('🔌 Socket URL:', SOCKET_URL)
 
 let socket = null
 
 export const initSocket = (token, userId, userName = '', userImage = '', userRole = '') => {
   if (socket?.connected) return socket
 
-  socket = io(SOCKET_URL, {
+  // In production, get fresh socket URL from load balancer
+  const socketUrl = isLocalDev ? SOCKET_URL : loadBalancer.getSocketUrl()
+
+  socket = io(socketUrl, {
     auth: { token, userId, userName, userImage, userRole },
     // Try WebSocket first, fall back to polling if WebSocket is blocked by firewall
     transports: ['websocket', 'polling'],
@@ -22,6 +35,17 @@ export const initSocket = (token, userId, userName = '', userImage = '', userRol
   socket.on('connect', () => {
     console.log('✅ Socket connected:', socket.id)
     console.log('✅ User ID:', userId)
+    console.log('✅ Socket Server:', socketUrl)
+  })
+
+  // Handle reconnection with load balancing
+  socket.on('reconnect_attempt', () => {
+    if (!isLocalDev) {
+      // Try a different server on reconnect
+      const newUrl = loadBalancer.getSocketUrl()
+      console.log('🔄 Reconnecting to:', newUrl)
+      socket.io.uri = newUrl
+    }
   })
 
   // Populate global onlineUsers set on first connect so late-mounting components get it
