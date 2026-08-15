@@ -35,15 +35,16 @@ const getSkillColor = (skill) => {
 }
 
 const glassCard = {
-  background: 'rgba(10,8,30,0.7)',
+  background: 'var(--bg-card)',
   border: "1px solid var(--border-secondary)",
   backdropFilter: 'blur(20px)',
   borderRadius: '16px',
+  boxShadow: 'var(--shadow-card)',
 }
 
 const inputStyle = {
-  background: 'rgba(255,255,255,0.05)',
-  border: "1px solid var(--border-primary)",
+  background: 'var(--input-bg)',
+  border: "1px solid var(--input-border)",
   color: "var(--text-primary)",
   borderRadius: '12px',
   padding: '10px 14px',
@@ -81,10 +82,10 @@ function PortalDropdown({ anchorRect, children }) {
       left: anchorRect.left,
       width: anchorRect.width,
       zIndex: 99999,
-      background: 'rgba(10,8,35,0.98)',
-      border: '1px solid rgba(99,102,241,0.35)',
+      background: 'var(--bg-modal)',
+      border: '1px solid var(--border-primary)',
       borderRadius: '12px',
-      boxShadow: '0 16px 48px rgba(0,0,0,0.8)',
+      boxShadow: 'var(--shadow-modal)',
       overflow: 'hidden',
     }}>
       {children}
@@ -160,8 +161,8 @@ function LocationInput({ value, onChange }) {
         <input
           value={query}
           onChange={handleChange}
-          onFocus={e => { e.target.style.borderColor = 'rgba(99,102,241,0.5)'; update(); setOpen(true) }}
-          onBlur={e => { e.target.style.borderColor = 'rgba(99,102,241,0.2)'; setTimeout(() => { setSuggestions([]); setOpen(false); close() }, 200) }}
+          onFocus={e => { e.target.style.borderColor = 'var(--input-focus-border)'; update(); setOpen(true) }}
+          onBlur={e => { e.target.style.borderColor = 'var(--input-border)'; setTimeout(() => { setSuggestions([]); setOpen(false); close() }, 200) }}
           placeholder="Search city, area or address..."
           style={{ ...inputStyle, paddingLeft: '36px', paddingRight: '40px' }}
           autoComplete="off"
@@ -182,8 +183,8 @@ function LocationInput({ value, onChange }) {
         {suggestions.map((s) => (
           <button key={s.place_id} type="button" onMouseDown={() => handleSelect(s)}
             className="w-full text-left px-4 py-2.5 text-xs flex items-start gap-2 transition"
-            style={{ color: 'rgba(226,232,240,0.85)', borderBottom: '1px solid rgba(99,102,241,0.08)' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
+            style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-tertiary)' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = ''}>
             <MapPin size={11} className="flex-shrink-0 mt-0.5" style={{ color: '#818cf8' }} />
             <span style={{ lineHeight: '1.5' }}>{s.display_name}</span>
@@ -252,8 +253,8 @@ function SkillsInput({ skills, onChange }) {
           placeholder="Type a skill and press Enter, or pick from suggestions..."
           style={inputStyle}
           autoComplete="off"
-          onFocusCapture={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'}
-          onBlurCapture={e => e.target.style.borderColor = 'rgba(99,102,241,0.2)'}
+          onFocusCapture={e => e.target.style.borderColor = 'var(--input-focus-border)'}
+          onBlurCapture={e => e.target.style.borderColor = 'var(--input-border)'}
         />
         {inputVal && (
           <button type="button" onMouseDown={() => addSkill(inputVal)}
@@ -456,7 +457,7 @@ export default function Settings() {
         )}
       </AnimatePresence>
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
-      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.80)' }} />
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'var(--bg-overlay)' }} />
       <div style={{ position: 'relative', zIndex: 60 }}>
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       </div>
@@ -488,10 +489,10 @@ export default function Settings() {
             <div className="h-0.5 -mx-5 sm:-mx-6 -mt-5 sm:-mt-6 mb-0 rounded-t-2xl"
               style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
             <div className="h-20 -mx-5 sm:-mx-6 mb-5 relative overflow-hidden"
-              style={{ background: bannerPreview ? `url(${bannerPreview}) center/cover no-repeat` : 'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.15))' }}>
+              style={{ background: bannerPreview ? `url(${bannerPreview}) center/cover no-repeat` : 'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1))' }}>
               {!bannerPreview && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span style={{ color: 'rgba(148,163,184,0.3)', fontSize: '0.7rem', fontFamily: 'monospace' }}>No banner set</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontFamily: 'monospace' }}>No banner set</span>
                 </div>
               )}
             </div>
@@ -535,11 +536,11 @@ export default function Settings() {
                 <ImageIcon size={14} /> Banner Image
               </h2>
               <div className="relative w-full h-32 rounded-xl overflow-hidden mb-4 cursor-pointer"
-                style={{ background: bannerPreview ? `url(${bannerPreview}) center/cover no-repeat` : 'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1))', border: "1px solid var(--border-primary)" }}
+                style={{ background: bannerPreview ? `url(${bannerPreview}) center/cover no-repeat` : 'linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.08))', border: "1px solid var(--border-primary)" }}
                 onClick={() => bannerPreview && setZoomedBanner(true)}>
-                {!bannerPreview && <div className="absolute inset-0 flex flex-col items-center justify-center gap-1"><ImageIcon size={24} style={{ color: 'rgba(148,163,184,0.3)' }} /><span style={{ color: "var(--text-muted)", fontSize: '0.75rem' }}>No banner uploaded</span></div>}
-                {bannerPreview && <div className="absolute inset-0 opacity-0 hover:opacity-100 transition flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)' }}><ZoomIn size={22} className="text-theme-primary" /></div>}
-                {uploadingBanner && <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}><Loader2 size={22} className="animate-spin text-theme-primary" /></div>}
+                {!bannerPreview && <div className="absolute inset-0 flex flex-col items-center justify-center gap-1"><ImageIcon size={24} style={{ color: 'var(--text-muted)' }} /><span style={{ color: "var(--text-muted)", fontSize: '0.75rem' }}>No banner uploaded</span></div>}
+                {bannerPreview && <div className="absolute inset-0 opacity-0 hover:opacity-100 transition flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.3)' }}><ZoomIn size={22} className="text-theme-primary" /></div>}
+                {uploadingBanner && <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}><Loader2 size={22} className="animate-spin text-theme-primary" /></div>}
               </div>
               <div className="flex gap-2 flex-wrap">
                 <motion.button type="button" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => bannerInputRef.current?.click()} disabled={uploadingBanner}
@@ -568,11 +569,11 @@ export default function Settings() {
                 <div className="relative flex-shrink-0">
                   <motion.div whileHover={{ scale: 1.05 }} className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center cursor-pointer"
                     style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 0 24px rgba(99,102,241,0.4)' }} onClick={() => preview && setZoomed(true)}>
-                    {preview ? (<><img src={preview} alt="Profile" className="w-full h-full object-cover" /><div className="absolute inset-0 rounded-full opacity-0 hover:opacity-100 transition flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}><ZoomIn size={20} className="text-theme-primary" /></div></>) : (<span className="text-theme-primary text-3xl font-bold">{user?.name?.charAt(0).toUpperCase()}</span>)}
+                    {preview ? (<><img src={preview} alt="Profile" className="w-full h-full object-cover" /><div className="absolute inset-0 rounded-full opacity-0 hover:opacity-100 transition flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.35)' }}><ZoomIn size={20} className="text-theme-primary" /></div></>) : (<span className="text-theme-primary text-3xl font-bold">{user?.name?.charAt(0).toUpperCase()}</span>)}
                   </motion.div>
                   <motion.button type="button" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} onClick={() => !uploading && fileInputRef.current?.click()} disabled={uploading}
                     className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center text-theme-primary shadow-lg"
-                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: '2px solid rgba(10,8,30,0.9)' }}>
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: '2px solid var(--bg-card)' }}>
                     {uploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
                   </motion.button>
                 </div>
@@ -619,11 +620,11 @@ export default function Settings() {
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Email</label>
-                  <div className="px-4 py-2.5 rounded-xl text-sm" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: "var(--text-secondary)" }}>{user?.email}</div>
+                  <div className="px-4 py-2.5 rounded-xl text-sm" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-light)', color: "var(--text-secondary)" }}>{user?.email}</div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Role</label>
-                  <div className="px-4 py-2.5 rounded-xl text-sm capitalize flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: "var(--text-secondary)" }}>
+                  <div className="px-4 py-2.5 rounded-xl text-sm capitalize flex items-center gap-2" style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-light)', color: "var(--text-secondary)" }}>
                     <Shield size={13} style={{ color: user?.role === 'mentor' ? '#c4b5fd' : '#93c5fd' }} />{user?.role}
                   </div>
                 </div>
@@ -830,11 +831,11 @@ export default function Settings() {
         {zoomed && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={() => setZoomed(false)}>
+            style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }} onClick={() => setZoomed(false)}>
             <motion.div initial={{ scale: 0.7 }} animate={{ scale: 1 }} exit={{ scale: 0.7 }} className="relative w-full max-w-sm" onClick={e => e.stopPropagation()}>
               <img src={preview} alt="Profile" className="w-full rounded-2xl shadow-2xl object-cover" style={{ boxShadow: '0 0 40px rgba(99,102,241,0.4)' }} />
               <button onClick={() => setZoomed(false)} className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center text-theme-primary"
-                style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)' }}><X size={16} /></button>
+                style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.2)' }}><X size={16} /></button>
             </motion.div>
           </motion.div>
         )}
@@ -845,11 +846,11 @@ export default function Settings() {
         {zoomedBanner && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }} onClick={() => setZoomedBanner(false)}>
+            style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }} onClick={() => setZoomedBanner(false)}>
             <motion.div initial={{ scale: 0.85 }} animate={{ scale: 1 }} exit={{ scale: 0.85 }} className="relative w-full max-w-2xl" onClick={e => e.stopPropagation()}>
               <img src={bannerPreview} alt="Banner" className="w-full rounded-2xl shadow-2xl object-cover" style={{ boxShadow: '0 0 40px rgba(99,102,241,0.4)', maxHeight: '60vh' }} />
               <button onClick={() => setZoomedBanner(false)} className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center text-theme-primary"
-                style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)' }}><X size={16} /></button>
+                style={{ background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.2)' }}><X size={16} /></button>
             </motion.div>
           </motion.div>
         )}
