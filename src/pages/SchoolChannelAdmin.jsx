@@ -33,10 +33,10 @@ export default function SchoolChannelAdmin() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/school-channel/all`, {
+      const response = await axios.get(`${API_URL}/api/school-channel/admin/all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setChannels(response.data.data.channels);
+      setChannels(response.data.channels || []);
     } catch (error) {
       console.error('Error fetching channels:', error);
       setError(error.response?.data?.error?.message || 'Failed to fetch channels');
@@ -60,7 +60,7 @@ export default function SchoolChannelAdmin() {
       const token = localStorage.getItem('token');
       
       const response = await axios.post(
-        `${API_URL}/api/school-channel/create`,
+        `${API_URL}/api/school-channel/admin/create`,
         formData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
