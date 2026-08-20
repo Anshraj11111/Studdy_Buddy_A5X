@@ -97,37 +97,6 @@ export default function Sidebar({ isOpen = false, onClose }) {
           })}
         </nav>
 
-        {/* Upgrade Card */}
-        <div
-          className="mx-3 mb-4 p-5 rounded-lg text-center hidden lg:block"
-          style={{
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-primary)'
-          }}
-        >
-          <div
-            className="w-12 h-12 mx-auto mb-3 rounded-lg flex items-center justify-center"
-            style={{ 
-              background: '#6366f1'
-            }}
-          >
-            <Sparkles size={20} className="text-white" />
-          </div>
-          <p className="text-theme-primary text-sm font-bold mb-1">Upgrade to Pro</p>
-          <p className="text-theme-tertiary text-xs mb-3 leading-snug">
-            Unlock premium features and grow faster.
-          </p>
-          <button
-            className="w-full py-2 rounded-lg text-sm font-semibold text-white transition-colors"
-            style={{
-              background: '#6366f1',
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#5558e3'}
-            onMouseLeave={(e) => e.target.style.background = '#6366f1'}
-          >
-            Upgrade Now
-          </button>
-        </div>
       </aside>
     </>
   )

@@ -85,11 +85,17 @@ export default function Doubts() {
   }, [page, search, topic, user])
 
   useEffect(() => {
-    if (statusFilter === "all") setDoubts(allDoubts)
-    else if (statusFilter === "unsolved") setDoubts(allDoubts.filter(d => d.status === "open"))
-    else if (statusFilter === "solved") setDoubts(allDoubts.filter(d => d.status === "resolved"))
-    else if (statusFilter === "matched") setDoubts(allDoubts.filter(d => d.status === "matched"))
-    else if (statusFilter === "trending") setDoubts([...allDoubts].sort((a, b) => (b.replies?.length || 0) - (a.replies?.length || 0)))
+    if (statusFilter === "all") {
+      setDoubts(allDoubts)
+    } else if (statusFilter === "unsolved") {
+      setDoubts(allDoubts.filter(d => d.status === "open"))
+    } else if (statusFilter === "solved") {
+      setDoubts(allDoubts.filter(d => d.status === "resolved"))
+    } else if (statusFilter === "matched") {
+      setDoubts(allDoubts.filter(d => d.status === "matched"))
+    } else if (statusFilter === "trending") {
+      setDoubts([...allDoubts].sort((a, b) => (b.replies?.length || 0) - (a.replies?.length || 0)))
+    }
   }, [statusFilter, allDoubts])
 
   const handleDelete = async (id, e) => {
