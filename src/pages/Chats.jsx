@@ -50,6 +50,10 @@ export default function Chats() {
   useEffect(() => {
     const socket = getSocket()
     if (!socket) return
+    
+    // Request latest online users when component mounts
+    socket.emit('getOnlineUsers')
+    
     setupOnlineTracking((updatedSet) => {
       setOnlineUsers(new Set(updatedSet))
     })
