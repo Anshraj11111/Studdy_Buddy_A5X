@@ -15,7 +15,12 @@ console.log('🔌 Socket URL:', SOCKET_URL)
 let socket = null
 
 export const initSocket = (token, userId, userName = '', userImage = '', userRole = '') => {
-  if (socket?.connected) return socket
+  if (socket?.connected) {
+    console.log('✅ Socket already connected, userId:', userId)
+    return socket
+  }
+
+  console.log('🔌 Initializing socket with userId:', userId)
 
   // In production, get fresh socket URL from load balancer
   const socketUrl = isLocalDev ? SOCKET_URL : loadBalancer.getSocketUrl()
@@ -36,6 +41,7 @@ export const initSocket = (token, userId, userName = '', userImage = '', userRol
     console.log('✅ Socket connected:', socket.id)
     console.log('✅ User ID:', userId)
     console.log('✅ Socket Server:', socketUrl)
+    console.log('✅ Auth data sent:', { token: '***', userId, userName, userImage, userRole })
   })
 
   // Handle reconnection with load balancing
@@ -50,8 +56,19 @@ export const initSocket = (token, userId, userName = '', userImage = '', userRol
 
   // Populate global onlineUsers set on first connect so late-mounting components get it
   socket.on('onlineUsers', ({ userIds }) => {
+    console.log('📋 Received online users list from server:', userIds)
     onlineUsers.clear()
     userIds.forEach(id => onlineUsers.add(String(id)))
+  })
+
+  // Debug: Listen for userOnline broadcasts
+  socket.on('userOnline', ({ userId }) => {
+    console.log('🟢 User came online:', userId)
+  })
+
+  // Debug: Listen for userOffline broadcasts
+  socket.on('userOffline', ({ userId }) => {
+    console.log('🔴 User went offline:', userId)
   })
 
   return socket
