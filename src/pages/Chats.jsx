@@ -49,12 +49,18 @@ export default function Chats() {
   // Setup real-time online status tracking
   useEffect(() => {
     const socket = getSocket()
-    if (!socket) return
+    if (!socket) {
+      console.log('⚠️ No socket found in Chats page')
+      return
+    }
+    
+    console.log('🔌 Setting up online tracking in Chats page')
     
     // Request latest online users when component mounts
     socket.emit('getOnlineUsers')
     
     setupOnlineTracking((updatedSet) => {
+      console.log('📊 Online users updated:', Array.from(updatedSet))
       setOnlineUsers(new Set(updatedSet))
     })
   }, [])
@@ -114,6 +120,9 @@ export default function Chats() {
               const other = getOtherUser(room)
               const otherId = String(other?._id || other || '')
               const isOnline = onlineUsers.has(otherId)
+              
+              console.log(`👤 Checking user: ${other?.name}, ID: ${otherId}, Online: ${isOnline}`)
+              
               return (
                 <motion.div key={room._id}
                   initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
