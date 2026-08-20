@@ -241,19 +241,13 @@ export default function Doubts() {
                       {doubt.description}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                      {doubt.status === "matched" ? (
+                      {doubt.status === "matched" && (
                         <button onClick={e => handleViewMatch(doubt, e)}
                           className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-all hover:opacity-80"
                           style={{ background: "#dbeafe", color: "#3b82f6" }}>
                           <Users size={12} />matched • tap to view
                         </button>
-                      ) : <StatusBadge status={doubt.status} />}
-                      {doubt.tags?.slice(0, 2).map(tag => (
-                        <span key={tag} className="px-2.5 py-1 text-xs rounded-md"
-                          style={{ background: "var(--bg-primary)", color: "var(--text-tertiary)", border: "1px solid var(--border-primary)" }}>
-                          {tag}
-                        </span>
-                      ))}
+                      )}
                     </div>
                   </Link>
 
