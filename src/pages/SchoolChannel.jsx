@@ -335,7 +335,7 @@ export default function SchoolChannel() {
                       color: isDark ? '#86efac' : '#16a34a'
                     }}>
                     <Users size={14} />
-                    {channel.stats.totalMembers} members
+                    {members.length} members
                   </span>
                 </div>
                 {channel.description && (
