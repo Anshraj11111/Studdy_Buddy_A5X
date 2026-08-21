@@ -5,7 +5,8 @@ import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import Navbar from '../components/Navbar'
-import { Download, Search, Upload, X, FileText, Film, Image, Loader2, ExternalLink, Trash2, Plus, BookOpen, Youtube, Link, Play, Maximize, Minimize, ListVideo, ChevronLeft, ChevronRight, ImageIcon, GripVertical } from 'lucide-react'
+import EditResourceModal from '../components/EditResourceModal'
+import { Download, Search, Upload, X, FileText, Film, Image, Loader2, ExternalLink, Trash2, Plus, BookOpen, Youtube, Link, Play, Maximize, Minimize, ListVideo, ChevronLeft, ChevronRight, ImageIcon, GripVertical, Edit } from 'lucide-react'
 
 const TOPICS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
 
@@ -752,6 +753,7 @@ export default function Resources() {
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState(null)
   const [selectedPlaylist, setSelectedPlaylist] = useState(null) // { playlist, startIndex }
+  const [editingResource, setEditingResource] = useState(null) // Resource being edited
 
   const fetchResources = async () => {
     try {
@@ -799,8 +801,14 @@ export default function Resources() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this resource?')) return
-    try { await resourceAPI.delete(id); setResources(prev => prev.filter(r => r._id !== id)) }
-    catch { }
+    try {
+      await resourceAPI.delete(id)
+      setResources(prev => prev.filter(r => r._id !== id))
+      alert('Resource deleted successfully!')
+    } catch (error) {
+      console.error('Delete error:', error)
+      alert(error.response?.data?.error?.message || 'Failed to delete resource')
+    }
   }
 
   const handleDeletePlaylist = async (id) => {
@@ -1051,6 +1059,25 @@ export default function Resources() {
                           <Youtube size={12} style={{ color: '#ef4444' }} />
                           <span className="text-white text-[10px] font-semibold">Video</span>
                         </div>
+                        {/* Edit/Delete buttons for mentor */}
+                        {user?.role === 'mentor' && (
+                          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingResource(r); }}
+                              className="p-1.5 rounded-lg backdrop-blur-sm hover:scale-110 transition-transform shadow-lg"
+                              style={{ background: 'rgba(99,102,241,0.95)', color: 'white' }}
+                              title="Edit resource">
+                              <Edit size={14} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(r._id); }}
+                              className="p-1.5 rounded-lg backdrop-blur-sm hover:scale-110 transition-transform shadow-lg"
+                              style={{ background: 'rgba(239,68,68,0.95)', color: 'white' }}
+                              title="Delete resource">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex items-center justify-center" style={{ aspectRatio: '16/9', background: r.fileType === 'pdf' ? '#fef2f2' : '#f5f3ff' }}>
@@ -1088,9 +1115,18 @@ export default function Resources() {
                         <span className="flex items-center gap-1.5 text-xs text-theme-tertiary"><Download size={12} /> {r.downloads || 0}</span>
                         <div className="flex items-center gap-2">
                           {user?.role === 'mentor' && String(r.uploadedBy?._id) === String(user?._id) && (
-                            <button onClick={() => handleDelete(r._id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10" style={{ color: '#ef4444' }}>
-                              <Trash2 size={14} />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => setEditingResource(r)}
+                                className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                                style={{ color: '#6366f1' }}
+                                title="Edit resource">
+                                <Edit size={14} />
+                              </button>
+                              <button onClick={() => handleDelete(r._id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10" style={{ color: '#ef4444' }} title="Delete resource">
+                                <Trash2 size={14} />
+                              </button>
+                            </>
                           )}
                           <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                             onClick={() => handleDownload(r)}
@@ -1131,6 +1167,7 @@ export default function Resources() {
         {showCreatePlaylist && <CreatePlaylistModal onClose={() => setShowCreatePlaylist(false)} onCreated={() => { setTab('playlists'); fetchPlaylists() }} />}
         {selectedVideo && <YouTubeModal resource={selectedVideo} onClose={() => setSelectedVideo(null)} />}
         {selectedPlaylist && <PlaylistVideoModal playlist={selectedPlaylist.playlist} initialIndex={selectedPlaylist.startIndex} onClose={() => setSelectedPlaylist(null)} />}
+        {editingResource && <EditResourceModal resource={editingResource} onClose={() => setEditingResource(null)} onUpdated={() => { fetchResources(); setEditingResource(null) }} />}
       </AnimatePresence>
     </div>
   )

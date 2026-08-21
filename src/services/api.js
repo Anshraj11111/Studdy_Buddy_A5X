@@ -185,6 +185,7 @@ export const resourceAPI = {
   getByTopic: (topic, page = 1) => api.get(`/resources/topic/${topic}?page=${page}`),
   download: (id) => api.post(`/resources/${id}/download`),
   getVideoToken: (id) => api.post(`/resources/${id}/token`),
+  update: (id, data) => api.put(`/resources/${id}`, data),
   delete: (id) => api.delete(`/resources/${id}`),
 };
 
