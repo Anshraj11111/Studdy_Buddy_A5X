@@ -4,7 +4,6 @@ import { resourceAPI, playlistAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
-import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 import { Download, Search, Upload, X, FileText, Film, Image, Loader2, ExternalLink, Trash2, Plus, BookOpen, Youtube, Link, Play, Maximize, Minimize, ListVideo, ChevronLeft, ChevronRight, ImageIcon, GripVertical } from 'lucide-react'
 
@@ -753,7 +752,6 @@ export default function Resources() {
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState(null)
   const [selectedPlaylist, setSelectedPlaylist] = useState(null) // { playlist, startIndex }
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const fetchResources = async () => {
     try {
@@ -820,13 +818,10 @@ export default function Resources() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
+    <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <Navbar />
 
-      <div className="relative flex-1 lg:ml-[240px] mt-16 overflow-x-hidden" style={{ background: 'var(--bg-primary)' }}>
+      <div className="relative flex-1 mt-16 overflow-x-hidden max-w-7xl mx-auto w-full" style={{ background: 'var(--bg-primary)' }}>
 
         {/* ── Hero Header ── */}
         <div className="px-4 sm:px-6 lg:px-8 py-6" style={{ borderBottom: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>

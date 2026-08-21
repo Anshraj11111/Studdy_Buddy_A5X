@@ -7,7 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 let socket;
 
 // WhatsApp-style emoji reactions
@@ -380,7 +380,7 @@ export default function SchoolChannel() {
                   </p>
                 </div>
               ) : (
-                messages.map((message) => (
+                messages.filter(message => message && message.sender).map((message) => (
                   <motion.div
                     key={message._id}
                     initial={{ opacity: 0, y: 10 }}
@@ -390,17 +390,17 @@ export default function SchoolChannel() {
                     
                     {/* Avatar */}
                     <div className="flex-shrink-0">
-                      {message.sender.profileImage ? (
+                      {message.sender?.profileImage ? (
                         <img
                           src={message.sender.profileImage}
-                          alt={message.sender.name}
+                          alt={message.sender.name || 'User'}
                           className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full flex items-center justify-center"
                           style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)' }}>
                           <span className="text-white font-semibold">
-                            {message.sender.name[0].toUpperCase()}
+                            {message.sender?.name?.[0]?.toUpperCase() || 'U'}
                           </span>
                         </div>
                       )}
@@ -590,7 +590,7 @@ export default function SchoolChannel() {
               </h3>
               
               <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                {members.map((member) => (
+                {members.filter(member => member !== null).map((member) => (
                   <div key={member._id} className="flex items-center gap-3">
                     {member.profileImage ? (
                       <img
@@ -602,7 +602,7 @@ export default function SchoolChannel() {
                       <div className="w-10 h-10 rounded-full flex items-center justify-center"
                         style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)' }}>
                         <span className="text-white font-semibold">
-                          {member.name[0].toUpperCase()}
+                          {member.name?.[0]?.toUpperCase() || 'U'}
                         </span>
                       </div>
                     )}
@@ -613,7 +613,7 @@ export default function SchoolChannel() {
                       </p>
                       <p className="text-xs"
                         style={{ color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
-                        {member.role === 'mentor' ? 'Admin' : 'Student'} • {member.xp} XP
+                        {member.role === 'mentor' ? 'Admin' : 'Student'} • {member.xp || 0} XP
                       </p>
                     </div>
                   </div>

@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { roomAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
-import { MessageSquare, Video, Users, Trash2, MessageCircle, Search, Loader2 } from 'lucide-react'
-import Sidebar from '../components/Sidebar'
+import { MessageSquare, Video, Users, Trash2, Search, Loader2 } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { setupOnlineTracking, isUserOnline, getSocket } from '../services/socket'
 
@@ -12,7 +11,6 @@ export default function Chats() {
   const [rooms, setRooms] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [onlineUsers, setOnlineUsers] = useState(new Set())
   const { user } = useAuthStore()
 
@@ -79,14 +77,10 @@ export default function Chats() {
   const STATUS_COLORS = { active: '#34d399', completed: '#818cf8', pending: '#fbbf24' }
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+    <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <Navbar />
 
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
-
-      <div className="relative flex-1 lg:ml-[240px] mt-16 px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden"
+      <div className="flex-1 mt-16 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto w-full"
         style={{ background: 'var(--bg-primary)' }}>
 
         {/* Header */}

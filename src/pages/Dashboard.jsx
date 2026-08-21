@@ -4,7 +4,6 @@ import { useAuthStore } from '../store/authStore'
 import { doubtAPI, communityAPI, roomAPI } from '../services/api'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
-import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 import { Link, useNavigate } from 'react-router-dom'
 import {
@@ -46,7 +45,6 @@ export default function Dashboard() {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [matchedRoom, setMatchedRoom] = useState(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -107,17 +105,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+    <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       {/* Navbar */}
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-
-      {/* Sidebar */}
-      <div style={{ position: "relative", zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
+      <Navbar />
 
       {/* Main content */}
-      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-4 py-3 sm:py-5 space-y-3 sm:space-y-4 overflow-x-hidden" style={{ zIndex: 5 }}>
+      <div className="relative flex-1 mt-16 px-3 sm:px-4 py-3 sm:py-5 space-y-3 sm:space-y-4 overflow-x-hidden max-w-7xl mx-auto w-full" style={{ zIndex: 5 }}>
 
         {/* HERO */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

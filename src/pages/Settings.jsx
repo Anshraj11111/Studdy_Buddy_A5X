@@ -9,7 +9,6 @@ import {
   Navigation,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
-import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import { followAPI } from '../services/api'
@@ -338,7 +337,6 @@ export default function Settings() {
   const [zoomedBanner, setZoomedBanner] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadingBanner, setUploadingBanner] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [counts, setCounts] = useState({ followersCount: 0, followingCount: 0, connectionsCount: 0 })
 
   useEffect(() => {
@@ -396,8 +394,8 @@ export default function Settings() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ position: 'relative' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+    <div className="flex flex-col min-h-screen" style={{ position: 'relative' }}>
+      <Navbar />
 
       {/* ── Toast Notifications ──────────────────────────── */}
       <AnimatePresence>
@@ -458,11 +456,8 @@ export default function Settings() {
       </AnimatePresence>
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'var(--bg-overlay)' }} />
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
 
-      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-5 py-5 overflow-x-hidden" style={{ zIndex: 5 }}>
+      <div className="relative flex-1 mt-16 px-3 sm:px-5 py-5 overflow-x-hidden max-w-7xl mx-auto w-full" style={{ zIndex: 5 }}>
         <div className="max-w-2xl mx-auto">
 
           {/* Header */}

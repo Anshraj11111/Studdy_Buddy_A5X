@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { doubtAPI } from '../services/api'
 import Navbar from '../components/Navbar'
-import Sidebar from '../components/Sidebar'
 import { Send, X, FileQuestion, Tag, BookOpen, AlignLeft, Loader2 } from 'lucide-react'
 
 const TOPICS = ['Robotics', 'Programming', 'Electronics', 'Mechanics', 'AI/ML']
@@ -23,7 +22,6 @@ export default function PostDoubt() {
   const [formData, setFormData] = useState({ title: '', description: '', topic: 'Robotics', tags: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const navigate = useNavigate()
 
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -48,15 +46,12 @@ export default function PostDoubt() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ position: 'relative' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+    <div className="flex flex-col min-h-screen" style={{ position: 'relative' }}>
+      <Navbar />
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: "var(--bg-overlay)" }} />
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
 
-      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-5 py-8 flex items-start justify-center" style={{ zIndex: 5 }}>
+      <div className="relative flex-1 mt-16 px-3 sm:px-5 py-8 flex items-start justify-center max-w-7xl mx-auto w-full" style={{ zIndex: 5 }}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl">
 
           {/* Header */}

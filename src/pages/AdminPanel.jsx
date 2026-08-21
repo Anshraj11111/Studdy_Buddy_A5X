@@ -663,7 +663,7 @@ function SchoolChannelManagement({ showToast }) {
                                   </div>
                                   <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: 11, color: "var(--text-tertiary)" }}>
                                     <span>XP: {member.xp || 0}</span>
-                                    <span>â€¢</span>
+                                    <span>•</span>
                                     <span>Joined {new Date(member.createdAt).toLocaleDateString()}</span>
                                   </div>
                                 </div>

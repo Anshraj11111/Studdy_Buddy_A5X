@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { rewardsAPI } from '../services/api'
 import Navbar from '../components/Navbar'
-import Sidebar from '../components/Sidebar'
 import {
   Zap, Flame, Trophy, Star, TrendingUp, Gift, Crown,
   Target, Activity, Coins, ChevronRight, Award, BarChart2,
@@ -130,7 +129,6 @@ export default function Rewards() {
   const [lb, setLb]             = useState([])
   const [loading, setLoading]   = useState(true)
   const [tab, setTab]           = useState('overview') // overview | leaderboard | history
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -169,11 +167,10 @@ export default function Rewards() {
   const nextMilestone = STREAK_MILESTONES.find(m => m > (streak?.current || 0))
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <Navbar />
 
-      <div className="lg:ml-[240px] mt-16 px-4 py-6 max-w-6xl mx-auto space-y-6">
+      <div className="mt-16 px-4 py-6 max-w-6xl mx-auto w-full space-y-6">
 
         {/* ── HEADER ─────────────────────────────────────────────────────── */}
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>

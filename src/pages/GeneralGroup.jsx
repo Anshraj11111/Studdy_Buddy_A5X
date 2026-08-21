@@ -7,7 +7,6 @@ import {
   Users, Send, LogIn, LogOut, Trash2, X,
   Crown, GraduationCap, Info, Smile,
 } from 'lucide-react'
-import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -279,7 +278,6 @@ export default function GeneralGroup() {
   const [sending,     setSending]     = useState(false)
   const [typingUsers, setTypingUsers] = useState([])
   const [showMembers, setShowMembers] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [error,       setError]       = useState('')
   const [showEmoji,   setShowEmoji]   = useState(false)
 
@@ -444,22 +442,17 @@ export default function GeneralGroup() {
   const grouped = groupByDate(messages)
 
   return (
-    <div className="flex min-h-screen" style={{ position: 'relative' }}>
+    <div className="flex flex-col min-h-screen" style={{ position: 'relative' }}>
       {/* Navbar */}
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <Navbar />
 
       {/* Fixed background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(5,3,20,0.85)' }} />
 
-      {/* Sidebar */}
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
-
-      {/* ── Main content — offset by sidebar on desktop ── */}
+      {/* ── Main content ── */}
       <div
-        className="relative flex-1 lg:ml-[240px] mt-16"
+        className="relative flex-1 mt-16 max-w-7xl mx-auto w-full"
         style={{ zIndex: 5, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', overflow: 'hidden' }}
       >
 

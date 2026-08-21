@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { doubtAPI, roomAPI } from "../services/api"
-import Sidebar from "../components/Sidebar"
 import Navbar from "../components/Navbar"
 import GlowingQuestionMark from "../components/GlowingQuestionMark"
 import { Link, useNavigate } from "react-router-dom"
@@ -50,7 +49,6 @@ export default function Doubts() {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [matchedRoom, setMatchedRoom] = useState(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const limit = 10
@@ -137,13 +135,10 @@ export default function Doubts() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      <div style={{ position: "relative", zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
+    <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <Navbar />
 
-      <div className="relative flex-1 lg:ml-[240px] mt-16 px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden"
+      <div className="flex-1 mt-16 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto w-full"
         style={{ background: 'var(--bg-primary)' }}>
 
         {/* Header */}

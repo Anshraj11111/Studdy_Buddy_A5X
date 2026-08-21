@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Star, MessageCircle, Video, Loader2, AlertCircle, Search, UserCircle2, Clock, Award, Zap } from 'lucide-react'
 import { mentorAPI, roomAPI } from '../services/api'
-import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 import { setupOnlineTracking, getSocket } from '../services/socket'
 
@@ -34,7 +33,6 @@ export default function Mentors() {
   const [connecting, setConnecting] = useState(null)
   const [selectedTopic, setSelectedTopic] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [onlineUsers, setOnlineUsers] = useState(new Set())
 
   useEffect(() => {
@@ -88,16 +86,11 @@ export default function Mentors() {
   })
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-
-      {/* Sidebar */}
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
+    <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <Navbar />
 
       {/* Main */}
-      <div className="relative flex-1 lg:ml-[240px] mt-16 px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden"
+      <div className="relative flex-1 mt-16 px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden max-w-7xl mx-auto w-full"
         style={{ background: 'var(--bg-primary)' }}>
 
         {/* Header */}

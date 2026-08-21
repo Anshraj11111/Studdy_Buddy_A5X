@@ -4,7 +4,6 @@ import { useAuthStore } from '../store/authStore'
 import { broadcastAPI } from '../services/api'
 import { getSocket } from '../services/socket'
 import { Send, Trash2, Users, X, Smile, Info, Zap, Cpu, Radio, Leaf, ArrowLeft, Copy, Check, Save, RefreshCw } from 'lucide-react'
-import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 
 // ── Channel config ────────────────────────────────────────────────────────────
@@ -319,7 +318,6 @@ export default function Broadcast() {
   const [input, setInput]             = useState('')
   const [loading, setLoading]         = useState(true)
   const [typingUsers, setTypingUsers] = useState([])
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [error, setError]             = useState('')
   const [currentUserId, setCurrentUserId] = useState(null)    // Track current user ID
   const [preventBackendOverride, setPreventBackendOverride] = useState(false) // Prevent backend from overriding temp data
@@ -874,12 +872,9 @@ export default function Broadcast() {
         `}
       </style>
       
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
+      <Navbar />
 
-      <div className="relative flex-1 lg:ml-[240px] mt-16" style={{ zIndex: 5, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', overflow: 'hidden', background: 'var(--bg-primary)' }}>
+      <div className="relative flex-1 mt-16 max-w-7xl mx-auto w-full" style={{ zIndex: 5, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 64px)', overflow: 'hidden', background: 'var(--bg-primary)' }}>
 
         {/* Error toast */}
         <AnimatePresence>

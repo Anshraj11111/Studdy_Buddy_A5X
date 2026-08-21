@@ -6,7 +6,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export default function SchoolChannelAdmin() {
   const { theme } = useThemeStore();
@@ -33,7 +33,7 @@ export default function SchoolChannelAdmin() {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/school-channel/admin/all`, {
+      const response = await axios.get(`${API_URL}/school-channel/admin/all`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setChannels(response.data.channels || []);

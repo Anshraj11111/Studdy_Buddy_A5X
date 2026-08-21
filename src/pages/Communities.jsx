@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { feedAPI, connectionAPI, followAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
-import Sidebar from '../components/Sidebar'
 import Navbar from '../components/Navbar'
 import { getSocket } from '../services/socket'
 import {
@@ -1487,18 +1486,13 @@ function TrendingSidebar() {
 export default function Communities() {
   const { user } = useAuthStore()
   const [tab, setTab] = useState('feed')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+    <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <Navbar />
 
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
-
-      <div className="flex-1 lg:ml-[240px] mt-16">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-5 pb-20">
+      <div className="flex-1 mt-16 max-w-7xl mx-auto w-full">
+        <div className="px-3 sm:px-4 py-5 pb-20">
 
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-5">

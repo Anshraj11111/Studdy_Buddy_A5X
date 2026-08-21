@@ -5,7 +5,6 @@ import { doubtAPI, roomAPI } from "../services/api"
 import { useAuthStore } from "../store/authStore"
 import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard } from "lucide-react"
 import Navbar from "../components/Navbar"
-import Sidebar from "../components/Sidebar"
 
 export default function MentorDashboard() {
   const { user } = useAuthStore()
@@ -17,7 +16,6 @@ export default function MentorDashboard() {
   const [editingReply, setEditingReply] = useState(null)
   const [replyText, setReplyText] = useState("")
   const [stats, setStats] = useState({ totalDoubts: 0, pendingReplies: 0, activeChats: 0 })
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -78,14 +76,14 @@ export default function MentorDashboard() {
   ]
 
   return (
-    <div className="flex min-h-screen" style={{ position: "relative" }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+    <div className="flex flex-col min-h-screen" style={{ position: "relative" }}>
+      <Navbar />
 
       {/* Background */}
       <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
       <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "var(--bg-overlay)" }} />
 
-      <div className="relative flex-1 mt-16 px-3 sm:px-5 py-5 overflow-x-hidden" style={{ zIndex: 5 }}>
+      <div className="relative flex-1 mt-16 px-3 sm:px-5 py-5 overflow-x-hidden max-w-7xl mx-auto w-full" style={{ zIndex: 5 }}>
         <div className="max-w-5xl mx-auto">
 
           {/* Header */}
@@ -192,7 +190,7 @@ export default function MentorDashboard() {
                                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                     <User size={11} style={{ color: "var(--text-tertiary)" }} />
                                     <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{doubt.userId?.name || "Unknown"}</span>
-                                    <span style={{ color: "rgba(148,163,184,0.3)" }}>·</span>
+                                    <span style={{ color: "rgba(148,163,184,0.3)" }}>ï¿½</span>
                                     <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>{new Date(doubt.createdAt).toLocaleDateString()}</span>
                                   </div>
                                 </div>

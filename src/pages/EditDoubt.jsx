@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { doubtAPI } from '../services/api'
 import Navbar from '../components/Navbar'
-import Sidebar from '../components/Sidebar'
 import { Save, X, Edit3, Tag, BookOpen, AlignLeft, Loader2, FileQuestion } from 'lucide-react'
 
 const TOPICS = ['Robotics', 'Programming', 'Electronics', 'Mechanics', 'AI/ML']
@@ -26,7 +25,6 @@ export default function EditDoubt() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const fetchDoubt = async () => {
@@ -50,15 +48,12 @@ export default function EditDoubt() {
   }
 
   return (
-    <div className="flex min-h-screen" style={{ position: 'relative' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+    <div className="flex flex-col min-h-screen" style={{ position: 'relative' }}>
+      <Navbar />
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }} />
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: "var(--bg-overlay)" }} />
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
 
-      <div className="relative flex-1 lg:ml-[240px] mt-16 px-3 sm:px-5 py-8 flex items-start justify-center" style={{ zIndex: 5 }}>
+      <div className="relative flex-1 mt-16 px-3 sm:px-5 py-8 flex items-start justify-center max-w-7xl mx-auto w-full" style={{ zIndex: 5 }}>
         {loading ? (
           <div className="flex flex-col items-center py-24 gap-3">
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>

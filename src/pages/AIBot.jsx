@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, Send, Loader2, Sparkles, Zap, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import Navbar from '../components/Navbar'
-import Sidebar from '../components/Sidebar'
 import { aiAPI } from '../services/api'
 
 export default function AIBot() {
@@ -16,7 +15,6 @@ export default function AIBot() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -49,18 +47,14 @@ export default function AIBot() {
 
   return (
     <div className="flex flex-col" style={{ height: '100vh', position: 'relative' }}>
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <Navbar />
 
       {/* Background */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 0, backgroundImage: 'url(/image.png)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
       <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: "var(--bg-overlay)" }} />
 
-      <div style={{ position: 'relative', zIndex: 60 }}>
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      </div>
-
       {/* Main chat area */}
-      <div className="relative flex flex-col flex-1 lg:ml-[240px] mt-16 overflow-hidden" style={{ zIndex: 5 }}>
+      <div className="relative flex flex-col flex-1 mt-16 overflow-hidden max-w-7xl mx-auto w-full" style={{ zIndex: 5 }}>
 
         {/* AI Header */}
         <div className="flex-shrink-0" style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-primary)", backdropFilter: 'blur(20px)' }}>
