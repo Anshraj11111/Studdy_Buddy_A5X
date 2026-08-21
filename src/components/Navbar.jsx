@@ -50,11 +50,12 @@ export default function Navbar({ onMenuClick }) {
   const navLinks = user?.role === 'student'
     ? [
         { to: '/dashboard', label: 'Dashboard' },
+         { to: '/resources', label: 'Resources' },
         { to: '/doubts', label: 'My Doubts' },
         { to: '/mentors', label: 'Mentors' },
         { to: '/chats', label: 'Chats' },
         { to: '/school-channel', label: 'My School' },
-        { to: '/resources', label: 'Resources' },
+       
         { to: '/communities', label: 'Communities' },
         { to: '/rewards', label: 'Rewards' },
       ]
