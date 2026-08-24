@@ -186,6 +186,16 @@ function YouTubeModal({ resource, onClose }) {
               {/* Bottom controls bar â€” copy link, YouTube logo, progress bar area */}
               <div className="absolute bottom-0 left-0 right-0" style={{ height: '60px', zIndex: 10, cursor: 'default' }}
                 onClick={e => e.preventDefault()} onContextMenu={e => e.preventDefault()} />
+              {/* HIDE YOUTUBE LOGO - Full width black bar at bottom */}
+              <div className="absolute left-0 right-0 bg-black pointer-events-none" 
+                style={{ 
+                  bottom: '0px',
+                  width: '100%',
+                  height: '50px',
+                  background: '#000000',
+                  zIndex: 60
+                }} 
+              />
             </>
           )}
         </div>
@@ -315,6 +325,16 @@ function PlaylistVideoModal({ playlist, initialIndex = 0, onClose }) {
                     bottom: '48px',
                     height: '250px',
                     background: '#000000'
+                  }} 
+                />
+                {/* HIDE YOUTUBE LOGO - Full width black bar at bottom */}
+                <div className="absolute left-0 right-0 bg-black pointer-events-none" 
+                  style={{ 
+                    bottom: '48px',
+                    width: '100%',
+                    height: '50px',
+                    background: '#000000',
+                    zIndex: 60
                   }} 
                 />
               </>
