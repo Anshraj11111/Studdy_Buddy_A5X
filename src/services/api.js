@@ -119,22 +119,29 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
-    // Handle 401 Unauthorized - only logout on auth-specific endpoints
+    // Handle 401 Unauthorized - be very conservative about logging out
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
       const requestUrl = originalRequest.url || '';
       
-      // Only force logout if it's an authentication endpoint failure
-      const isAuthEndpoint = requestUrl.includes('/auth/profile') || 
-                            requestUrl.includes('/auth/verify') ||
-                            requestUrl.includes('/auth/refresh');
+      // Only force logout if it's a login/auth endpoint failure (not profile fetch on page load)
+      const isLoginEndpoint = requestUrl.includes('/auth/login') || 
+                             requestUrl.includes('/auth/register') ||
+                             requestUrl.includes('/auth/google');
+      
+      // Don't auto-logout on profile fetch failures during page load
+      // The authStore will handle those cases properly
+      const isProfileFetch = requestUrl.includes('/auth/profile');
       
       // Don't logout on public pages or if already on login/signup
-      if (isAuthEndpoint && currentPath !== "/login" && currentPath !== "/signup" && currentPath !== "/admin") {
+      if (isLoginEndpoint && currentPath !== "/login" && currentPath !== "/signup" && currentPath !== "/admin") {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         window.location.href = "/login";
       }
+      
+      // For profile fetch failures, let the authStore handle it
+      // Don't force redirect here
     }
     
     return Promise.reject(error);

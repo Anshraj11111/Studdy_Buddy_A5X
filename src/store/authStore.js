@@ -83,11 +83,16 @@ export const useAuthStore = create((set) => ({
         const freshUser = data.data.user
         localStorage.setItem('user', JSON.stringify(freshUser))
         set({ user: freshUser })
-      } catch {
-        // Token expired or invalid — log out silently
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        set({ token: null, user: null })
+      } catch (error) {
+        // Only logout if it's actually an auth error (401/403)
+        // Don't logout on network errors or other API issues
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          set({ token: null, user: null })
+        }
+        // For other errors (network issues, 500, etc.), keep the cached user
+        // The app will continue working with cached data
       }
     } else {
       set({ isInitialized: true })

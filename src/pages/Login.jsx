@@ -22,11 +22,17 @@ export default function Login() {
 
   useEffect(() => {
     if (window.google && googleBtnRef.current) {
-      window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleResponse })
-      window.google.accounts.id.renderButton(googleBtnRef.current, {
-        theme: isDark ? 'filled_black' : 'outline',
-        size: 'large', width: '100%', text: 'signin_with', shape: 'rectangular',
-      })
+      try {
+        window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleResponse })
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: isDark ? 'filled_black' : 'outline',
+          size: 'large', width: '100%', text: 'signin_with', shape: 'rectangular',
+        })
+      } catch (error) {
+        // Silently handle Google Sign-In initialization errors
+        // This prevents 403 errors from breaking the page
+        console.warn('Google Sign-In initialization failed:', error)
+      }
     }
   }, [isDark])
 
