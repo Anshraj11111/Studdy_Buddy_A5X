@@ -143,14 +143,14 @@ export default function Doubts() {
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} 
-          className="flex items-start justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-theme-primary mb-1.5">My Doubts</h1>
-            <p className="text-theme-secondary text-sm">Track, manage and resolve your questions</p>
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-theme-primary mb-1.5">My Doubts</h1>
+            <p className="text-theme-secondary text-xs sm:text-sm">Track, manage and resolve your questions</p>
           </div>
-          <Link to="/doubts/new">
+          <Link to="/doubts/new" className="w-full sm:w-auto">
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-lg transition-all"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-lg transition-all"
               style={{ background: "#6366f1", boxShadow: "0 2px 8px rgba(99,102,241,0.3)" }}>
               <Plus size={16} />Post Doubt
             </motion.button>
@@ -159,14 +159,16 @@ export default function Doubts() {
 
         {/* Status Filter Tabs */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="flex gap-2 mb-6 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+          className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide" 
+          style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
           {STATUS_FILTERS.map(f => (
             <button key={f.id} onClick={() => setStatusFilter(f.id)}
-              className="px-4 py-2 text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 rounded-lg"
+              className="px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 rounded-lg"
               style={{
                 background: statusFilter === f.id ? "#e0e7ff" : "transparent",
                 color: statusFilter === f.id ? "#6366f1" : "var(--text-tertiary)",
-                border: "none"
+                border: "none",
+                minWidth: "fit-content"
               }}>
               {f.label}
             </button>
@@ -185,7 +187,7 @@ export default function Doubts() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={() => { setTopic(""); setPage(1) }}
-              className="px-3.5 py-1.5 rounded-full text-xs font-medium transition-all"
+              className="px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-medium transition-all flex-shrink-0"
               style={{ 
                 background: !topic ? "#e0e7ff" : "var(--bg-secondary)", 
                 color: !topic ? "#6366f1" : "var(--text-tertiary)",
@@ -195,7 +197,7 @@ export default function Doubts() {
             </button>
             {TOPICS.map(t => (
               <button key={t} onClick={() => { setTopic(t); setPage(1) }}
-                className="px-3.5 py-1.5 rounded-full text-xs font-medium transition-all"
+                className="px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-medium transition-all flex-shrink-0"
                 style={{ 
                   background: topic === t ? "#e0e7ff" : "var(--bg-secondary)", 
                   color: topic === t ? "#6366f1" : "var(--text-tertiary)",
@@ -226,13 +228,13 @@ export default function Doubts() {
                   background: "var(--bg-secondary)", 
                   border: "1px solid var(--border-primary)"
                 }}>
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-3 sm:gap-4">
                   <Link to={`/doubts/${doubt._id}`} className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-base mb-1.5 line-clamp-2 transition-colors"
+                    <h3 className="font-semibold text-sm sm:text-base mb-1.5 line-clamp-2 transition-colors"
                       style={{ color: "#6366f1" }}>
                       {doubt.title}
                     </h3>
-                    <p className="text-sm line-clamp-2 mb-3 text-theme-secondary">
+                    <p className="text-xs sm:text-sm line-clamp-2 mb-3 text-theme-secondary">
                       {doubt.description}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
@@ -247,7 +249,7 @@ export default function Doubts() {
                   </Link>
 
                   {/* Actions */}
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 flex-shrink-0">
                     <Link to={`/doubts/${doubt._id}/edit`}>
                       <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                         className="p-2 rounded-lg transition-colors"

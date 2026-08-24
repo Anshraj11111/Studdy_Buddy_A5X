@@ -303,33 +303,34 @@ export default function SchoolChannel() {
     <div className="min-h-screen" style={{ background: isDark ? '#0a0814' : '#f5f0ff' }}>
       <Navbar />
       
-      <div className="container mx-auto px-4 py-8 max-w-6xl" style={{ paddingTop: '100px' }}>
+      <div className="container mx-auto px-4 py-6 sm:py-8 max-w-6xl mt-16">
         {/* Channel Header */}
-        <div className="rounded-2xl p-6 mb-6 shadow-xl"
+        <div className="rounded-2xl p-4 sm:p-6 mb-6 shadow-xl"
           style={{
             background: isDark ? 'rgba(15,12,31,0.95)' : '#ffffff',
             border: isDark ? '1px solid rgba(139,92,246,0.3)' : '1px solid #e2e8f0',
             backdropFilter: 'blur(20px)',
           }}>
-          <div className="flex items-start justify-between flex-wrap gap-4">
-            <div className="flex items-start gap-4 flex-1 min-w-0">
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg"
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
+            <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0 w-full">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg"
                 style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)' }}>
-                <School size={36} className="text-white" />
+                <School size={28} className="sm:hidden text-white" />
+                <School size={36} className="hidden sm:block text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-3xl font-bold mb-2 break-words" style={{ color: isDark ? '#fff' : '#0f172a' }}>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2" style={{ color: isDark ? '#fff' : '#0f172a' }}>
                   {channel.schoolName}
                 </h1>
-                <div className="flex items-center gap-3 flex-wrap text-sm mb-3">
-                  <span className="flex items-center gap-1 px-3 py-1 rounded-full"
+                <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm mb-3">
+                  <span className="flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full whitespace-nowrap"
                     style={{ 
                       background: isDark ? 'rgba(139,92,246,0.15)' : '#f3e8ff',
                       color: isDark ? '#c4b5fd' : '#7c3aed'
                     }}>
                     📍 {channel.city}
                   </span>
-                  <span className="flex items-center gap-1 px-3 py-1 rounded-full"
+                  <span className="flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-full whitespace-nowrap"
                     style={{ 
                       background: isDark ? 'rgba(34,197,94,0.15)' : '#dcfce7',
                       color: isDark ? '#86efac' : '#16a34a'
@@ -339,7 +340,7 @@ export default function SchoolChannel() {
                   </span>
                 </div>
                 {channel.description && (
-                  <p className="text-sm leading-relaxed break-words" 
+                  <p className="text-xs sm:text-sm leading-relaxed" 
                     style={{ color: isDark ? 'rgba(148,163,184,0.8)' : '#64748b' }}>
                     {channel.description}
                   </p>
@@ -349,7 +350,7 @@ export default function SchoolChannel() {
             
             <button
               onClick={() => setShowMembers(!showMembers)}
-              className="px-5 py-2.5 rounded-xl flex items-center gap-2 transition-all hover:scale-105 flex-shrink-0 shadow-md"
+              className="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-105 flex-shrink-0 shadow-md text-sm sm:text-base"
               style={{
                 background: isDark ? 'rgba(139,92,246,0.2)' : '#f3e8ff',
                 color: '#8b5cf6',
@@ -362,17 +363,17 @@ export default function SchoolChannel() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Messages Section */}
           <div className="lg:col-span-2 rounded-2xl"
             style={{
               background: isDark ? 'rgba(15,12,31,0.9)' : '#ffffff',
               border: isDark ? '1px solid rgba(139,92,246,0.2)' : '1px solid #e2e8f0',
-              overflow: 'visible'
+              overflow: 'hidden'
             }}>
             
             {/* Messages List */}
-            <div className="h-[500px] overflow-y-auto overflow-x-visible p-6 space-y-4" style={{ overflowX: 'visible' }}>
+            <div className="h-[400px] sm:h-[500px] overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4">
               {messages.length === 0 ? (
                 <div className="text-center py-12">
                   <p style={{ color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>
@@ -579,17 +580,17 @@ export default function SchoolChannel() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="rounded-2xl p-6"
+              className="rounded-2xl p-4 sm:p-6"
               style={{
                 background: isDark ? 'rgba(15,12,31,0.9)' : '#ffffff',
                 border: isDark ? '1px solid rgba(139,92,246,0.2)' : '1px solid #e2e8f0',
               }}>
-              <h3 className="text-lg font-bold mb-4"
+              <h3 className="text-base sm:text-lg font-bold mb-4"
                 style={{ color: isDark ? '#fff' : '#0f172a' }}>
                 Members ({members.length})
               </h3>
               
-              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+              <div className="space-y-3 max-h-[400px] sm:max-h-[500px] overflow-y-auto">
                 {members.filter(member => member !== null).map((member) => (
                   <div key={member._id} className="flex items-center gap-3">
                     {member.profileImage ? (

@@ -282,7 +282,7 @@ function SkillsInput({ skills, onChange }) {
         </div>
       </PortalDropdown>
 
-      <p className="text-xs mt-1.5" style={{ color: "var(--text-muted)" }}>
+      <p className="text-xs mt-1.5" style={{ color: "#9ca3af" }}>
         Press Enter or click Add to add custom skills. Backspace removes the last one.
       </p>
     </>
@@ -527,13 +527,13 @@ export default function Settings() {
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
               style={glassCard} className="p-5 sm:p-6">
               <div className="h-0.5 -mx-5 sm:-mx-6 -mt-5 sm:-mt-6 mb-5 rounded-t-2xl" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
-              <h2 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: '#a5b4fc', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <h2 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: '#818cf8', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 <ImageIcon size={14} /> Banner Image
               </h2>
               <div className="relative w-full h-32 rounded-xl overflow-hidden mb-4 cursor-pointer"
                 style={{ background: bannerPreview ? `url(${bannerPreview}) center/cover no-repeat` : 'linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.08))', border: "1px solid var(--border-primary)" }}
                 onClick={() => bannerPreview && setZoomedBanner(true)}>
-                {!bannerPreview && <div className="absolute inset-0 flex flex-col items-center justify-center gap-1"><ImageIcon size={24} style={{ color: 'var(--text-muted)' }} /><span style={{ color: "var(--text-muted)", fontSize: '0.75rem' }}>No banner uploaded</span></div>}
+                {!bannerPreview && <div className="absolute inset-0 flex flex-col items-center justify-center gap-1"><ImageIcon size={24} style={{ color: '#9ca3af' }} /><span style={{ color: "#9ca3af", fontSize: '0.75rem' }}>No banner uploaded</span></div>}
                 {bannerPreview && <div className="absolute inset-0 opacity-0 hover:opacity-100 transition flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.3)' }}><ZoomIn size={22} className="text-theme-primary" /></div>}
                 {uploadingBanner && <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}><Loader2 size={22} className="animate-spin text-theme-primary" /></div>}
               </div>
@@ -549,7 +549,7 @@ export default function Settings() {
                   </motion.button>
                 )}
               </div>
-              <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>Recommended: 1500×500px, max 10MB.</p>
+              <p className="text-xs mt-2" style={{ color: "#9ca3af" }}>Recommended: 1500×500px, max 10MB.</p>
               <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
             </motion.div>
 
@@ -557,7 +557,7 @@ export default function Settings() {
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               style={glassCard} className="p-5 sm:p-6">
               <div className="h-0.5 -mx-5 sm:-mx-6 -mt-5 sm:-mt-6 mb-5 rounded-t-2xl" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
-              <h2 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: '#a5b4fc', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <h2 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: '#818cf8', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 <Camera size={14} /> Profile Photo
               </h2>
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
@@ -595,12 +595,12 @@ export default function Settings() {
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.13 }}
               style={glassCard} className="p-5 sm:p-6">
               <div className="h-0.5 -mx-5 sm:-mx-6 -mt-5 sm:-mt-6 mb-5 rounded-t-2xl" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
-              <h2 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: '#a5b4fc', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <h2 className="text-sm font-bold mb-4 flex items-center gap-2" style={{ color: '#818cf8', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 <User size={14} /> Account Info
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Full Name</label>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "#6b7280" }}>Full Name</label>
                   <input value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} placeholder="Your name" style={inputStyle}
                     onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'} onBlur={e => e.target.style.borderColor = 'rgba(99,102,241,0.2)'} />
                 </div>
@@ -611,7 +611,7 @@ export default function Settings() {
                   <input value={formData.headline} onChange={e => setFormData(p => ({ ...p, headline: e.target.value }))} maxLength={120}
                     placeholder="e.g., Full-Stack Developer | AI Enthusiast" style={inputStyle}
                     onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'} onBlur={e => e.target.style.borderColor = 'rgba(99,102,241,0.2)'} />
-                  <p className="text-xs text-right mt-1" style={{ color: "var(--text-muted)" }}>{formData.headline.length}/120</p>
+                  <p className="text-xs text-right mt-1" style={{ color: "#9ca3af" }}>{formData.headline.length}/120</p>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Email</label>
@@ -630,14 +630,14 @@ export default function Settings() {
                   <textarea value={formData.bio} onChange={e => setFormData(p => ({ ...p, bio: e.target.value }))} maxLength={300} rows={3}
                     placeholder="Tell others about yourself..." style={{ ...inputStyle, resize: 'none' }}
                     onFocus={e => e.target.style.borderColor = 'rgba(99,102,241,0.5)'} onBlur={e => e.target.style.borderColor = 'rgba(99,102,241,0.2)'} />
-                  <p className="text-xs text-right mt-1" style={{ color: "var(--text-muted)" }}>{formData.bio.length}/300</p>
+                  <p className="text-xs text-right mt-1" style={{ color: "#9ca3af" }}>{formData.bio.length}/300</p>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
                     <span className="flex items-center gap-1"><MapPin size={12} /> Location (Public)</span>
                   </label>
                   <LocationInput value={formData.address} onChange={val => setFormData(p => ({ ...p, address: val }))} />
-                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                  <p className="text-xs mt-1" style={{ color: "#9ca3af" }}>
                     Shown on your public profile. Click <Navigation size={10} style={{ display: 'inline' }} /> to auto-detect.
                   </p>
                 </div>
@@ -648,14 +648,14 @@ export default function Settings() {
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
               style={glassCard} className="p-5 sm:p-6">
               <div className="h-0.5 -mx-5 sm:-mx-6 -mt-5 sm:-mt-6 mb-5 rounded-t-2xl" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
-              <h2 className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#a5b4fc', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <h2 className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#818cf8', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 <Link2 size={14} /> Social Links
               </h2>
-              <p className="text-xs mb-4" style={{ color: "var(--text-tertiary)" }}>Add your profiles so others can connect with you</p>
+              <p className="text-xs mb-4" style={{ color: "#6b7280" }}>Add your profiles so others can connect with you</p>
               <div className="space-y-3">
                 {SOCIAL_FIELDS.map(({ key, label, icon: Icon, placeholder, color }) => (
                   <div key={key}>
-                    <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: "var(--text-secondary)" }}>
+                    <label className="block text-xs font-semibold mb-1.5 flex items-center gap-1.5" style={{ color: "#6b7280" }}>
                       <Icon size={12} style={{ color }} /> {label}
                     </label>
                     <div className="relative">
@@ -673,10 +673,10 @@ export default function Settings() {
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }}
               style={glassCard} className="p-5 sm:p-6">
               <div className="h-0.5 -mx-5 sm:-mx-6 -mt-5 sm:-mt-6 mb-5 rounded-t-2xl" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
-              <h2 className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#a5b4fc', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <h2 className="text-sm font-bold mb-1 flex items-center gap-2" style={{ color: '#818cf8', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 <Check size={14} /> {user?.role === 'mentor' ? 'Expertise / Skills' : 'Skills'}
               </h2>
-              <p className="text-xs mb-4" style={{ color: "var(--text-tertiary)" }}>Add any skill — pick from suggestions or type your own</p>
+              <p className="text-xs mb-4" style={{ color: "#6b7280" }}>Add any skill — pick from suggestions or type your own</p>
               <SkillsInput skills={formData.skills} onChange={skills => setFormData(p => ({ ...p, skills }))} />
             </motion.div>
 
@@ -690,7 +690,7 @@ export default function Settings() {
                 style={{ color: user?.role === 'mentor' ? '#c4b5fd' : '#6ee7b7', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 {user?.role === 'mentor' ? '🏢' : '🎓'} {user?.role === 'mentor' ? 'Work Experience' : 'Education'}
               </h2>
-              <p className="text-xs mb-4" style={{ color: "var(--text-tertiary)" }}>
+              <p className="text-xs mb-4" style={{ color: "#6b7280" }}>
                 {user?.role === 'mentor' ? 'Add your company, role, and professional background' : 'Add your school, college, or institution details'}
               </p>
 
@@ -773,17 +773,17 @@ export default function Settings() {
               style={{ ...glassCard, border: '1px solid rgba(251,191,36,0.15)' }} className="p-5 sm:p-6">
               <div className="h-0.5 -mx-5 sm:-mx-6 -mt-5 sm:-mt-6 mb-5 rounded-t-2xl" style={{ background: 'linear-gradient(90deg,transparent,#f59e0b,#fbbf24,transparent)' }} />
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-sm font-bold flex items-center gap-2" style={{ color: '#fcd34d', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <h2 className="text-sm font-bold flex items-center gap-2" style={{ color: '#fbbf24', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   <Lock size={14} /> Private Contact Info
                 </h2>
-                <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fcd34d' }}>
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
                   Only you
                 </span>
               </div>
-              <p className="text-xs mb-4" style={{ color: "var(--text-tertiary)" }}>This information is private and will never be shown to other users.</p>
+              <p className="text-xs mb-4" style={{ color: "#6b7280" }}>This information is private and will never be shown to other users.</p>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "#6b7280" }}>
                     <span className="flex items-center gap-1"><Phone size={12} /> Phone Number</span>
                   </label>
                   <div className="relative">
@@ -794,13 +794,13 @@ export default function Settings() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: "#6b7280" }}>
                     <span className="flex items-center gap-1"><MapPin size={12} /> Full Address (Private)</span>
                   </label>
                   <textarea value={formData.privateAddress} onChange={e => setFormData(p => ({ ...p, privateAddress: e.target.value }))} maxLength={300} rows={3}
                     placeholder="Flat no., Street, City, State, PIN..." style={{ ...inputStyle, resize: 'none', borderColor: 'rgba(251,191,36,0.2)' }}
                     onFocus={e => e.target.style.borderColor = 'rgba(251,191,36,0.5)'} onBlur={e => e.target.style.borderColor = 'rgba(251,191,36,0.2)'} />
-                  <p className="text-xs text-right mt-1" style={{ color: "var(--text-muted)" }}>{formData.privateAddress.length}/300</p>
+                  <p className="text-xs text-right mt-1" style={{ color: "#9ca3af" }}>{formData.privateAddress.length}/300</p>
                 </div>
               </div>
             </motion.div>

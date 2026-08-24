@@ -863,13 +863,14 @@ function FeedTab({ user }) {
             <AnimatePresence>
               {catOpen && (
                 <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                  className="absolute left-0 top-full mt-1 z-30 rounded-lg shadow-xl overflow-hidden min-w-[160px]"
+                  className="absolute left-0 top-full mt-1 z-30 rounded-lg shadow-xl overflow-hidden min-w-[180px]"
                   style={{ background: "var(--bg-card)", border: "1px solid var(--border-primary)" }}>
                   {CATEGORIES.map(({ label, icon: Icon }) => (
                     <button key={label} onClick={() => handleCatFilter(label)}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition hover:bg-blue-50"
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition hover:bg-blue-50 text-left whitespace-nowrap"
                       style={{ background: filterCat === label ? '#e0e7ff' : 'transparent', color: filterCat === label ? '#6366f1' : 'var(--text-secondary)' }}>
-                      <Icon size={14} /> {label}
+                      <Icon size={16} className="flex-shrink-0" /> 
+                      <span className="flex-1">{label}</span>
                     </button>
                   ))}
                 </motion.div>
@@ -1433,9 +1434,9 @@ function ProfileSidebar({ user }) {
           {CATEGORIES.filter(c => c.label !== 'All').map(({ label, icon: Icon }) => (
             <div key={label} className="flex items-center gap-2.5 py-2 px-2 rounded-lg transition-colors cursor-default hover:bg-gray-100">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#e0e7ff' }}>
-                <Icon size={13} style={{ color: '#6366f1' }} />
+                <Icon size={14} style={{ color: '#6366f1' }} />
               </div>
-              <span className="text-sm font-medium text-theme-secondary">{label}</span>
+              <span className="text-sm font-medium text-theme-secondary whitespace-nowrap">{label}</span>
             </div>
           ))}
         </div>

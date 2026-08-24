@@ -274,8 +274,8 @@ export default function Navbar({ onMenuClick }) {
                           : user.name?.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-semibold text-sm text-theme-primary">{user.name}</div>
-                        <div className="text-xs capitalize text-theme-tertiary">{user.role}</div>
+                        <div className="font-semibold text-sm" style={{ color: '#1f2937' }}>{user.name}</div>
+                        <div className="text-xs capitalize" style={{ color: '#6b7280' }}>{user.role}</div>
                       </div>
                       {unreadCount > 0 && (
                         <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded-full text-white"
@@ -287,11 +287,23 @@ export default function Navbar({ onMenuClick }) {
                   {/* Nav links */}
                   {navLinks.map(({ to, label }) => (
                     <Link key={to} to={to} onClick={() => setIsOpen(false)}>
-                      <div className="flex items-center px-3 py-2.5 rounded-lg transition text-sm font-medium"
+                      <div className="flex items-center px-3 py-2.5 rounded-lg transition-all text-sm font-semibold"
                         style={{
-                          background: isActive(to) ? (document.documentElement.classList.contains('dark') ? 'rgba(99,102,241,0.2)' : '#e0e7ff') : 'transparent',
-                          color: isActive(to) ? '#6366f1' : 'var(--text-tertiary)',
+                          background: isActive(to) ? '#e0e7ff' : 'transparent',
+                          color: isActive(to) ? '#6366f1' : '#6b7280',
                           borderLeft: isActive(to) ? '2px solid #6366f1' : '2px solid transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive(to)) {
+                            e.currentTarget.style.background = '#f3f4f6';
+                            e.currentTarget.style.color = '#374151';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive(to)) {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = '#6b7280';
+                          }
                         }}>
                         {label}
                       </div>
@@ -299,7 +311,16 @@ export default function Navbar({ onMenuClick }) {
                   ))}
 
                   <Link to="/settings" onClick={() => setIsOpen(false)}>
-                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition text-sm font-medium text-theme-tertiary hover:bg-indigo-50 dark:hover:bg-indigo-950/30">
+                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg transition-all text-sm font-semibold"
+                      style={{ color: '#6b7280' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f3f4f6';
+                        e.currentTarget.style.color = '#374151';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = '#6b7280';
+                      }}>
                       <Settings size={15} /> Settings
                     </div>
                   </Link>
