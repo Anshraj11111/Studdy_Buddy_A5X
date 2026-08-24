@@ -119,12 +119,20 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
-    // Handle 401 Unauthorized
+    // Handle 401 Unauthorized - only logout on auth-specific endpoints
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
+      const requestUrl = originalRequest.url || '';
       
-      if (currentPath !== "/login" && currentPath !== "/signup" && currentPath !== "/admin") {
+      // Only force logout if it's an authentication endpoint failure
+      const isAuthEndpoint = requestUrl.includes('/auth/profile') || 
+                            requestUrl.includes('/auth/verify') ||
+                            requestUrl.includes('/auth/refresh');
+      
+      // Don't logout on public pages or if already on login/signup
+      if (isAuthEndpoint && currentPath !== "/login" && currentPath !== "/signup" && currentPath !== "/admin") {
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
         window.location.href = "/login";
       }
     }
