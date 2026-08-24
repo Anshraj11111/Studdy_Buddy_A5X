@@ -7,6 +7,7 @@ export const useAuthStore = create((set) => ({
   loading: false,
   error: null,
   isInitialized: false,
+  isTokenValidated: false, // New flag to track if token is validated
 
   register: async (email, password, name, role, mentorCode, skills = [], schoolName = '', city = '') => {
     set({ loading: true, error: null })
@@ -15,7 +16,7 @@ export const useAuthStore = create((set) => ({
       const { token, user } = response.data.data
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
-      set({ user, token, loading: false, error: null })
+      set({ user, token, loading: false, error: null, isTokenValidated: true })
       return response.data.data
     } catch (error) {
       const errorMessage = error.response?.data?.error?.message || 'Registration failed'
@@ -34,7 +35,7 @@ export const useAuthStore = create((set) => ({
       if (!token || !user) throw new Error('Invalid response from server')
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
-      set({ user, token, loading: false, error: null })
+      set({ user, token, loading: false, error: null, isTokenValidated: true })
       return data
     } catch (error) {
       const errorMessage = error.response?.data?.error?.message || error.message || 'Login failed'
@@ -53,7 +54,7 @@ export const useAuthStore = create((set) => ({
       if (!token || !user) throw new Error('Invalid response from server')
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
-      set({ user, token, loading: false, error: null })
+      set({ user, token, loading: false, error: null, isTokenValidated: true })
       return data
     } catch (error) {
       const errorMessage = error.response?.data?.error?.message || error.message || 'Google login failed'
@@ -64,7 +65,8 @@ export const useAuthStore = create((set) => ({
 
   logout: () => {
     localStorage.removeItem('token')
-    set({ user: null, token: null })
+    localStorage.removeItem('user')
+    set({ user: null, token: null, isTokenValidated: false })
   },
 
   // Initialize auth state from localStorage
@@ -75,7 +77,7 @@ export const useAuthStore = create((set) => ({
     if (token) {
       // Immediately unblock the UI using cached user data
       const parsedUser = cachedUser ? JSON.parse(cachedUser) : null
-      set({ token, user: parsedUser, isInitialized: true })
+      set({ token, user: parsedUser, isInitialized: true, isTokenValidated: false })
 
       // Silently validate token + refresh user data in background
       let retryCount = 0
@@ -86,7 +88,7 @@ export const useAuthStore = create((set) => ({
           const { data } = await authAPI.getProfile()
           const freshUser = data.data.user
           localStorage.setItem('user', JSON.stringify(freshUser))
-          set({ user: freshUser })
+          set({ user: freshUser, isTokenValidated: true }) // Mark token as validated
           return // Success - exit early
         } catch (error) {
           retryCount++
@@ -100,7 +102,7 @@ export const useAuthStore = create((set) => ({
             console.warn('🔒 Token validation failed after retries, logging out')
             localStorage.removeItem('token')
             localStorage.removeItem('user')
-            set({ token: null, user: null })
+            set({ token: null, user: null, isTokenValidated: false })
             
             // Only redirect if not already on login/signup pages
             if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
@@ -110,7 +112,7 @@ export const useAuthStore = create((set) => ({
         }
       }
     } else {
-      set({ isInitialized: true })
+      set({ isInitialized: true, isTokenValidated: false })
     }
   },
 

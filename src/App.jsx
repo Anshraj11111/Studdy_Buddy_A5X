@@ -52,7 +52,7 @@ function ScrollToTop() {
 }
 
 function AppShell() {
-  const { token, user, initAuth, isInitialized } = useAuthStore()
+  const { token, user, initAuth, isInitialized, isTokenValidated } = useAuthStore()
   const { initTheme } = useThemeStore()
   const { fetch: fetchNotifications, addNew } = useNotificationStore()
   const { pathname } = useLocation()
@@ -66,7 +66,7 @@ function AppShell() {
   }, [initAuth, initTheme])
 
   useEffect(() => {
-    if (token && user) {
+    if (token && user && isTokenValidated) {
       initSocket(token, user._id, user.name || '', user.profileImage || '', user.role || '')
       fetchNotifications()
       onNotification((notif) => addNew(notif))
@@ -75,7 +75,7 @@ function AppShell() {
       disconnectSocket()
     }
     return () => offNotification()
-  }, [token, user])
+  }, [token, user, isTokenValidated])
 
   if (!isInitialized && !isAdminRoute) {
     return (
