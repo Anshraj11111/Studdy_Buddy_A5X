@@ -30,7 +30,7 @@ export default function Signup() {
         window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleResponse })
         window.google.accounts.id.renderButton(googleBtnRef.current, {
           theme: isDark ? 'filled_black' : 'outline',
-          size: 'large', width: '100%', text: 'signup_with', shape: 'rectangular',
+          size: 'large', width: 380, text: 'signup_with', shape: 'rectangular',
         })
       } catch (error) {
         // Silently handle Google Sign-In initialization errors

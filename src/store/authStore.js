@@ -84,15 +84,16 @@ export const useAuthStore = create((set) => ({
         localStorage.setItem('user', JSON.stringify(freshUser))
         set({ user: freshUser })
       } catch (error) {
-        // Only logout if it's actually an auth error (401/403)
-        // Don't logout on network errors or other API issues
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
-          set({ token: null, user: null })
+        // Token is invalid or expired - logout and redirect
+        console.warn('🔒 Token validation failed, logging out')
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        set({ token: null, user: null })
+        
+        // Only redirect if not already on login/signup pages
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+          window.location.href = '/login'
         }
-        // For other errors (network issues, 500, etc.), keep the cached user
-        // The app will continue working with cached data
       }
     } else {
       set({ isInitialized: true })
