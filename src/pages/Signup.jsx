@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { UserPlus, Mail, Lock, User, UserCircle, Loader2, AlertCircle, Sparkles, Eye, EyeOff, Check, Shield } from 'lucide-react'
+import { UserPlus, Mail, Lock, User, UserCircle, Loader2, AlertCircle, Eye, EyeOff, Check, Shield } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import ThemeToggle from '../components/ThemeToggle'
-import loginBgDark from '../assets/login-signup.png'
-// login-light.png — use same image until the light version is added to assets
-import loginBgLight from '../assets/login-signup.png'
+import a5xLogo from '../assets/A5X logo.png'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
@@ -74,27 +72,23 @@ export default function Signup() {
     ...p, skills: p.skills.includes(skill) ? p.skills.filter(s => s !== skill) : [...p.skills, skill]
   }))
 
-  const inputClass = `w-full pl-10 pr-4 py-2.5 rounded-xl text-sm transition-all outline-none ${
-    isDark
-      ? 'bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20'
-      : 'bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/15'
-  }`
+  const inputClass = `w-full pl-11 pr-4 py-2.5 rounded-xl text-sm transition-all outline-none bg-white/[0.05] border border-white/10 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:bg-white/[0.08]`
 
-  const labelClass = `block text-xs font-semibold mb-1.5 uppercase tracking-wider`
-  const labelStyle = { color: isDark ? 'rgba(148,163,184,0.8)' : '#64748b' }
-  const errEl = (msg) => msg ? <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><AlertCircle size={11} /> {msg}</p> : null
+  const labelClass = `block text-sm font-medium mb-2 text-gray-400`
+  const labelStyle = {}
+  const errEl = (msg) => msg ? <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {msg}</p> : null
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden"
-      style={{ background: isDark ? '#0a0814' : '#f5f0ff' }}>
+      style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%)' }}>
 
-      {/* Full-page background image based on theme */}
+      {/* Background Image - Drone */}
       <div className="absolute inset-0 pointer-events-none" style={{
-        backgroundImage: `url(${isDark ? loginBgDark : loginBgLight})`,
+        backgroundImage: `url('/login-bg.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        opacity: isDark ? 0.85 : 0.9,
+        opacity: 0.25,
       }} />
 
       {/* Theme toggle */}
@@ -105,24 +99,28 @@ export default function Signup() {
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
         className="w-full max-w-md relative z-10">
 
-        <div className="rounded-2xl p-8"
+        <div className="rounded-3xl p-8 relative overflow-hidden"
           style={{
-            background: isDark ? 'rgba(15,12,31,0.92)' : '#ffffff',
-            border: isDark ? '1px solid rgba(139,92,246,0.25)' : '1px solid rgba(226,232,240,1)',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.5)' : '0 20px 60px rgba(100,116,139,0.15)',
-            backdropFilter: isDark ? 'blur(20px)' : 'none',
+            background: 'rgba(20,20,30,0.6)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(10px)',
           }}>
 
-          {/* Logo */}
+          {/* A5X Logo */}
           <div className="text-center mb-6">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 220 }}
-              className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)' }}>
-              <Sparkles className="text-white" size={28} />
+            <motion.div 
+              initial={{ scale: 0, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 15 }}
+              className="w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+              <img src={a5xLogo} alt="A5X Logo" className="w-full h-full object-contain" />
             </motion.div>
-            <h1 className="text-2xl font-bold mb-1.5" style={{ color: isDark ? '#fff' : '#0f172a' }}>Join Studdy Buddy</h1>
-            <p className="text-sm" style={{ color: isDark ? 'rgba(148,163,184,0.7)' : '#64748b' }}>
-              Create your account to get started
+            <h1 className="text-3xl font-bold mb-2">
+              Join <span style={{ color: '#8b5cf6' }}>Studdy Buddy!</span>
+            </h1>
+            <p className="text-sm" style={{ color: 'rgba(156,163,175,0.9)' }}>
+              Create your <span style={{ color: '#8b5cf6' }}>Studdy Buddy</span> account
             </p>
           </div>
 
@@ -131,7 +129,7 @@ export default function Signup() {
             <div>
               <label className={labelClass} style={labelStyle}>Full Name</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2" size={15} style={{ color: '#8b5cf6' }} />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                 <input type="text" name="name" placeholder="John Doe" value={formData.name}
                   onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} className={inputClass} />
               </div>
@@ -142,7 +140,7 @@ export default function Signup() {
             <div>
               <label className={labelClass} style={labelStyle}>Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2" size={15} style={{ color: '#8b5cf6' }} />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                 <input type="email" name="email" placeholder="you@example.com" value={formData.email}
                   onChange={e => setFormData(p => ({ ...p, email: e.target.value }))} className={inputClass} />
               </div>
@@ -153,13 +151,13 @@ export default function Signup() {
             <div>
               <label className={labelClass} style={labelStyle}>Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2" size={15} style={{ color: '#8b5cf6' }} />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                 <input type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••"
                   value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
                   className={inputClass + ' pr-10'} />
                 <button type="button" onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition">
-                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
               {errEl(errors.password)}
@@ -169,13 +167,13 @@ export default function Signup() {
             <div>
               <label className={labelClass} style={labelStyle}>Confirm Password</label>
               <div className="relative">
-                <Shield className="absolute left-3 top-1/2 -translate-y-1/2" size={15} style={{ color: '#8b5cf6' }} />
+                <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                 <input type={showConfirm ? 'text' : 'password'} name="confirmPassword" placeholder="••••••••"
                   value={formData.confirmPassword} onChange={e => setFormData(p => ({ ...p, confirmPassword: e.target.value }))}
                   className={inputClass + ' pr-10'} />
                 <button type="button" onClick={() => setShowConfirm(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition">
-                  {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
+                  {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
               {errEl(errors.confirmPassword)}
@@ -185,12 +183,18 @@ export default function Signup() {
             <div>
               <label className={labelClass} style={labelStyle}>I am a</label>
               <div className="relative">
-                <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2" size={15} style={{ color: '#8b5cf6' }} />
+                <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                 <select name="role" value={formData.role} onChange={e => setFormData(p => ({ ...p, role: e.target.value }))}
-                  className={inputClass + ' appearance-none cursor-pointer'}>
-                  <option value="student">Student</option>
-                  <option value="mentor">Mentor</option>
+                  className={inputClass + ' appearance-none cursor-pointer'}
+                  style={{ colorScheme: 'dark' }}>
+                  <option value="student" className="bg-gray-800 text-white">Student</option>
+                  <option value="mentor" className="bg-gray-800 text-white">Mentor</option>
                 </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1.5L6 6.5L11 1.5" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
               </div>
             </div>
 
@@ -198,19 +202,19 @@ export default function Signup() {
             <AnimatePresence>
               {formData.role === 'student' && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }} className="space-y-3.5 overflow-hidden">
+                  exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden">
                   <div>
                     <label className={labelClass} style={labelStyle}>School Name</label>
                     <input type="text" name="schoolName" placeholder="Enter your school name" value={formData.schoolName}
                       onChange={e => setFormData(p => ({ ...p, schoolName: e.target.value }))}
-                      className={inputClass.replace('pl-10', 'pl-4')} />
+                      className={inputClass.replace('pl-11', 'pl-4')} />
                     {errEl(errors.schoolName)}
                   </div>
                   <div>
                     <label className={labelClass} style={labelStyle}>City</label>
                     <input type="text" name="city" placeholder="Enter your city" value={formData.city}
                       onChange={e => setFormData(p => ({ ...p, city: e.target.value }))}
-                      className={inputClass.replace('pl-10', 'pl-4')} />
+                      className={inputClass.replace('pl-11', 'pl-4')} />
                     {errEl(errors.city)}
                   </div>
                 </motion.div>
@@ -221,12 +225,12 @@ export default function Signup() {
             <AnimatePresence>
               {formData.role === 'mentor' && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }} className="space-y-3.5 overflow-hidden">
+                  exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden">
                   <div>
                     <label className={labelClass} style={labelStyle}>Mentor Code</label>
                     <input type="text" name="mentorCode" placeholder="Enter your mentor code" value={formData.mentorCode}
                       onChange={e => setFormData(p => ({ ...p, mentorCode: e.target.value }))}
-                      className={inputClass.replace('pl-10', 'pl-4')} />
+                      className={inputClass.replace('pl-11', 'pl-4')} />
                     {errEl(errors.mentorCode)}
                   </div>
                   <div>
@@ -241,8 +245,8 @@ export default function Signup() {
                             className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
                             style={{
                               background: selected ? '#8b5cf6' : 'transparent',
-                              color: selected ? 'white' : (isDark ? 'rgba(148,163,184,0.7)' : '#64748b'),
-                              border: selected ? '1px solid #8b5cf6' : `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`,
+                              color: selected ? 'white' : 'rgba(148,163,184,0.7)',
+                              border: selected ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
                             }}>
                             {selected && <Check size={11} />} {skill}
                           </button>
@@ -256,21 +260,24 @@ export default function Signup() {
 
             {errors.submit && (
               <div className="p-3 rounded-xl text-sm flex items-center gap-2"
-                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>
-                <AlertCircle size={15} /> {errors.submit}
+                style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+                <AlertCircle size={16} /> {errors.submit}
               </div>
             )}
 
             <motion.button type="submit" disabled={loading}
-              whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
-              className="w-full py-3 text-white font-semibold rounded-xl flex items-center justify-center gap-2 mt-1 disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg,#8b5cf6,#6366f1)', boxShadow: '0 4px 20px rgba(139,92,246,0.4)' }}>
-              {loading ? <><Loader2 size={17} className="animate-spin" /> Creating account...</> : <><UserPlus size={17} /> Sign Up</>}
+              whileHover={{ scale: loading ? 1 : 1.01 }} whileTap={{ scale: loading ? 1 : 0.99 }}
+              className="w-full py-3 text-white font-semibold rounded-xl flex items-center justify-center gap-2 mt-4 disabled:opacity-50 transition-all"
+              style={{ 
+                background: 'linear-gradient(90deg, #8b5cf6 0%, #6366f1 100%)', 
+                boxShadow: '0 4px 15px rgba(139,92,246,0.4)' 
+              }}>
+              {loading ? <><Loader2 size={18} className="animate-spin" /> Creating account...</> : <><UserPlus size={18} /> Sign Up</>}
             </motion.button>
 
             {loading && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3 }}
-                className="text-center text-xs" style={{ color: isDark ? 'rgba(148,163,184,0.6)' : '#94a3b8' }}>
+                className="text-center text-xs text-gray-500">
                 ⚡ Server is waking up, please wait...
               </motion.p>
             )}
@@ -279,22 +286,22 @@ export default function Signup() {
           {/* Divider + Google */}
           <div className="mt-5">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px" style={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }} />
-              <span className="text-xs" style={{ color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>or continue with</span>
-              <div className="flex-1 h-px" style={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }} />
+              <div className="flex-1 h-px bg-gray-700" />
+              <span className="text-xs text-gray-500">or continue with</span>
+              <div className="flex-1 h-px bg-gray-700" />
             </div>
             <div ref={googleBtnRef} className="flex justify-center" />
             {googleLoading && (
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <Loader2 size={13} className="animate-spin text-purple-400" />
-                <span className="text-xs" style={{ color: isDark ? 'rgba(148,163,184,0.6)' : '#94a3b8' }}>Signing up with Google...</span>
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <Loader2 size={14} className="animate-spin text-purple-400" />
+                <span className="text-xs text-gray-500">Signing up with Google...</span>
               </div>
             )}
           </div>
 
-          <p className="text-center text-sm mt-5" style={{ color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>
+          <p className="text-center text-sm mt-5 text-gray-400">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold hover:underline" style={{ color: '#8b5cf6' }}>Sign in</Link>
+            <Link to="/login" className="font-semibold hover:underline text-purple-400">Sign in</Link>
           </p>
         </div>
       </motion.div>

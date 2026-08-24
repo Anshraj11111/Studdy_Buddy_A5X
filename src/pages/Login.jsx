@@ -1,13 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LogIn, Mail, Lock, UserCircle, Loader2, AlertCircle, Sparkles, Eye, EyeOff } from 'lucide-react'
+import { LogIn, Mail, Lock, UserCircle, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import ThemeToggle from '../components/ThemeToggle'
-import loginBgDark from '../assets/login-signup.png'
-// login-light.png — use same image until the light version is added to assets
-import loginBgLight from '../assets/login-signup.png'
+import a5xLogo from '../assets/A5X logo.png'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
 
@@ -59,23 +57,19 @@ export default function Login() {
     } catch (err) { setErrors({ submit: err.message || 'Login failed' }) }
   }
 
-  const inputClass = `w-full pl-10 pr-4 py-3 rounded-xl text-sm transition-all outline-none ${
-    isDark
-      ? 'bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
-      : 'bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15'
-  }`
+  const inputClass = `w-full pl-11 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-white/[0.05] border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white/[0.08]`
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
-      style={{ background: isDark ? '#0a0814' : '#f0f2ff' }}>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%)' }}>
 
-      {/* Full-page background image based on theme */}
+      {/* Background Image - Drone */}
       <div className="absolute inset-0 pointer-events-none" style={{
-        backgroundImage: `url(${isDark ? loginBgDark : loginBgLight})`,
+        backgroundImage: `url('/login-bg.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        opacity: isDark ? 0.85 : 0.9,
+        opacity: 0.25,
       }} />
 
       {/* Theme Toggle — top right */}
@@ -86,97 +80,110 @@ export default function Login() {
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
         className="w-full max-w-md relative z-10">
 
-        <div className="rounded-2xl p-8"
+        <div className="rounded-3xl p-8 relative overflow-hidden"
           style={{
-            background: isDark ? 'rgba(15,12,31,0.92)' : '#ffffff',
-            border: isDark ? '1px solid rgba(99,102,241,0.25)' : '1px solid rgba(226,232,240,1)',
-            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.5)' : '0 20px 60px rgba(100,116,139,0.15)',
-            backdropFilter: isDark ? 'blur(20px)' : 'none',
+            background: 'rgba(20,20,30,0.6)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(10px)',
           }}>
 
-          {/* Logo */}
+          {/* A5X Logo */}
           <div className="text-center mb-8">
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 220 }}
-              className="w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
-              <Sparkles className="text-white" size={28} />
+            <motion.div 
+              initial={{ scale: 0, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 15 }}
+              className="w-20 h-20 mx-auto mb-5 flex items-center justify-center">
+              <img src={a5xLogo} alt="A5X Logo" className="w-full h-full object-contain" />
             </motion.div>
-            <h1 className="text-2xl font-bold mb-1.5" style={{ color: isDark ? '#fff' : '#0f172a' }}>Welcome Back</h1>
-            <p className="text-sm" style={{ color: isDark ? 'rgba(148,163,184,0.7)' : '#64748b' }}>
-              Sign in to your Studdy Buddy account
+            <h1 className="text-3xl font-bold mb-2">
+              Welcome <span style={{ color: '#6366f1' }}>Back!</span>
+            </h1>
+            <p className="text-sm" style={{ color: 'rgba(156,163,175,0.9)' }}>
+              Sign in to your <span style={{ color: '#6366f1' }}>Studdy Buddy</span> account
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: isDark ? 'rgba(148,163,184,0.8)' : '#64748b' }}>Email</label>
+              <label className="block text-sm font-medium mb-2 text-gray-400">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2" size={16} style={{ color: isDark ? '#6366f1' : '#6366f1' }} />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 <input type="email" name="email" placeholder="you@example.com"
                   value={formData.email} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
                   className={inputClass} />
               </div>
-              {errors.email && <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><AlertCircle size={11} /> {errors.email}</p>}
+              {errors.email && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.email}</p>}
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: isDark ? 'rgba(148,163,184,0.8)' : '#64748b' }}>Password</label>
+              <label className="block text-sm font-medium mb-2 text-gray-400">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2" size={16} style={{ color: '#6366f1' }} />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 <input type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••"
                   value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
-                  className={inputClass + ' pr-10'} />
+                  className={inputClass + ' pr-11'} />
                 <button type="button" onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 opacity-50 hover:opacity-100 transition">
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              {errors.password && <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><AlertCircle size={11} /> {errors.password}</p>}
+              {errors.password && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.password}</p>}
             </div>
 
             {/* Role */}
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: isDark ? 'rgba(148,163,184,0.8)' : '#64748b' }}>I am a</label>
+              <label className="block text-sm font-medium mb-2 text-gray-400">I am a</label>
               <div className="relative">
-                <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2" size={16} style={{ color: '#6366f1' }} />
+                <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 <select name="role" value={formData.role} onChange={e => setFormData(p => ({ ...p, role: e.target.value }))}
-                  className={inputClass + ' appearance-none cursor-pointer'}>
-                  <option value="student">Student</option>
-                  <option value="mentor">Mentor</option>
+                  className={inputClass + ' appearance-none cursor-pointer'}
+                  style={{ colorScheme: 'dark' }}>
+                  <option value="student" className="bg-gray-800 text-white">Student</option>
+                  <option value="mentor" className="bg-gray-800 text-white">Mentor</option>
                 </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1.5L6 6.5L11 1.5" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
               </div>
             </div>
 
             {/* Mentor Code */}
             {formData.role === 'mentor' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: isDark ? 'rgba(148,163,184,0.8)' : '#64748b' }}>Mentor Code</label>
+                <label className="block text-sm font-medium mb-2 text-gray-400">Mentor Code</label>
                 <input type="text" name="mentorCode" placeholder="Enter your mentor code"
                   value={formData.mentorCode} onChange={e => setFormData(p => ({ ...p, mentorCode: e.target.value }))}
-                  className={inputClass.replace('pl-10', 'pl-4')} />
-                {errors.mentorCode && <p className="text-red-400 text-xs mt-1 flex items-center gap-1"><AlertCircle size={11} /> {errors.mentorCode}</p>}
+                  className={inputClass.replace('pl-11', 'pl-4')} />
+                {errors.mentorCode && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.mentorCode}</p>}
               </motion.div>
             )}
 
             {errors.submit && (
               <div className="p-3 rounded-xl text-sm flex items-center gap-2"
-                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>
-                <AlertCircle size={15} /> {errors.submit}
+                style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+                <AlertCircle size={16} /> {errors.submit}
               </div>
             )}
 
             <motion.button type="submit" disabled={loading}
-              whileHover={{ scale: loading ? 1 : 1.02 }} whileTap={{ scale: loading ? 1 : 0.98 }}
-              className="w-full py-3 text-white font-semibold rounded-xl flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
-              {loading ? <><Loader2 size={17} className="animate-spin" /> Signing in...</> : <><LogIn size={17} /> Sign In</>}
+              whileHover={{ scale: loading ? 1 : 1.01 }} whileTap={{ scale: loading ? 1 : 0.99 }}
+              className="w-full py-3 text-white font-semibold rounded-xl flex items-center justify-center gap-2 mt-5 disabled:opacity-50 transition-all"
+              style={{ 
+                background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%)', 
+                boxShadow: '0 4px 15px rgba(99,102,241,0.4)' 
+              }}>
+              {loading ? <><Loader2 size={18} className="animate-spin" /> Signing in...</> : <><LogIn size={18} /> Sign In</>}
             </motion.button>
 
             {loading && (
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 3 }}
-                className="text-center text-xs" style={{ color: isDark ? 'rgba(148,163,184,0.6)' : '#94a3b8' }}>
+                className="text-center text-xs text-gray-500">
                 ⚡ Server is waking up, please wait...
               </motion.p>
             )}
@@ -185,22 +192,22 @@ export default function Login() {
           {/* Divider + Google */}
           <div className="mt-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex-1 h-px" style={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }} />
-              <span className="text-xs" style={{ color: isDark ? 'rgba(148,163,184,0.5)' : '#94a3b8' }}>or continue with</span>
-              <div className="flex-1 h-px" style={{ background: isDark ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }} />
+              <div className="flex-1 h-px bg-gray-700" />
+              <span className="text-xs text-gray-500">or continue with</span>
+              <div className="flex-1 h-px bg-gray-700" />
             </div>
             <div ref={googleBtnRef} className="flex justify-center" />
             {googleLoading && (
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <Loader2 size={13} className="animate-spin text-indigo-400" />
-                <span className="text-xs" style={{ color: isDark ? 'rgba(148,163,184,0.6)' : '#94a3b8' }}>Signing in with Google...</span>
+              <div className="flex items-center justify-center gap-2 mt-3">
+                <Loader2 size={14} className="animate-spin text-indigo-400" />
+                <span className="text-xs text-gray-500">Signing in with Google...</span>
               </div>
             )}
           </div>
 
-          <p className="text-center text-sm mt-5" style={{ color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>
+          <p className="text-center text-sm mt-5 text-gray-400">
             Don't have an account?{' '}
-            <Link to="/signup" className="font-semibold hover:underline" style={{ color: '#6366f1' }}>Sign up</Link>
+            <Link to="/signup" className="font-semibold hover:underline text-indigo-400">Sign up</Link>
           </p>
         </div>
       </motion.div>
