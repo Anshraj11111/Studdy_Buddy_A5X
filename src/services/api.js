@@ -201,6 +201,7 @@ export const playlistAPI = {
   list: (params = {}) => api.get('/playlists', { params }),
   getById: (id) => api.get(`/playlists/${id}`),
   getVideoToken: (playlistId, videoId) => api.post(`/playlists/${playlistId}/videos/${videoId}/token`),
+  update: (id, data) => api.put(`/playlists/${id}`, data),
   delete: (id) => api.delete(`/playlists/${id}`),
 };
 

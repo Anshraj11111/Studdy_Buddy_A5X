@@ -8,11 +8,11 @@ import Navbar from '../components/Navbar'
 import EditResourceModal from '../components/EditResourceModal'
 import { Download, Search, Upload, X, FileText, Film, Image, Loader2, ExternalLink, Trash2, Plus, BookOpen, Youtube, Link, Play, Maximize, Minimize, ListVideo, ChevronLeft, ChevronRight, ImageIcon, GripVertical, Edit } from 'lucide-react'
 
-const TOPICS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
+const TOPICS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Entrepreneurship']
 
 const TOPIC_COLORS = {
   'Robotics': '#60a5fa', 'Programming': '#34d399', 'AI/ML': '#a78bfa',
-  'IoT': '#38bdf8', 'Electronics': '#fbbf24', 'Embedded Systems': '#f87171',
+  'IoT': '#38bdf8', 'Electronics': '#fbbf24', 'Entrepreneurship': '#f87171',
 }
 
 function fileIcon(type) {
@@ -306,11 +306,15 @@ function PlaylistVideoModal({ playlist, initialIndex = 0, onClose }) {
               <>
                 <iframe key={embedSrc} src={embedSrc} title={currentVideo?.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  referrerPolicy="strict-origin" className="absolute inset-0 w-full h-full" style={{ border: 'none' }} />
-                {/* Block YouTube description/info overlay - covers bottom portion */}
-                <div className="absolute bottom-0 left-0 right-0 h-24 bg-black pointer-events-none z-20" 
+                  referrerPolicy="strict-origin" 
+                  className="absolute inset-0 w-full h-full" 
+                  style={{ border: 'none' }} />
+                {/* BLACK BAR - Completely covers YouTube description area */}
+                <div className="absolute left-0 right-0 bg-black pointer-events-none z-50" 
                   style={{ 
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 40%, transparent 100%)'
+                    bottom: '48px',
+                    height: '250px',
+                    background: '#000000'
                   }} 
                 />
               </>
@@ -542,6 +546,199 @@ function CreatePlaylistModal({ onClose, onCreated }) {
   )
 }
 
+// ─── EDIT PLAYLIST MODAL ──────────────────────────────────────────────────────
+function EditPlaylistModal({ playlist, onClose, onUpdated }) {
+  const thumbRef = useRef()
+  const [form, setForm] = useState({
+    title: playlist.title || '',
+    description: playlist.description || '',
+    topic: playlist.topic || 'Robotics',
+    tags: playlist.tags?.join(', ') || ''
+  })
+  const [thumbnail, setThumbnail] = useState(null)
+  const [thumbnailPreview, setThumbnailPreview] = useState(playlist.thumbnail || '')
+  const [videos, setVideos] = useState(playlist.videos?.map(v => ({
+    _id: v._id,
+    title: v.title || '',
+    youtubeUrl: v.youtubeUrl || '',
+    description: v.description || ''
+  })) || [{ title: '', youtubeUrl: '', description: '' }])
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+
+  const inputStyle = { background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', borderRadius: '10px', padding: '8px 12px', fontSize: '0.8rem', width: '100%', outline: 'none' }
+
+  const handleThumb = (e) => {
+    const f = e.target.files[0]
+    if (!f) return
+    setThumbnail(f)
+    setThumbnailPreview(URL.createObjectURL(f))
+  }
+
+  const addVideo = () => setVideos(v => [...v, { title: '', youtubeUrl: '', description: '' }])
+  const removeVideo = (i) => setVideos(v => v.filter((_, idx) => idx !== i))
+  const updateVideo = (i, field, val) => setVideos(v => v.map((item, idx) => idx === i ? { ...item, [field]: val } : item))
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!form.title || !form.description || !form.topic) { setError('Fill all required fields'); return }
+    if (videos.length === 0) { setError('Add at least one video'); return }
+    for (const v of videos) {
+      if (!v.title || !v.youtubeUrl) { setError('Each video needs a title and YouTube URL'); return }
+      if (!v.youtubeUrl.includes('youtube.com') && !v.youtubeUrl.includes('youtu.be')) {
+        setError('Invalid YouTube URL: ' + v.youtubeUrl); return
+      }
+    }
+    setUploading(true); setError('')
+    try {
+      let thumbUrl = playlist.thumbnail || ''
+      if (thumbnail) {
+        const { url } = await uploadToCloudinary(thumbnail, 'studdy-buddy/playlists')
+        thumbUrl = url
+      }
+      const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
+      const res = await playlistAPI.update(playlist._id, {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        topic: form.topic,
+        tags,
+        thumbnail: thumbUrl,
+        videos,
+      })
+      if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed to update')
+      onUpdated()
+      onClose()
+    } catch (err) {
+      setError(err.response?.data?.error?.message || err.message || 'Failed to update')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-40" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={onClose} />
+      <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        className="fixed inset-x-4 top-16 z-50 rounded-2xl max-w-xl mx-auto overflow-hidden flex flex-col"
+        style={{ maxHeight: '90vh', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
+
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--border-primary)' }}>
+          <h2 className="font-bold text-theme-primary flex items-center gap-2">
+            <Edit size={17} style={{ color: '#3b82f6' }} /> Edit Playlist
+          </h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10">
+            <X size={16} className="text-theme-tertiary" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          {/* Thumbnail */}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">Playlist Thumbnail</label>
+            <div onClick={() => thumbRef.current?.click()}
+              className="relative rounded-xl overflow-hidden cursor-pointer border-2 border-dashed flex items-center justify-center"
+              style={{ aspectRatio: '16/9', background: 'var(--bg-primary)', borderColor: thumbnailPreview ? '#3b82f6' : 'var(--border-primary)' }}>
+              {thumbnailPreview ? (
+                <img src={thumbnailPreview} alt="thumbnail" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-6">
+                  <ImageIcon size={28} className="text-blue-400" />
+                  <p className="text-xs text-theme-secondary">Click to upload new thumbnail</p>
+                </div>
+              )}
+              {thumbnailPreview && (
+                <button type="button" onClick={e => { e.stopPropagation(); setThumbnail(null); setThumbnailPreview('') }}
+                  className="absolute top-2 right-2 p-1 rounded-full bg-black/60">
+                  <X size={12} className="text-white" />
+                </button>
+              )}
+            </div>
+            <input ref={thumbRef} type="file" className="hidden" accept="image/*" onChange={handleThumb} />
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">Playlist Title *</label>
+            <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+              placeholder="e.g. ROS for Beginners" style={inputStyle} />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">Description *</label>
+            <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="What will students learn from this playlist?" rows={2} style={{ ...inputStyle, resize: 'none' }} />
+          </div>
+
+          {/* Topic + Tags */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">Topic *</label>
+              <select value={form.topic} onChange={e => setForm(p => ({ ...p, topic: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
+                {TOPICS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">Tags (comma separated)</label>
+              <input value={form.tags} onChange={e => setForm(p => ({ ...p, tags: e.target.value }))}
+                placeholder="ros, gazebo, slam" style={inputStyle} />
+            </div>
+          </div>
+
+          {/* Videos */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold text-theme-secondary">Videos *</label>
+              <button type="button" onClick={addVideo}
+                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg transition"
+                style={{ background: '#dbeafe', color: '#3b82f6' }}>
+                <Plus size={12} /> Add Video
+              </button>
+            </div>
+            <div className="space-y-3">
+              {videos.map((v, i) => (
+                <div key={i} className="p-3 rounded-xl" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-theme-primary">Video {i + 1}</span>
+                    {videos.length > 1 && (
+                      <button type="button" onClick={() => removeVideo(i)} className="text-red-400 hover:text-red-500">
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <input value={v.title} onChange={e => updateVideo(i, 'title', e.target.value)}
+                      placeholder="Video title *" style={inputStyle} />
+                    <div className="relative">
+                      <Youtube size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: '#ef4444' }} />
+                      <input value={v.youtubeUrl} onChange={e => updateVideo(i, 'youtubeUrl', e.target.value)}
+                        placeholder="YouTube URL * (unlisted)" style={{ ...inputStyle, paddingLeft: '28px' }} />
+                    </div>
+                    <input value={v.description} onChange={e => updateVideo(i, 'description', e.target.value)}
+                      placeholder="Short description (optional)" style={inputStyle} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-500 px-3 py-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>{error}</p>}
+        </form>
+
+        <div className="px-5 py-4" style={{ borderTop: '1px solid var(--border-primary)' }}>
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={submit} disabled={uploading}
+            className="w-full flex items-center justify-center gap-2 py-3 text-white font-semibold text-sm rounded-xl disabled:opacity-50"
+            style={{ background: '#3b82f6' }}>
+            {uploading ? <><Loader2 size={15} className="animate-spin" /> Updating...</> : <><Edit size={15} /> Update Playlist</>}
+          </motion.button>
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
 function UploadModal({ onClose, onUploaded }) {
   const fileRef = useRef()
   const [uploadMode, setUploadMode] = useState('file') // 'file' | 'youtube'
@@ -561,7 +758,7 @@ function UploadModal({ onClose, onUploaded }) {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (!form.title || !form.description || !form.topic) { setError('Fill all required fields'); return }
+    if (!form.title || !form.topic) { setError('Fill all required fields (Title and Topic)'); return }
     const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
 
     if (uploadMode === 'youtube') {
@@ -570,7 +767,15 @@ function UploadModal({ onClose, onUploaded }) {
       if (!getYouTubeId(form.youtubeUrl)) { setError('Could not extract video ID. Check the YouTube link.'); return }
       setUploading(true); setError('')
       try {
-        const res = await resourceAPI.create({ title: form.title.trim(), description: form.description.trim(), topic: form.topic, tags, fileUrl: form.youtubeUrl.trim(), fileType: 'link', isPublic: true })
+        const res = await resourceAPI.create({ 
+          title: form.title.trim(), 
+          description: form.description.trim() || '', // Optional - can be empty
+          topic: form.topic, 
+          tags, 
+          fileUrl: form.youtubeUrl.trim(), 
+          fileType: 'link', 
+          isPublic: true 
+        })
         if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed')
         onUploaded(); onClose()
       } catch (err) { setError(err.response?.data?.error?.message || err.message || 'Failed') }
@@ -584,7 +789,15 @@ function UploadModal({ onClose, onUploaded }) {
       const { url } = await uploadToCloudinary(file, 'studdy-buddy/resources')
       const mime = file.type || ''
       const fileType = mime.startsWith('image') ? 'image' : mime.startsWith('video') ? 'video' : mime === 'application/pdf' ? 'pdf' : mime.includes('word') || mime.includes('doc') ? 'doc' : 'other'
-      const res = await resourceAPI.create({ title: form.title.trim(), description: form.description.trim(), topic: form.topic, tags, fileUrl: url, fileType, isPublic: true })
+      const res = await resourceAPI.create({ 
+        title: form.title.trim(), 
+        description: form.description.trim() || '', // Optional - can be empty
+        topic: form.topic, 
+        tags, 
+        fileUrl: url, 
+        fileType, 
+        isPublic: true 
+      })
       if (!res.data?.success) throw new Error(res.data?.error?.message || 'Upload failed')
       onUploaded(); onClose()
     } catch (err) { setError(err.response?.data?.error?.message || err.message || 'Upload failed') }
@@ -670,7 +883,7 @@ function UploadModal({ onClose, onUploaded }) {
 
           {[
             { label: 'Title *', key: 'title', type: 'input', placeholder: 'Resource title' },
-            { label: 'Description *', key: 'description', type: 'textarea', placeholder: 'Brief description...' },
+            { label: 'Description (optional)', key: 'description', type: 'textarea', placeholder: 'Brief description...' },
           ].map(f => (
             <div key={f.key}>
               <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">{f.label}</label>
@@ -758,6 +971,7 @@ export default function Resources() {
   const [selectedVideo, setSelectedVideo] = useState(null)
   const [selectedPlaylist, setSelectedPlaylist] = useState(null) // { playlist, startIndex }
   const [editingResource, setEditingResource] = useState(null) // Resource being edited
+  const [editingPlaylist, setEditingPlaylist] = useState(null) // Playlist being edited
 
   const fetchResources = async () => {
     try {
@@ -816,9 +1030,19 @@ export default function Resources() {
   }
 
   const handleDeletePlaylist = async (id) => {
-    if (!window.confirm('Delete this playlist?')) return
-    try { await playlistAPI.delete(id); setPlaylists(prev => prev.filter(p => p._id !== id)) }
-    catch { }
+    if (!window.confirm('Delete this playlist? This action cannot be undone.')) return
+    try {
+      const res = await playlistAPI.delete(id)
+      if (res.data?.success) {
+        setPlaylists(prev => prev.filter(p => p._id !== id))
+        alert('Playlist deleted successfully!')
+      } else {
+        alert(res.data?.error?.message || 'Failed to delete playlist')
+      }
+    } catch (error) {
+      console.error('Delete playlist error:', error)
+      alert(error.response?.data?.error?.message || 'Failed to delete playlist. Please try again.')
+    }
   }
 
   const openPlaylist = async (playlist) => {
@@ -959,6 +1183,9 @@ export default function Resources() {
                           <ListVideo size={36} className="text-white/60" />
                         </div>
                       )}
+                      
+                      {/* REMOVED: Edit/Delete buttons from thumbnail - now only in bottom actions */}
+                      
                       {/* Video count badge */}
                       <div className="absolute bottom-2 right-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full"
                         style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
@@ -966,7 +1193,7 @@ export default function Resources() {
                         <span className="text-white text-[10px] font-bold">{pl.videos?.length || 0} videos</span>
                       </div>
                       {/* Topic badge */}
-                      <div className="absolute top-2 left-2">
+                      <div className="absolute top-2 right-2">
                         <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold text-white"
                           style={{ background: TOPIC_COLORS[pl.topic] || '#6366f1' }}>
                           {pl.topic}
@@ -999,11 +1226,22 @@ export default function Resources() {
                       <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: '1px solid var(--border-primary)' }}>
                         <span className="text-xs text-theme-tertiary">{pl.videos?.length || 0} videos</span>
                         <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                          {user?.role === 'mentor' && String(pl.createdBy?._id) === String(user?._id) && (
-                            <button onClick={() => handleDeletePlaylist(pl._id)}
-                              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10" style={{ color: '#ef4444' }}>
-                              <Trash2 size={13} />
-                            </button>
+                          {/* Show edit/delete for owner or any mentor (admin) */}
+                          {user?.role === 'mentor' && (
+                            <>
+                              <button onClick={(e) => { e.stopPropagation(); setEditingPlaylist(pl) }}
+                                className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 transition" 
+                                style={{ color: '#3b82f6' }}
+                                title="Edit playlist">
+                                <Edit size={13} />
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeletePlaylist(pl._id) }}
+                                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition" 
+                                style={{ color: '#ef4444' }}
+                                title="Delete playlist">
+                                <Trash2 size={13} />
+                              </button>
+                            </>
                           )}
                           <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                             onClick={() => openPlaylist(pl)}
@@ -1063,25 +1301,7 @@ export default function Resources() {
                           <Youtube size={12} style={{ color: '#ef4444' }} />
                           <span className="text-white text-[10px] font-semibold">Video</span>
                         </div>
-                        {/* Edit/Delete buttons for mentor */}
-                        {user?.role === 'mentor' && (
-                          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setEditingResource(r); }}
-                              className="p-1.5 rounded-lg backdrop-blur-sm hover:scale-110 transition-transform shadow-lg"
-                              style={{ background: 'rgba(99,102,241,0.95)', color: 'white' }}
-                              title="Edit resource">
-                              <Edit size={14} />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(r._id); }}
-                              className="p-1.5 rounded-lg backdrop-blur-sm hover:scale-110 transition-transform shadow-lg"
-                              style={{ background: 'rgba(239,68,68,0.95)', color: 'white' }}
-                              title="Delete resource">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        )}
+                        {/* REMOVED: Edit/Delete buttons from thumbnail - now only in bottom actions */}
                       </div>
                     ) : (
                       <div className="flex items-center justify-center" style={{ aspectRatio: '16/9', background: r.fileType === 'pdf' ? '#fef2f2' : '#f5f3ff' }}>
@@ -1169,6 +1389,7 @@ export default function Resources() {
       <AnimatePresence>
         {showUpload && <UploadModal onClose={() => setShowUpload(false)} onUploaded={fetchResources} />}
         {showCreatePlaylist && <CreatePlaylistModal onClose={() => setShowCreatePlaylist(false)} onCreated={() => { setTab('playlists'); fetchPlaylists() }} />}
+        {editingPlaylist && <EditPlaylistModal playlist={editingPlaylist} onClose={() => setEditingPlaylist(null)} onUpdated={() => { fetchPlaylists(); setEditingPlaylist(null) }} />}
         {selectedVideo && <YouTubeModal resource={selectedVideo} onClose={() => setSelectedVideo(null)} />}
         {selectedPlaylist && <PlaylistVideoModal playlist={selectedPlaylist.playlist} initialIndex={selectedPlaylist.startIndex} onClose={() => setSelectedPlaylist(null)} />}
         {editingResource && <EditResourceModal resource={editingResource} onClose={() => setEditingResource(null)} onUpdated={() => { fetchResources(); setEditingResource(null) }} />}

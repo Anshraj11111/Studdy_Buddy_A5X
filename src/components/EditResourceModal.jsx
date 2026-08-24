@@ -44,8 +44,9 @@ export default function EditResourceModal({ resource, onClose, onUpdated }) {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (!form.title || !form.description || !form.topic) {
-      setError('Fill all required fields')
+    // Only Title and Topic are required - Description is optional
+    if (!form.title || !form.topic) {
+      setError('Fill all required fields (Title and Topic)')
       return
     }
 
@@ -68,7 +69,7 @@ export default function EditResourceModal({ resource, onClose, onUpdated }) {
       const tags = form.tags.split(',').map(t => t.trim()).filter(Boolean)
       const updateData = {
         title: form.title.trim(),
-        description: form.description.trim(),
+        description: form.description.trim() || '', // Optional - can be empty
         topic: form.topic,
         tags,
       }
@@ -78,12 +79,16 @@ export default function EditResourceModal({ resource, onClose, onUpdated }) {
         updateData.fileUrl = form.youtubeUrl.trim()
       }
 
+      console.log('Updating resource with data:', updateData)
       const res = await resourceAPI.update(resource._id, updateData)
+      console.log('Update response:', res.data)
+      
       if (!res.data?.success) throw new Error(res.data?.error?.message || 'Update failed')
       
       onUpdated()
       onClose()
     } catch (err) {
+      console.error('Update error:', err)
       setError(err.response?.data?.error?.message || err.message || 'Update failed')
     } finally {
       setUpdating(false)
@@ -160,7 +165,7 @@ export default function EditResourceModal({ resource, onClose, onUpdated }) {
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">Description *</label>
+            <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">Description (optional)</label>
             <textarea
               value={form.description}
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
