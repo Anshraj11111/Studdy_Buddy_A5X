@@ -246,36 +246,33 @@ export default function BroadcastLive() {
         {selectedChannel && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.8)' }}
+            style={{ background: 'rgba(0,0,0,0.95)' }}
             onClick={() => setSelectedChannel(null)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-full max-w-4xl rounded-xl overflow-hidden"
-              style={{ background: 'var(--bg-secondary)' }}
+              className="w-full h-full max-w-full flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-4 border-b" style={{ borderColor: 'var(--border-primary)' }}>
-                <h3 className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                  {CHANNELS.find(ch => ch.id === selectedChannel)?.name} - Preview
-                </h3>
+              {/* Fullscreen Video Player */}
+              <div className="flex-1 flex items-center justify-center">
+                <div className="w-full h-full max-h-screen">
+                  <YouTubeLivePlayerSimple 
+                    videoId={streams[selectedChannel]?.youtubeVideoId}
+                    autoplay={true}
+                  />
+                </div>
               </div>
-              <div className="aspect-video">
-                <YouTubeLivePlayerSimple 
-                  videoId={streams[selectedChannel]?.youtubeVideoId}
-                  autoplay={true}
-                />
-              </div>
-              <div className="p-4">
-                <button
-                  onClick={() => setSelectedChannel(null)}
-                  className="w-full py-2 rounded-lg font-medium"
-                  style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                >
-                  Close
-                </button>
-              </div>
+              
+              {/* Close Button - Floating top right */}
+              <button
+                onClick={() => setSelectedChannel(null)}
+                className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white hover:bg-white/20 transition-all z-50"
+                style={{ background: 'rgba(0,0,0,0.5)' }}
+              >
+                ✕
+              </button>
             </motion.div>
           </div>
         )}
