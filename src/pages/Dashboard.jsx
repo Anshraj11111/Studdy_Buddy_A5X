@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
+import { useThemeStore } from '../store/themeStore'
 import { doubtAPI, communityAPI, roomAPI } from '../services/api'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
@@ -10,7 +11,6 @@ import {
   MessageSquare, Users, BookOpen, Zap, TrendingUp, X, MessageCircle,
   Target, ArrowUpRight, Flame, Activity, Trophy, Cpu
 } from 'lucide-react'
-import dashboardBg from '../assets/dashboard.png'
 
 function Sparkline({ color = '#8b5cf6', data = [3,5,2,8,4,9,6,11,8,13] }) {
   const max = Math.max(...data), min = Math.min(...data)
@@ -38,7 +38,13 @@ function Sparkline({ color = '#8b5cf6', data = [3,5,2,8,4,9,6,11,8,13] }) {
 
 export default function Dashboard() {
   const { user } = useAuthStore()
+  const { theme } = useThemeStore()
+  const isDark = theme === 'dark'
   const navigate = useNavigate()
+  
+  // Debug: Log theme value
+  console.log('Dashboard theme:', theme, 'isDark:', isDark)
+  
   const [doubts, setDoubts] = useState([])
   const [communities, setCommunities] = useState([])
   const [loading, setLoading] = useState(true)
@@ -105,9 +111,21 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+    <div className="flex flex-col min-h-screen" style={{ position: "relative" }}>
       {/* Navbar */}
       <Navbar />
+
+      {/* Background */}
+      <div style={{ 
+        position: "fixed", 
+        inset: 0, 
+        zIndex: 0, 
+        backgroundImage: isDark ? "url(/dashboard1.png)" : "url(/dashboard-light.png)", 
+        backgroundSize: "cover", 
+        backgroundPosition: "center", 
+        backgroundAttachment: "fixed" 
+      }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.2)" }} />
 
       {/* Main content */}
       <div className="relative flex-1 mt-16 px-3 sm:px-4 py-3 sm:py-5 space-y-3 sm:space-y-4 overflow-x-hidden max-w-7xl mx-auto w-full" style={{ zIndex: 5 }}>
@@ -116,7 +134,6 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="lg:col-span-2">
             <div className="relative rounded-lg overflow-hidden" style={{ minHeight: "260px", background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
-              <div className="absolute inset-0" style={{ backgroundImage: "url(" + dashboardBg + ")", backgroundSize: "cover", backgroundPosition: "center top", opacity: 0.05 }} />
               <div className="relative z-10 p-7">
                 <motion.div className="flex items-center gap-2 mb-3" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
                   <motion.span className="w-2 h-2 rounded-full bg-green-500 inline-block" animate={{ scale: [1,1.5,1], opacity: [1,0.5,1] }} transition={{ duration: 1.5, repeat: Infinity }} />

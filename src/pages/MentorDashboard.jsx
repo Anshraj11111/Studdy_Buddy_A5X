@@ -3,11 +3,14 @@ import { Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { doubtAPI, roomAPI } from "../services/api"
 import { useAuthStore } from "../store/authStore"
+import { useThemeStore } from "../store/themeStore"
 import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard } from "lucide-react"
 import Navbar from "../components/Navbar"
 
 export default function MentorDashboard() {
   const { user } = useAuthStore()
+  const { theme } = useThemeStore()
+  const isDark = theme === 'dark'
   const [activeTab, setActiveTab] = useState("doubts")
   const [doubts, setDoubts] = useState([])
   const [rooms, setRooms] = useState([])
@@ -80,8 +83,16 @@ export default function MentorDashboard() {
       <Navbar />
 
       {/* Background */}
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
-      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "var(--bg-overlay)" }} />
+      <div style={{ 
+        position: "fixed", 
+        inset: 0, 
+        zIndex: 0, 
+        backgroundImage: isDark ? "url(/dashboard1.png)" : "url(/dashboard-light.png?v=1)", 
+        backgroundSize: "cover", 
+        backgroundPosition: "center", 
+        backgroundAttachment: "fixed" 
+      }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.2)" }} />
 
       <div className="relative flex-1 mt-16 px-3 sm:px-5 py-5 overflow-x-hidden max-w-7xl mx-auto w-full" style={{ zIndex: 5 }}>
         <div className="max-w-5xl mx-auto">
@@ -139,7 +150,7 @@ export default function MentorDashboard() {
 
           {/* Tabs */}
           <div className="flex gap-1 p-1 rounded-2xl mb-5"
-            style={{ background: "rgba(10,8,30,0.6)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+            style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
             {[
               { key: "doubts", label: "Student Doubts", icon: MessageSquare },
               { key: "chats", label: `Chats (${rooms.length})`, icon: MessageCircle },
@@ -148,7 +159,7 @@ export default function MentorDashboard() {
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-all"
                 style={{
                   background: activeTab === key ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
-                  color: activeTab === key ? "white" : "rgba(148,163,184,0.7)",
+                  color: activeTab === key ? "white" : "var(--text-secondary)",
                   boxShadow: activeTab === key ? "0 2px 12px rgba(99,102,241,0.35)" : "none",
                 }}>
                 <Icon size={14} /> {label}
@@ -173,7 +184,7 @@ export default function MentorDashboard() {
                       <motion.div key={doubt._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: Math.min(i * 0.04, 0.3) }}
                         className="rounded-2xl overflow-hidden"
-                        style={{ background: "rgba(10,8,30,0.7)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                        style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
                         <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
                         <div className="p-4 sm:p-5">
                           <div className="flex items-start gap-3 mb-3">
@@ -190,7 +201,7 @@ export default function MentorDashboard() {
                                   <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                     <User size={11} style={{ color: "var(--text-tertiary)" }} />
                                     <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{doubt.userId?.name || "Unknown"}</span>
-                                    <span style={{ color: "rgba(148,163,184,0.3)" }}>�</span>
+                                    <span style={{ color: "var(--text-tertiary)" }}>•</span>
                                     <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>{new Date(doubt.createdAt).toLocaleDateString()}</span>
                                   </div>
                                 </div>
@@ -211,12 +222,12 @@ export default function MentorDashboard() {
 
                           {/* Replies */}
                           {doubt.replies?.length > 0 && (
-                            <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid rgba(99,102,241,0.15)" }}>
-                              <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "rgba(99,102,241,0.7)", fontFamily: "monospace" }}>
+                            <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--border-primary)" }}>
+                              <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text-accent)", fontFamily: "monospace" }}>
                                 <MessageSquare size={12} /> Replies ({doubt.replies.length})
                               </p>
                               {doubt.replies.map(reply => (
-                                <div key={reply._id} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(99,102,241,0.12)" }}>
+                                <div key={reply._id} className="rounded-xl p-3" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)" }}>
                                   <div className="flex justify-between items-start mb-1.5">
                                     <div className="flex items-center gap-2">
                                       <div className="w-7 h-7 rounded-full flex items-center justify-center text-theme-primary font-bold text-xs flex-shrink-0"
@@ -243,7 +254,7 @@ export default function MentorDashboard() {
                                       </div>
                                     )}
                                   </div>
-                                  <p className="text-xs sm:text-sm" style={{ color: "rgba(226,232,240,0.85)" }}>{reply.content}</p>
+                                  <p className="text-xs sm:text-sm" style={{ color: "var(--text-primary)" }}>{reply.content}</p>
                                 </div>
                               ))}
                             </div>
@@ -251,12 +262,12 @@ export default function MentorDashboard() {
 
                           {/* Reply Form */}
                           {replyingTo === doubt._id ? (
-                            <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(99,102,241,0.15)" }}>
+                            <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border-primary)" }}>
                               <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
                                 placeholder="Write your reply..."
                                 rows={3}
                                 className="w-full text-sm text-theme-primary placeholder-gray-500 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none mb-2"
-                                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-primary)" }} />
+                                style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)" }} />
                               <div className="flex gap-2">
                                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                                   onClick={() => handleReply(doubt._id)}
@@ -267,7 +278,7 @@ export default function MentorDashboard() {
                                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                                   onClick={cancelReply}
                                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl"
-                                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(148,163,184,0.8)" }}>
+                                  style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-secondary)", color: "var(--text-secondary)" }}>
                                   <X size={12} /> Cancel
                                 </motion.button>
                               </div>
@@ -277,7 +288,7 @@ export default function MentorDashboard() {
                               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                                 onClick={() => setReplyingTo(doubt._id)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl"
-                                style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}>
+                                style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", color: "var(--text-accent)" }}>
                                 <MessageSquare size={12} /> Reply
                               </motion.button>
                             </div>
@@ -288,8 +299,8 @@ export default function MentorDashboard() {
                   </div>
                 ) : (
                   <div className="text-center py-20 rounded-2xl"
-                    style={{ background: "rgba(10,8,30,0.6)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
-                    <MessageSquare size={36} className="mx-auto mb-3" style={{ color: "rgba(99,102,241,0.4)" }} />
+                    style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                    <MessageSquare size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)" }} />
                     <p style={{ color: "var(--text-secondary)" }}>No student doubts yet.</p>
                   </div>
                 )}
@@ -308,7 +319,7 @@ export default function MentorDashboard() {
                           transition={{ delay: Math.min(i * 0.06, 0.4), type: "spring", stiffness: 200 }}
                           whileHover={{ x: 4, transition: { duration: 0.15 } }}
                           className="group relative rounded-2xl overflow-hidden"
-                          style={{ background: "rgba(10,8,30,0.7)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                          style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
                           <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background: "linear-gradient(to bottom,#6366f1,#8b5cf6)" }} />
                           <div className="flex items-center justify-between gap-3 p-4 pl-5">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -320,13 +331,13 @@ export default function MentorDashboard() {
                                     : other?.name?.charAt(0).toUpperCase() || "U"}
                                 </div>
                                 <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
-                                  style={{ background: "#34d399", borderColor: "rgba(10,8,30,0.9)" }} />
+                                  style={{ background: "#34d399", borderColor: "var(--bg-primary)" }} />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <h3 className="font-bold text-theme-primary text-sm truncate">{other?.name || "Unknown User"}</h3>
                                 <p className="text-xs truncate" style={{ color: "var(--text-secondary)" }}>{other?.email}</p>
                                 {room.topic && (
-                                  <p className="text-xs mt-0.5" style={{ color: "rgba(99,102,241,0.7)", fontFamily: "monospace" }}># {room.topic}</p>
+                                  <p className="text-xs mt-0.5" style={{ color: "var(--text-accent)", fontFamily: "monospace" }}># {room.topic}</p>
                                 )}
                               </div>
                             </div>
@@ -353,8 +364,8 @@ export default function MentorDashboard() {
                   </div>
                 ) : (
                   <div className="text-center py-20 rounded-2xl"
-                    style={{ background: "rgba(10,8,30,0.6)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
-                    <MessageCircle size={36} className="mx-auto mb-3" style={{ color: "rgba(99,102,241,0.4)" }} />
+                    style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                    <MessageCircle size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)" }} />
                     <h3 className="font-bold text-theme-primary mb-1">No chats yet</h3>
                     <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Students will appear here when they message you.</p>
                   </div>

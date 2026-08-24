@@ -1,17 +1,18 @@
 import axios from "axios";
 import loadBalancer from "../config/loadBalancer.js";
+import { isDevelopment, secureLog } from "../config/env.js";
 
 // Check if we're in development or production
-const isLocalDev = import.meta.env.DEV || import.meta.env.VITE_API_URL?.includes('localhost');
+const isLocalDev = isDevelopment();
 
 // Use load balancer in production, localhost in development
 const API_BASE_URL = isLocalDev 
   ? (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
   : loadBalancer.getApiUrl();
 
-// Log the URL being used so you can verify in the console
-console.log('🌐 API Mode:', isLocalDev ? 'Development (localhost)' : 'Production (Load Balanced)');
-console.log('🌐 API base URL:', API_BASE_URL);
+// Secure logging (only in development)
+secureLog('🌐 API Mode:', isLocalDev ? 'Development (localhost)' : 'Production (Load Balanced)');
+secureLog('🌐 API base URL:', API_BASE_URL);
 
 // Keep-alive ping for all 3 Render servers to prevent cold starts
 if (!isLocalDev) {

@@ -22,10 +22,15 @@ yarn-error.log*
 # environment variables
 .env
 .env.local
+.env.development
 .env.development.local
+.env.test
 .env.test.local
+.env.production
 .env.production.local
-!.env.production
+.env.example
+*.env
+!.env.production.example
 
 # system files
 .DS_Store

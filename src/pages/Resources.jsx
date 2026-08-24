@@ -829,7 +829,7 @@ export default function Resources() {
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       <Navbar />
 
-      <div className="relative flex-1 mt-16 overflow-x-hidden max-w-7xl mx-auto w-full" style={{ background: 'var(--bg-primary)' }}>
+      <div className="relative flex-1 mt-20 overflow-x-hidden max-w-7xl mx-auto w-full" style={{ background: 'var(--bg-primary)' }}>
 
         {/* ── Hero Header ── */}
         <div className="px-4 sm:px-6 lg:px-8 py-6" style={{ borderBottom: '1px solid var(--border-primary)', background: 'var(--bg-secondary)' }}>

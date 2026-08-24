@@ -492,7 +492,7 @@ export default function Broadcast() {
         
         // Show rejection message
         const tempToast = document.createElement('div')
-        tempToast.innerHTML = `❌ Your request to join ${CHANNELS.find(c => c.id === channel)?.name} was rejected. You can try again.`
+        tempToast.textContent = `❌ Your request to join ${CHANNELS.find(c => c.id === channel)?.name} was rejected. You can try again.`
         tempToast.style.cssText = `
           position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
           background: linear-gradient(135deg,#ef4444,#dc2626); color: white; 
@@ -644,7 +644,7 @@ export default function Broadcast() {
     const alreadyEnrolledInThisChannel = enrollments.some(e => e.channel === channelId)
     if (alreadyEnrolledInThisChannel) {
       const tempToast = document.createElement('div')
-      tempToast.innerHTML = `⚠️ You're already enrolled in ${CHANNELS.find(c => c.id === channelId)?.name} channel!`
+      tempToast.textContent = `⚠️ You're already enrolled in ${CHANNELS.find(c => c.id === channelId)?.name} channel!`
       tempToast.style.cssText = `
         position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
         background: linear-gradient(135deg,#f59e0b,#d97706); color: white; 
@@ -659,7 +659,7 @@ export default function Broadcast() {
     // Check if no existing enrollment
     if (enrollments.length === 0) {
       const tempToast = document.createElement('div')
-      tempToast.innerHTML = `⚠️ Please join a channel first before requesting additional access!`
+      tempToast.textContent = `⚠️ Please join a channel first before requesting additional access!`
       tempToast.style.cssText = `
         position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
         background: linear-gradient(135deg,#f59e0b,#d97706); color: white; 
@@ -674,7 +674,7 @@ export default function Broadcast() {
     // Prevent multiple requests for same channel
     if (pendingReq?.channel === channelId) {
       const tempToast = document.createElement('div')
-      tempToast.innerHTML = `⚠️ Already have pending request for ${CHANNELS.find(c => c.id === channelId)?.name}`
+      tempToast.textContent = `⚠️ Already have pending request for ${CHANNELS.find(c => c.id === channelId)?.name}`
       tempToast.style.cssText = `
         position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
         background: linear-gradient(135deg,#f59e0b,#d97706); color: white; 
@@ -692,7 +692,7 @@ export default function Broadcast() {
     
     // Show instant success feedback
     const tempToast = document.createElement('div')
-    tempToast.innerHTML = `✅ Request sent for ${channelName}! Admin will review your request.`
+    tempToast.textContent = `✅ Request sent for ${channelName}! Admin will review your request.`
     tempToast.style.cssText = `
       position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
       background: linear-gradient(135deg,#10b981,#059669); color: white; 
@@ -715,7 +715,7 @@ export default function Broadcast() {
       
       // Show error message
       const errorToast = document.createElement('div')
-      errorToast.innerHTML = `❌ ${errorMsg}`
+      errorToast.textContent = `❌ ${errorMsg}`
       errorToast.style.cssText = `
         position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
         background: linear-gradient(135deg,#ef4444,#dc2626); color: white; 
@@ -758,7 +758,7 @@ export default function Broadcast() {
       
       // Show success message
       const tempToast = document.createElement('div')
-      tempToast.innerHTML = `✅ Successfully left ${channelName} channel!`
+      tempToast.textContent = `✅ Successfully left ${channelName} channel!`
       tempToast.style.cssText = `
         position: fixed; top: 80px; left: 50%; transform: translateX(-50%); z-index: 1000;
         background: linear-gradient(135deg,#10b981,#059669); color: white; 
