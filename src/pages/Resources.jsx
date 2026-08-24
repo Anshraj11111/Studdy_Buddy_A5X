@@ -249,7 +249,7 @@ function PlaylistVideoModal({ playlist, initialIndex = 0, onClose }) {
   }
 
   const embedSrc = videoId
-    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&fs=0`
+    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&fs=0&iv_load_policy=3&disablekb=0&controls=1&showinfo=0&cc_load_policy=0`
     : null
 
   return (
@@ -307,47 +307,50 @@ function PlaylistVideoModal({ playlist, initialIndex = 0, onClose }) {
                 <iframe key={embedSrc} src={embedSrc} title={currentVideo?.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   referrerPolicy="strict-origin" className="absolute inset-0 w-full h-full" style={{ border: 'none' }} />
-                {/* Block YouTube UI */}
-                <div className="absolute top-0 left-0 right-0 h-14 z-10 cursor-default" onClick={e => e.preventDefault()} />
-                <div className="absolute bottom-0 left-0 right-0 h-12 z-10 cursor-default" onClick={e => e.preventDefault()} />
+                {/* Block YouTube description/info overlay - covers bottom portion */}
+                <div className="absolute bottom-0 left-0 right-0 h-24 bg-black pointer-events-none z-20" 
+                  style={{ 
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 40%, transparent 100%)'
+                  }} 
+                />
               </>
             )}
           </div>
 
-          {/* Navigation arrows */}
-          <div className="flex items-center justify-between px-4 py-2 flex-shrink-0" style={{ borderTop: `1px solid ${borderColor}`, background: headerBg }}>
-            <button onClick={() => setCurrentIndex(i => Math.max(0, i - 1))} disabled={currentIndex === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-30"
-              style={{ background: navBtnBg, border: `1px solid ${navBtnBorder}`, color: textSecondary }}>
-              <ChevronLeft size={14} /> Previous
-            </button>
-            {currentVideo?.description && (
-              <p className="text-xs text-center flex-1 mx-4 line-clamp-1" style={{ color: textMuted }}>{currentVideo.description}</p>
-            )}
-            <button onClick={() => setCurrentIndex(i => Math.min(playlist.videos.length - 1, i + 1))}
-              disabled={currentIndex >= playlist.videos?.length - 1}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-30"
-              style={{ background: '#6366f1', color: 'white' }}>
-              Next <ChevronRight size={14} />
-            </button>
-          </div>
+          {/* Navigation arrows - Hide when fullscreen */}
+          {!isFullscreen && (
+            <div className="flex items-center justify-between px-4 py-2 flex-shrink-0" style={{ borderTop: `1px solid ${borderColor}`, background: headerBg }}>
+              <button onClick={() => setCurrentIndex(i => Math.max(0, i - 1))} disabled={currentIndex === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-30"
+                style={{ background: navBtnBg, border: `1px solid ${navBtnBorder}`, color: textSecondary }}>
+                <ChevronLeft size={14} /> Previous
+              </button>
+              <button onClick={() => setCurrentIndex(i => Math.min(playlist.videos.length - 1, i + 1))}
+                disabled={currentIndex >= playlist.videos?.length - 1}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-30"
+                style={{ background: '#6366f1', color: 'white' }}>
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Playlist sidebar */}
-        <div className="w-full lg:w-64 flex-shrink-0 overflow-y-auto"
-          style={{ borderLeft: `1px solid ${borderColor}`, borderTop: `1px solid ${borderColor}`, maxHeight: '60vh', background: sidebarBg }}>
-          <div className="px-3 py-2.5" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: textSecondary }}>Playlist</p>
-            <p className="text-xs mt-0.5" style={{ color: textMuted }}>{playlist.videos?.length} videos</p>
-          </div>
-          <div>
-            {playlist.videos?.map((v, idx) => (
-              <button key={v._id || idx} onClick={() => setCurrentIndex(idx)}
-                className="w-full flex items-start gap-3 p-3 text-left transition"
-                style={{ background: idx === currentIndex ? activeItem : 'transparent', borderBottom: `1px solid ${sidebarBorder}` }}>
-                <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold"
-                  style={{ background: idx === currentIndex ? '#6366f1' : (isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'), color: idx === currentIndex ? 'white' : textMuted }}>
-                  {idx === currentIndex ? <Play size={10} fill="white" /> : idx + 1}
+        {/* Playlist sidebar - Hide when fullscreen */}
+        {!isFullscreen && (
+          <div className="w-full lg:w-64 flex-shrink-0 overflow-y-auto"
+            style={{ borderLeft: `1px solid ${borderColor}`, borderTop: `1px solid ${borderColor}`, maxHeight: '60vh', background: sidebarBg }}>
+            <div className="px-3 py-2.5" style={{ borderBottom: `1px solid ${sidebarBorder}` }}>
+              <p className="text-xs font-bold uppercase tracking-wider" style={{ color: textSecondary }}>Playlist</p>
+              <p className="text-xs mt-0.5" style={{ color: textMuted }}>{playlist.videos?.length} videos</p>
+            </div>
+            <div>
+              {playlist.videos?.map((v, idx) => (
+                <button key={v._id || idx} onClick={() => setCurrentIndex(idx)}
+                  className="w-full flex items-start gap-3 p-3 text-left transition"
+                  style={{ background: idx === currentIndex ? activeItem : 'transparent', borderBottom: `1px solid ${sidebarBorder}` }}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold"
+                    style={{ background: idx === currentIndex ? '#6366f1' : (isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'), color: idx === currentIndex ? 'white' : textMuted }}>
+                    {idx === currentIndex ? <Play size={10} fill="white" /> : idx + 1}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-semibold line-clamp-2" style={{ color: idx === currentIndex ? '#6366f1' : textPrimary }}>{v.title}</p>
@@ -357,6 +360,7 @@ function PlaylistVideoModal({ playlist, initialIndex = 0, onClose }) {
             ))}
           </div>
         </div>
+        )}
       </motion.div>
     </div>
   )
