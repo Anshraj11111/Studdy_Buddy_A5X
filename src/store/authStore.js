@@ -78,21 +78,35 @@ export const useAuthStore = create((set) => ({
       set({ token, user: parsedUser, isInitialized: true })
 
       // Silently validate token + refresh user data in background
-      try {
-        const { data } = await authAPI.getProfile()
-        const freshUser = data.data.user
-        localStorage.setItem('user', JSON.stringify(freshUser))
-        set({ user: freshUser })
-      } catch (error) {
-        // Token is invalid or expired - logout and redirect
-        console.warn('🔒 Token validation failed, logging out')
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        set({ token: null, user: null })
-        
-        // Only redirect if not already on login/signup pages
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
-          window.location.href = '/login'
+      let retryCount = 0
+      const maxRetries = 3
+      
+      while (retryCount < maxRetries) {
+        try {
+          const { data } = await authAPI.getProfile()
+          const freshUser = data.data.user
+          localStorage.setItem('user', JSON.stringify(freshUser))
+          set({ user: freshUser })
+          return // Success - exit early
+        } catch (error) {
+          retryCount++
+          
+          if (retryCount < maxRetries) {
+            // Retry with exponential backoff (maybe different server will work)
+            console.warn(`🔄 Token validation failed, retrying (${retryCount}/${maxRetries})`)
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+          } else {
+            // All retries failed - token is truly invalid
+            console.warn('🔒 Token validation failed after retries, logging out')
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            set({ token: null, user: null })
+            
+            // Only redirect if not already on login/signup pages
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+              window.location.href = '/login'
+            }
+          }
         }
       }
     } else {
