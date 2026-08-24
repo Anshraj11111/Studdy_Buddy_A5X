@@ -62,8 +62,6 @@ export default function Navbar({ onMenuClick }) {
     : [
         { to: '/mentor-dashboard', label: 'Dashboard' },
         { to: '/chats', label: 'Chats' },
-        { to: '/school-channel', label: 'Schools' },
-        { to: '/school-channel-admin', label: 'Manage Schools' },
         { to: '/resources', label: 'Resources' },
         { to: '/communities', label: 'Communities' },
         { to: '/rewards', label: 'Rewards' },
