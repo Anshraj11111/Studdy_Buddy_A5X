@@ -1,0 +1,26 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="110" fill="#6366f1"/>
+  
+  <!-- Book Icon -->
+  <path d="M128 96C128 78.3269 142.327 64 160 64H352C369.673 64 384 78.3269 384 96V416C384 433.673 369.673 448 352 448H160C142.327 448 128 433.673 128 416V96Z" fill="white" fill-opacity="0.2"/>
+  
+  <!-- Book Pages -->
+  <path d="M160 96H352V384H160V96Z" fill="white"/>
+  
+  <!-- Book Spine -->
+  <rect x="248" y="64" width="16" height="384" fill="#4f46e5"/>
+  
+  <!-- Graduation Cap -->
+  <path d="M256 144L176 176L256 208L336 176L256 144Z" fill="#fbbf24"/>
+  <path d="M336 176V224L256 256L176 224V176" stroke="#fbbf24" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Students Icon -->
+  <circle cx="200" cy="320" r="24" fill="#6366f1"/>
+  <circle cx="256" cy="320" r="24" fill="#6366f1"/>
+  <circle cx="312" cy="320" r="24" fill="#6366f1"/>
+  
+  <!-- Connected Lines -->
+  <line x1="224" y1="320" x2="232" y2="320" stroke="#6366f1" stroke-width="4"/>
+  <line x1="280" y1="320" x2="288" y2="320" stroke="#6366f1" stroke-width="4"/>
+</svg>

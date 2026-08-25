@@ -6,6 +6,7 @@ import { useNotificationStore } from './store/notificationStore'
 import { initSocket, disconnectSocket, onNotification, offNotification } from './services/socket'
 import Navbar from './components/Navbar'
 import IncomingCallModal from './components/IncomingCallModal'
+import InstallPWA from './components/InstallPWA'
 
 // Eagerly load auth pages (always needed on first visit)
 import Login from './pages/Login'
@@ -178,6 +179,7 @@ export default function App() {
     >
       <ScrollToTop />
       <AppShell />
+      <InstallPWA />
     </Router>
   )
 }
