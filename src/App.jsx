@@ -33,6 +33,8 @@ const Broadcast = lazy(() => import('./pages/Broadcast'))
 const BroadcastLive = lazy(() => import('./pages/BroadcastLive'))
 const SchoolChannel = lazy(() => import('./pages/SchoolChannel'))
 const SchoolChannelAdmin = lazy(() => import('./pages/SchoolChannelAdmin'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsConditions = lazy(() => import('./pages/TermsConditions'))
 
 // Minimal page-level skeleton shown while a lazy chunk loads
 function PageLoader() {
@@ -123,6 +125,10 @@ function AppShell() {
           <Route path="/broadcast-live" element={<ProtectedRoute><BroadcastLive /></ProtectedRoute>} />
           <Route path="/school-channel" element={<ProtectedRoute><SchoolChannel /></ProtectedRoute>} />
           <Route path="/school-channel-admin" element={<ProtectedRoute><SchoolChannelAdmin /></ProtectedRoute>} />
+
+          {/* Legal Pages - Public */}
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-conditions" element={<TermsConditions />} />
 
           {/* Admin — standalone, no navbar */}
           <Route path="/admin" element={<AdminPanel />} />
