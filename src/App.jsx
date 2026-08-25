@@ -179,7 +179,6 @@ export default function App() {
     >
       <ScrollToTop />
       <AppShell />
-      <InstallPWA />
     </Router>
   )
 }

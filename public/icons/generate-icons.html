@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate PWA Icons</title>
+</head>
+<body>
+  <h2>PWA Icon Generator</h2>
+  <p>Right-click on each icon and "Save image as..." with the exact filename</p>
+  
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-top: 20px;">
+    <div>
+      <canvas id="icon-72" width="72" height="72" style="border: 1px solid #ccc;"></canvas>
+      <p>icon-72x72.png</p>
+    </div>
+    <div>
+      <canvas id="icon-96" width="96" height="96" style="border: 1px solid #ccc;"></canvas>
+      <p>icon-96x96.png</p>
+    </div>
+    <div>
+      <canvas id="icon-128" width="128" height="128" style="border: 1px solid #ccc;"></canvas>
+      <p>icon-128x128.png</p>
+    </div>
+    <div>
+      <canvas id="icon-144" width="144" height="144" style="border: 1px solid #ccc;"></canvas>
+      <p>icon-144x144.png</p>
+    </div>
+    <div>
+      <canvas id="icon-152" width="152" height="152" style="border: 1px solid #ccc;"></canvas>
+      <p>icon-152x152.png</p>
+    </div>
+    <div>
+      <canvas id="icon-192" width="192" height="192" style="border: 1px solid #ccc;"></canvas>
+      <p>icon-192x192.png</p>
+    </div>
+    <div>
+      <canvas id="icon-384" width="384" height="384" style="border: 1px solid #ccc;"></canvas>
+      <p>icon-384x384.png</p>
+    </div>
+    <div>
+      <canvas id="icon-512" width="512" height="512" style="border: 1px solid #ccc;"></canvas>
+      <p>icon-512x512.png</p>
+    </div>
+  </div>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    
+    sizes.forEach(size => {
+      const canvas = document.getElementById(`icon-${size}`);
+      const ctx = canvas.getContext('2d');
+      
+      // Background
+      ctx.fillStyle = '#6366f1';
+      ctx.fillRect(0, 0, size, size);
+      
+      // Border radius effect
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, size * 0.2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      
+      // Book icon
+      const bookSize = size * 0.6;
+      const bookX = (size - bookSize) / 2;
+      const bookY = (size - bookSize) / 2;
+      
+      ctx.fillStyle = 'white';
+      ctx.fillRect(bookX, bookY, bookSize, bookSize);
+      
+      // Book spine
+      ctx.fillStyle = '#4f46e5';
+      ctx.fillRect(size/2 - size*0.03, bookY, size*0.06, bookSize);
+      
+      // Graduation cap
+      const capY = size * 0.3;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.moveTo(size/2, capY);
+      ctx.lineTo(size * 0.3, capY + size*0.08);
+      ctx.lineTo(size/2, capY + size*0.16);
+      ctx.lineTo(size * 0.7, capY + size*0.08);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Text - "SB"
+      ctx.fillStyle = '#6366f1';
+      ctx.font = `bold ${size * 0.2}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('SB', size/2, size * 0.65);
+      
+      // Download link
+      canvas.style.cursor = 'pointer';
+      canvas.onclick = function() {
+        const link = document.createElement('a');
+        link.download = `icon-${size}x${size}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+      };
+    });
+  </script>
+</body>
+</html>
