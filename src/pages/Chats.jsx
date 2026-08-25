@@ -53,14 +53,22 @@ export default function Chats() {
     }
     
     console.log('🔌 Setting up online tracking in Chats page')
+    console.log('🔌 Socket connected:', socket.connected)
+    console.log('🔌 Socket ID:', socket.id)
     
     // Request latest online users when component mounts
     socket.emit('getOnlineUsers')
+    console.log('📤 Requested online users list')
     
     setupOnlineTracking((updatedSet) => {
-      console.log('📊 Online users updated:', Array.from(updatedSet))
+      console.log('📊 Online users updated in Chats:', Array.from(updatedSet))
       setOnlineUsers(new Set(updatedSet))
     })
+    
+    // Cleanup
+    return () => {
+      console.log('🧹 Cleaning up online tracking in Chats page')
+    }
   }, [])
 
   const handleDeleteChat = (roomId, e) => {
