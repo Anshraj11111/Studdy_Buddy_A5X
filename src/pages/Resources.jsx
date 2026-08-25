@@ -1436,10 +1436,20 @@ export default function Resources() {
                             <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                // Remove fl_attachment flag if present to enable inline preview
-                                const previewUrl = r.notesUrl.replace('/upload/fl_attachment/', '/upload/')
-                                // Open PDF directly in new tab for inline preview
-                                window.open(previewUrl, '_blank', 'noopener,noreferrer')
+                                // Remove fl_attachment flag if present
+                                const cleanUrl = r.notesUrl.replace('/upload/fl_attachment/', '/upload/')
+                                
+                                // Detect if mobile device
+                                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                                
+                                if (isMobile) {
+                                  // Mobile: Use Google Docs Viewer for better compatibility
+                                  const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(cleanUrl)}&embedded=true`
+                                  window.open(viewerUrl, '_blank', 'noopener,noreferrer')
+                                } else {
+                                  // Desktop: Direct PDF preview
+                                  window.open(cleanUrl, '_blank', 'noopener,noreferrer')
+                                }
                               }}
                               className="flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-lg"
                               style={{ background: '#10b981' }}
