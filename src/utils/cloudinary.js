@@ -22,10 +22,21 @@ export async function uploadToCloudinary(file, folder = 'studdy-buddy') {
   formData.append('upload_preset', UPLOAD_PRESET)
   formData.append('folder', folder)
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`,
-    { method: 'POST', body: formData }
-  )
+  // Determine the correct endpoint and resource type based on file
+  const isPDF = file.type === 'application/pdf' || file.name?.endsWith('.pdf')
+  const isDoc = file.type?.includes('word') || file.type?.includes('document') || 
+                file.name?.endsWith('.doc') || file.name?.endsWith('.docx')
+  
+  let endpoint = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`
+  
+  // For PDFs and docs, explicitly use raw upload with proper flags
+  if (isPDF || isDoc) {
+    endpoint = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/raw/upload`
+    formData.append('resource_type', 'raw')
+    formData.append('flags', 'attachment') // Force download, not preview
+  }
+
+  const response = await fetch(endpoint, { method: 'POST', body: formData })
 
   if (!response.ok) {
     const err = await response.json()

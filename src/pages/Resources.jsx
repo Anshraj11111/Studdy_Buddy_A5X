@@ -761,9 +761,11 @@ function EditPlaylistModal({ playlist, onClose, onUpdated }) {
 
 function UploadModal({ onClose, onUploaded }) {
   const fileRef = useRef()
+  const notesRef = useRef()
   const [uploadMode, setUploadMode] = useState('file') // 'file' | 'youtube'
   const [form, setForm] = useState({ title: '', description: '', topic: 'Robotics', tags: '', youtubeUrl: '' })
   const [file, setFile] = useState(null)
+  const [notesFile, setNotesFile] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
 
@@ -774,6 +776,14 @@ function UploadModal({ onClose, onUploaded }) {
     const maxSize = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024
     if (f.size > maxSize) { setError(isVideo ? 'Video must be under 100MB' : 'File must be under 10MB'); return }
     setFile(f); setError('')
+  }
+
+  const onNotesChange = (e) => {
+    const f = e.target.files[0]
+    if (!f) return
+    const maxSize = 10 * 1024 * 1024 // 10MB for notes
+    if (f.size > maxSize) { setError('Notes file must be under 10MB'); return }
+    setNotesFile(f); setError('')
   }
 
   const submit = async (e) => {
@@ -787,13 +797,25 @@ function UploadModal({ onClose, onUploaded }) {
       if (!getYouTubeId(form.youtubeUrl)) { setError('Could not extract video ID. Check the YouTube link.'); return }
       setUploading(true); setError('')
       try {
+        // Upload notes via backend if provided
+        let notesUrl = ''
+        if (notesFile) {
+          const notesFormData = new FormData()
+          notesFormData.append('notes', notesFile)
+          const notesRes = await resourceAPI.uploadNotes(notesFormData)
+          if (notesRes.data?.success) {
+            notesUrl = notesRes.data.data.url
+          }
+        }
+
         const res = await resourceAPI.create({ 
           title: form.title.trim(), 
-          description: form.description.trim() || '', // Optional - can be empty
+          description: form.description.trim() || '',
           topic: form.topic, 
           tags, 
           fileUrl: form.youtubeUrl.trim(), 
-          fileType: 'link', 
+          fileType: 'link',
+          notesUrl: notesUrl,
           isPublic: true 
         })
         if (!res.data?.success) throw new Error(res.data?.error?.message || 'Failed')
@@ -807,15 +829,28 @@ function UploadModal({ onClose, onUploaded }) {
     setUploading(true); setError('')
     try {
       const { url } = await uploadToCloudinary(file, 'studdy-buddy/resources')
+      
+      // Upload notes via backend if provided
+      let notesUrl = ''
+      if (notesFile) {
+        const notesFormData = new FormData()
+        notesFormData.append('notes', notesFile)
+        const notesRes = await resourceAPI.uploadNotes(notesFormData)
+        if (notesRes.data?.success) {
+          notesUrl = notesRes.data.data.url
+        }
+      }
+
       const mime = file.type || ''
       const fileType = mime.startsWith('image') ? 'image' : mime.startsWith('video') ? 'video' : mime === 'application/pdf' ? 'pdf' : mime.includes('word') || mime.includes('doc') ? 'doc' : 'other'
       const res = await resourceAPI.create({ 
         title: form.title.trim(), 
-        description: form.description.trim() || '', // Optional - can be empty
+        description: form.description.trim() || '',
         topic: form.topic, 
         tags, 
         fileUrl: url, 
-        fileType, 
+        fileType,
+        notesUrl: notesUrl,
         isPublic: true 
       })
       if (!res.data?.success) throw new Error(res.data?.error?.message || 'Upload failed')
@@ -923,6 +958,30 @@ function UploadModal({ onClose, onUploaded }) {
           <div>
             <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">Tags <span className="text-theme-tertiary font-normal">(comma separated)</span></label>
             <input value={form.tags} onChange={e => setForm(p => ({ ...p, tags: e.target.value }))} placeholder="e.g. arduino, servo, beginner" style={inputStyle} />
+          </div>
+
+          {/* Notes Upload Field */}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">
+              📝 Notes (optional) <span className="text-theme-tertiary font-normal">(PDF/DOC)</span>
+            </label>
+            <div onClick={() => notesRef.current?.click()}
+              className="border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition"
+              style={{ borderColor: notesFile ? 'rgba(99,102,241,0.5)' : 'var(--border-primary)', background: notesFile ? 'rgba(99,102,241,0.05)' : 'var(--bg-primary)' }}>
+              {notesFile ? (
+                <div className="flex items-center justify-center gap-2">
+                  <FileText size={16} style={{ color: '#6366f1' }} />
+                  <span className="text-sm font-medium text-theme-primary truncate max-w-[200px]">{notesFile.name}</span>
+                  <button type="button" onClick={e => { e.stopPropagation(); setNotesFile(null) }} className="text-red-400 ml-1"><X size={14} /></button>
+                </div>
+              ) : (
+                <>
+                  <FileText size={24} className="mx-auto mb-1.5 text-indigo-400" />
+                  <p className="text-xs text-theme-secondary">Click to upload notes file <span className="text-theme-tertiary">(PDF/DOC - 10MB max)</span></p>
+                </>
+              )}
+            </div>
+            <input ref={notesRef} type="file" className="hidden" onChange={onNotesChange} accept=".pdf,.doc,.docx" />
           </div>
 
           {error && <p className="text-xs text-red-500 px-3 py-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>{error}</p>}
@@ -1371,6 +1430,22 @@ export default function Resources() {
                                 <Trash2 size={14} />
                               </button>
                             </>
+                          )}
+                          {/* Notes Button - Show if notes available */}
+                          {r.notesUrl && (
+                            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                // Remove fl_attachment flag if present to enable inline preview
+                                const previewUrl = r.notesUrl.replace('/upload/fl_attachment/', '/upload/')
+                                // Open PDF directly in new tab for inline preview
+                                window.open(previewUrl, '_blank', 'noopener,noreferrer')
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-2 text-white text-xs font-semibold rounded-lg"
+                              style={{ background: '#10b981' }}
+                              title="View Notes">
+                              <FileText size={12} /> Notes
+                            </motion.button>
                           )}
                           <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                             onClick={() => handleDownload(r)}

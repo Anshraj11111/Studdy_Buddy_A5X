@@ -193,6 +193,9 @@ export const resourceAPI = {
   getVideoToken: (id) => api.post(`/resources/${id}/token`),
   update: (id, data) => api.put(`/resources/${id}`, data),
   delete: (id) => api.delete(`/resources/${id}`),
+  uploadNotes: (formData) => api.post(`/resources/upload-notes`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
 };
 
 /* ---------------- PLAYLISTS ---------------- */
