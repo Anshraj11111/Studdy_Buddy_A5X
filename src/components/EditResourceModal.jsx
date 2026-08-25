@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { X, Edit, Youtube, Loader2 } from 'lucide-react'
+import { X, Edit, Youtube, Loader2, FileText, Upload as UploadIcon, Trash2 } from 'lucide-react'
 import { resourceAPI } from '../services/api'
 
 const TOPICS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
@@ -28,6 +28,9 @@ export default function EditResourceModal({ resource, onClose, onUpdated }) {
     tags: (resource.tags || []).join(', '),
     youtubeUrl: resource.fileUrl || '',
   })
+  const [notesFile, setNotesFile] = useState(null)
+  const [existingNotes, setExistingNotes] = useState(resource.notesUrl || '')
+  const [deletingNotes, setDeletingNotes] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState('')
 
@@ -77,6 +80,22 @@ export default function EditResourceModal({ resource, onClose, onUpdated }) {
       // If it's a YouTube video, include the URL
       if (resource.fileType === 'link') {
         updateData.fileUrl = form.youtubeUrl.trim()
+      }
+
+      // Upload new notes file if provided
+      if (notesFile) {
+        const formData = new FormData()
+        formData.append('notes', notesFile)
+        const uploadRes = await resourceAPI.uploadNotes(formData)
+        if (uploadRes.data?.success) {
+          updateData.notesUrl = uploadRes.data.data.url
+        }
+      } else if (!deletingNotes && existingNotes) {
+        // Keep existing notes if not deleted
+        updateData.notesUrl = existingNotes
+      } else {
+        // Remove notes if deleted
+        updateData.notesUrl = ''
       }
 
       console.log('Updating resource with data:', updateData)
@@ -197,6 +216,66 @@ export default function EditResourceModal({ resource, onClose, onUpdated }) {
               placeholder="e.g. arduino, servo, beginner"
               style={inputStyle}
             />
+          </div>
+
+          {/* Notes Upload/Delete */}
+          <div>
+            <label className="block text-xs font-semibold mb-1.5 text-theme-secondary">
+              Notes (PDF/DOC) <span className="text-theme-tertiary font-normal">(optional)</span>
+            </label>
+            
+            {/* Show existing notes */}
+            {existingNotes && !deletingNotes && !notesFile && (
+              <div className="flex items-center justify-between p-3 rounded-lg mb-2" 
+                   style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                <div className="flex items-center gap-2">
+                  <FileText size={16} style={{ color: '#10b981' }} />
+                  <span className="text-xs font-medium text-theme-primary">Notes attached</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeletingNotes(true)
+                    setExistingNotes('')
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:bg-red-500/10 rounded">
+                  <Trash2 size={12} /> Remove
+                </button>
+              </div>
+            )}
+
+            {/* Upload new notes */}
+            {(!existingNotes || deletingNotes) && !notesFile && (
+              <label
+                className="flex flex-col items-center justify-center p-4 rounded-lg cursor-pointer transition-all hover:border-indigo-500"
+                style={{ border: '2px dashed var(--border-primary)', background: 'var(--bg-primary)' }}>
+                <UploadIcon size={20} className="text-theme-tertiary mb-2" />
+                <span className="text-xs text-theme-secondary">Click to upload notes (PDF/DOC)</span>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={e => setNotesFile(e.target.files[0])}
+                  className="hidden"
+                />
+              </label>
+            )}
+
+            {/* Show selected new file */}
+            {notesFile && (
+              <div className="flex items-center justify-between p-3 rounded-lg" 
+                   style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+                <div className="flex items-center gap-2">
+                  <FileText size={16} style={{ color: '#6366f1' }} />
+                  <span className="text-xs font-medium text-theme-primary truncate max-w-[200px]">{notesFile.name}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNotesFile(null)}
+                  className="text-red-400 ml-1">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
           </div>
 
           {error && (
