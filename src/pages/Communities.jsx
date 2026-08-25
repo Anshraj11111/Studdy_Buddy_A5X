@@ -10,7 +10,7 @@ import {
   Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
   UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
   Zap, FolderKanban, GraduationCap, Globe2, TrendingUp, BookOpen,
-  Sparkles, ChevronDown, Bell, BellOff
+  Sparkles, ChevronDown, Bell, BellOff, Edit2, MoreHorizontal
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -41,6 +41,94 @@ const CAT_GRADIENT = {
   Projects: 'from-pink-500 to-rose-500',
   Mentorship: 'from-indigo-500 to-blue-600',
   All: 'from-indigo-500 to-purple-600',
+}
+
+// Comment Item Component
+function CommentItem({ comment, postId, user, onUpdate }) {
+  const [editingComment, setEditingComment] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  
+  const isCommentOwner = String(comment.userId?._id) === String(user?._id);
+
+  const handleEditComment = async () => {
+    if (!editText.trim()) return;
+    setEditSubmitting(true);
+    try {
+      const res = await feedAPI.editComment(postId, comment._id, { content: editText.trim() });
+      onUpdate(res.data.data.post);
+      setEditingComment(false);
+    } catch (err) {
+      alert(err.response?.data?.error?.message || 'Failed to edit comment');
+    }
+    setEditSubmitting(false);
+  };
+
+  const handleDeleteComment = async () => {
+    if (!confirm('Delete this comment?')) return;
+    try {
+      const res = await feedAPI.deleteComment(postId, comment._id);
+      onUpdate(res.data.data.post);
+    } catch (err) {
+      alert('Failed to delete comment');
+    }
+  };
+
+  return (
+    <div className="flex gap-2.5 items-start group">
+      <Avatar src={comment.userId?.profileImage} name={comment.userId?.name} size={8} />
+      <div className="flex-1 min-w-0">
+        {editingComment ? (
+          <div className="flex gap-2 items-start">
+            <input
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleEditComment()}
+              className="flex-1 rounded-lg px-3 py-2 text-xs focus:outline-none"
+              style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)", color: 'var(--text-primary)' }}
+              autoFocus
+            />
+            <button
+              onClick={handleEditComment}
+              disabled={editSubmitting || !editText.trim()}
+              className="p-1.5 rounded text-indigo-500 disabled:opacity-40 flex-shrink-0"
+            >
+              {editSubmitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+            </button>
+            <button
+              onClick={() => { setEditingComment(false); setEditText(comment.content); }}
+              className="p-1.5 rounded text-gray-500 flex-shrink-0"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-lg px-3 py-2 pr-16 relative" style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }}>
+            <p className="text-xs font-bold text-theme-primary break-words">{comment.userId?.name}</p>
+            <p className="text-xs mt-0.5 text-theme-secondary break-words">{comment.content}</p>
+            {isCommentOwner && (
+              <div className="absolute top-2 right-2 flex gap-1">
+                <button
+                  onClick={() => setEditingComment(true)}
+                  className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Edit comment"
+                >
+                  <Edit2 size={12} className="text-gray-600 dark:text-gray-400" />
+                </button>
+                <button
+                  onClick={handleDeleteComment}
+                  className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                  title="Delete comment"
+                >
+                  <Trash2 size={12} className="text-red-600" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function Avatar({ src, name, size = 9 }) {
@@ -497,7 +585,7 @@ function PostComposer({ user, onPost }) {
 }
 
 // ─── SINGLE POST CARD ─────────────────────────────────────────────────────────
-function PostCard({ post, user, onLike, onDelete, onComment, onFollow }) {
+function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate }) {
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -720,13 +808,13 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow }) {
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-3 space-y-3">
               {(post.comments || []).map(c => (
-                <div key={c._id} className="flex gap-2.5 items-start">
-                  <Avatar src={c.userId?.profileImage} name={c.userId?.name} size={8} />
-                  <div className="rounded-lg px-3 py-2 flex-1" style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }}>
-                    <p className="text-xs font-bold text-theme-primary">{c.userId?.name}</p>
-                    <p className="text-xs mt-0.5 text-theme-secondary">{c.content}</p>
-                  </div>
-                </div>
+                <CommentItem 
+                  key={c._id} 
+                  comment={c} 
+                  postId={post._id} 
+                  user={user} 
+                  onUpdate={onUpdate} 
+                />
               ))}
               <div className="flex gap-2 items-center">
                 <Avatar src={user?.profileImage} name={user?.name} size={8} />
@@ -840,6 +928,10 @@ function FeedTab({ user }) {
     } catch { /* ignore */ }
   }
 
+  const handleUpdate = (updatedPost) => {
+    setPosts(prev => prev.map(p => p._id === updatedPost._id ? updatedPost : p))
+  }
+
   const activeCat = CATEGORIES.find(c => c.label === filterCat)
 
   return (
@@ -941,7 +1033,7 @@ function FeedTab({ user }) {
           {posts.map((post, i) => (
             <motion.div key={post._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(i * 0.04, 0.3) }}>
-              <PostCard post={post} user={user} onLike={handleLike} onDelete={handleDelete} onComment={handleComment} />
+              <PostCard post={post} user={user} onLike={handleLike} onDelete={handleDelete} onComment={handleComment} onUpdate={handleUpdate} />
             </motion.div>
           ))}
         </div>

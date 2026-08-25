@@ -163,7 +163,8 @@ export default function Dashboard() {
                     { label: "Robotics", icon: "🤖", bgClass: "bg-blue-100 dark:bg-blue-500/20", textClass: "text-blue-600 dark:text-blue-300" },
                     { label: "AI / ML",  icon: "🧠", bgClass: "bg-purple-100 dark:bg-purple-500/20", textClass: "text-purple-600 dark:text-purple-300" },
                     { label: "IoT",      icon: "📡", bgClass: "bg-cyan-100 dark:bg-cyan-500/20", textClass: "text-cyan-600 dark:text-cyan-300" },
-                    { label: "Embedded", icon: "⚡", bgClass: "bg-yellow-100 dark:bg-yellow-500/20", textClass: "text-yellow-600 dark:text-yellow-300" },
+                    { label: "Electronics", icon: "⚡", bgClass: "bg-yellow-100 dark:bg-yellow-500/20", textClass: "text-yellow-600 dark:text-yellow-300" },
+                    { label: "Entrepreneurship", icon: "💡", bgClass: "bg-green-100 dark:bg-green-500/20", textClass: "text-green-600 dark:text-green-300" },
                   ].map((tag, i) => (
                     <motion.span key={tag.label} className={`px-3 py-1 rounded-full text-xs font-medium ${tag.bgClass} ${tag.textClass}`}
                       initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.2 + i * 0.08, type: "spring" }}
@@ -234,20 +235,22 @@ export default function Dashboard() {
             const Icon = stat.icon
             return (
               <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 * i }} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
-                <div className="rounded-lg p-4 relative overflow-hidden group" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-primary)" }}>
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Icon style={{ width: "0.85rem", height: "0.85rem", color: stat.color }} />
+                <div className="rounded-lg p-4 relative overflow-hidden group h-[160px] flex flex-col" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-primary)" }}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Icon style={{ width: "0.9rem", height: "0.9rem", color: stat.color }} />
                         <span className="text-theme-secondary text-xs">{stat.label}</span>
                       </div>
-                      <motion.div className="text-2xl font-bold text-theme-primary" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 + i * 0.1, type: "spring" }}>{stat.value}</motion.div>
+                      <motion.div className="text-3xl font-bold text-theme-primary" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 + i * 0.1, type: "spring" }}>{stat.value}</motion.div>
                     </div>
                     <span className="flex items-center gap-0.5 text-xs font-bold" style={{ color: stat.color }}>
                       <TrendingUp style={{ width: "0.7rem", height: "0.7rem" }} />{stat.change}
                     </span>
                   </div>
-                  <Sparkline color={stat.color} data={stat.spark} />
+                  <div className="mt-auto">
+                    <Sparkline color={stat.color} data={stat.spark} />
+                  </div>
                 </div>
               </motion.div>
             )
@@ -270,7 +273,7 @@ export default function Dashboard() {
               const Icon = action.icon
               return (
                 <Link key={action.to} to={action.to} className="group">
-                  <motion.div className="rounded-lg p-4 flex items-center justify-between" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-primary)" }} whileHover={{ y: -3, borderColor: action.color + "50" }} transition={{ duration: 0.2 }}>
+                  <motion.div className="rounded-lg p-4 flex items-center justify-between h-[88px]" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-primary)" }} whileHover={{ y: -3, borderColor: action.color + "50" }} transition={{ duration: 0.2 }}>
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: action.color + "18", border: "1px solid " + action.color + "30" }}>
                         <Icon style={{ width: "1.1rem", height: "1.1rem", color: action.color }} />

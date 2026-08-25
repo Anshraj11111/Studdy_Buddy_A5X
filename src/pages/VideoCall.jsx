@@ -49,6 +49,7 @@ export default function VideoCall() {
   const [showFeedback,       setShowFeedback]      = useState(false)
   const [isFullscreen,       setIsFullscreen]      = useState(false)
   const [autoplayBlocked,    setAutoplayBlocked]   = useState(false)
+  const [permissionDenied,   setPermissionDenied]  = useState(false)
 
   // ── DOM refs ──────────────────────────────────────────────────────────────
   const localVideoRef  = useRef(null)
@@ -763,7 +764,7 @@ export default function VideoCall() {
       doCleanup()
       
       if (err.name === 'NotAllowedError') {
-        alert('Camera/microphone permission denied. Please allow access and try again.')
+        setPermissionDenied(true)
       } else {
         alert('Failed to start call: ' + err.message)
       }
@@ -796,7 +797,11 @@ export default function VideoCall() {
       }
     } catch (err) {
       console.error('❌ acceptCall error:', err)
-      alert('Failed to access camera/microphone.')
+      if (err.name === 'NotAllowedError') {
+        setPermissionDenied(true)
+      } else {
+        alert('Failed to access camera/microphone.')
+      }
     }
   }, [getLocalStream])
 
@@ -907,6 +912,98 @@ export default function VideoCall() {
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div style={{ height: '100vh', background: 'var(--bg-primary)', overflow: 'hidden', position: 'relative' }}>
+
+      {/* ── PERMISSION DENIED MODAL ─────────────────────────────────────── */}
+      {permissionDenied && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 100,
+            background: 'rgba(0,0,0,0.95)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20,
+          }}>
+          <motion.div
+            initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
+            style={{
+              background: 'var(--bg-secondary)',
+              borderRadius: 16,
+              padding: 32,
+              maxWidth: 420,
+              width: '100%',
+              border: '1px solid var(--border-primary)',
+            }}>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{
+                width: 80, height: 80, borderRadius: '50%',
+                background: 'rgba(239,68,68,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px',
+              }}>
+                <Video size={36} style={{ color: '#ef4444' }} />
+              </div>
+              <h2 className="text-theme-primary" style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>
+                Camera/Microphone Access Required
+              </h2>
+              <p className="text-theme-secondary" style={{ fontSize: 14, marginBottom: 20 }}>
+                Please allow camera and microphone access to make {audioOnly ? 'voice' : 'video'} calls
+              </p>
+            </div>
+
+            <div style={{
+              background: 'var(--bg-primary)',
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 20,
+              border: '1px solid var(--border-primary)',
+            }}>
+              <p className="text-theme-primary" style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
+                How to enable:
+              </p>
+              <ol className="text-theme-secondary" style={{ fontSize: 13, paddingLeft: 20, margin: 0, lineHeight: 1.7 }}>
+                <li>Click the <strong style={{ color: 'var(--text-primary)' }}>🔒 lock icon</strong> or <strong style={{ color: 'var(--text-primary)' }}>camera icon</strong> in your browser's address bar</li>
+                <li>Select <strong style={{ color: 'var(--text-primary)' }}>"Allow"</strong> for Camera and Microphone</li>
+                <li>Click the <strong style={{ color: 'var(--text-primary)' }}>"Reload Page"</strong> button below</li>
+              </ol>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  background: '#6366f1',
+                  border: 'none',
+                  borderRadius: 10,
+                  color: 'white',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Reload Page
+              </button>
+              <button
+                onClick={() => navigate(`/chat/${roomId}`)}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  background: 'var(--bg-primary)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: 10,
+                  color: 'var(--text-secondary)',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Go Back
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       <CallEndFeedbackModal
         isOpen={showFeedback}

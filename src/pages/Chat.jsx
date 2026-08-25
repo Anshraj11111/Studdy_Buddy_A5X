@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore'
 import { roomAPI } from '../services/api'
 import { joinRoom, sendTyping, leaveRoom, getSocket, setupOnlineTracking } from '../services/socket'
 import { showMessageNotification, playNotificationSound, requestNotificationPermission, startCallingTone, stopCallingTone } from '../utils/notifications'
-import { Send, Video, ArrowLeft, Loader2, Phone, PhoneOff, X } from 'lucide-react'
+import { Send, Video, ArrowLeft, Loader2, Phone, PhoneOff, X, Trash2 } from 'lucide-react'
 
 export default function Chat() {
   const { roomId } = useParams()
@@ -20,6 +20,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(true)
   const [blockedWarning, setBlockedWarning] = useState('')
   const [onlineUsers, setOnlineUsers] = useState(new Set())
+  const [selectedMessageId, setSelectedMessageId] = useState(null) // for delete menu
   // ── Calling state ──────────────────────────────────────────────────────────
   const [callingState, setCallingState] = useState(null) // null | { type: 'audio'|'video', status: 'calling'|'rejected' }
   const callingTimerRef = useRef(null)
@@ -85,10 +86,16 @@ export default function Chat() {
       }
     }
 
+    const handleMessageDeleted = (data) => {
+      setMessages(prev => prev.filter(m => m._id !== data.messageId))
+      setSelectedMessageId(null)
+    }
+
     socket.on('messageReceived', handleMessage)
     socket.on('messageConfirmed', handleConfirmed)
     socket.on('messageBLocked', handleBlocked)
     socket.on('userTyping', handleTyping)
+    socket.on('messageDeleted', handleMessageDeleted)
     socket.on('roomJoined', (data) => { if (data.messages?.length > 0) setMessages(data.messages) })
 
     // ── Call rejected by other side ──────────────────────────────────────────
@@ -110,6 +117,7 @@ export default function Chat() {
       socket.off('messageConfirmed', handleConfirmed)
       socket.off('messageBLocked', handleBlocked)
       socket.off('userTyping', handleTyping)
+      socket.off('messageDeleted', handleMessageDeleted)
       socket.off('roomJoined')
       socket.off('callRejected', handleCallRejected)
       socket.off('callAccepted', handleCallAccepted)
@@ -148,6 +156,18 @@ export default function Chat() {
     if (!typing) { setTyping(true); sendTyping(roomId, user._id) }
     clearTimeout(typingTimeoutRef.current)
     typingTimeoutRef.current = setTimeout(() => setTyping(false), 3000)
+  }
+
+  const handleDeleteMessage = (messageId) => {
+    const socket = getSocket()
+    if (socket) {
+      socket.emit('deleteMessage', {
+        messageId,
+        userId: user._id,
+        roomId,
+      })
+    }
+    setSelectedMessageId(null)
   }
 
   // ── Initiate call ────────────────────────────────────────────────────────
@@ -316,7 +336,7 @@ export default function Chat() {
                 )}
 
                 {/* Bubble */}
-                <div style={{ maxWidth: '70%' }}>
+                <div style={{ maxWidth: '70%', position: 'relative' }}>
                   <div className={isOwn ? '' : ''} style={isOwn ? {
                     background: '#6366f1',
                     borderRadius: '16px 16px 4px 16px',
@@ -333,6 +353,34 @@ export default function Chat() {
                       {time}{msg.temp ? ' ✓' : ''}
                     </p>
                   </div>
+                  
+                  {/* Delete button - only for own messages */}
+                  {isOwn && !msg.temp && (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => handleDeleteMessage(msg._id)}
+                      style={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: '#ef4444',
+                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        opacity: 0.9,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                      }}
+                      title="Delete message"
+                    >
+                      <Trash2 size={12} style={{ color: 'white' }} />
+                    </motion.button>
+                  )}
                 </div>
               </motion.div>
             )

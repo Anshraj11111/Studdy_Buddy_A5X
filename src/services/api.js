@@ -242,6 +242,8 @@ export const feedAPI = {
   deletePost: (id) => api.delete(`/feed/${id}`),
   likePost: (id) => api.post(`/feed/${id}/like`),
   addComment: (id, data) => api.post(`/feed/${id}/comment`, data),
+  editComment: (postId, commentId, data) => api.put(`/feed/${postId}/comment/${commentId}`, data),
+  deleteComment: (postId, commentId) => api.delete(`/feed/${postId}/comment/${commentId}`),
 };
 
 /* ---------------- FOLLOW / FOLLOWERS ---------------- */
