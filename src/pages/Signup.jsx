@@ -12,7 +12,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-
 
 export default function Signup() {
   const [formData, setFormData] = useState({
-    name: '', email: '', password: '', confirmPassword: '', role: 'student', mentorCode: '', skills: [], schoolName: '', city: '',
+    name: '', email: '', password: '', confirmPassword: '', role: 'student', mentorCode: '', skills: [], schoolName: '', schoolPassword: '', city: '',
   })
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
@@ -57,7 +57,8 @@ export default function Signup() {
     if (formData.password.length < 6) e.password = 'Password must be at least 6 characters'
     if (formData.password !== formData.confirmPassword) e.confirmPassword = 'Passwords do not match'
     if (formData.role === 'student') {
-      if (!formData.schoolName) e.schoolName = 'School name is required'
+      if (!formData.schoolName) e.schoolName = 'School code is required'
+      if (!formData.schoolPassword) e.schoolPassword = 'School password is required'
       if (!formData.city) e.city = 'City is required'
     }
     if (formData.role === 'mentor' && !formData.mentorCode) e.mentorCode = 'Mentor code is required'
@@ -69,7 +70,7 @@ export default function Signup() {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     try {
-      await register(formData.email, formData.password, formData.name, formData.role, formData.mentorCode, formData.skills, formData.schoolName, formData.city)
+      await register(formData.email, formData.password, formData.name, formData.role, formData.mentorCode, formData.skills, formData.schoolName, formData.schoolPassword, formData.city)
       navigate(formData.role === 'mentor' ? '/mentor-dashboard' : '/dashboard', { replace: true })
     } catch (err) { setErrors({ submit: err.message || 'Registration failed' }) }
   }
@@ -210,11 +211,18 @@ export default function Signup() {
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden">
                   <div>
-                    <label className={labelClass} style={labelStyle}>School Name</label>
-                    <input type="text" name="schoolName" placeholder="Enter your school name" value={formData.schoolName}
+                    <label className={labelClass} style={labelStyle}>School Code</label>
+                    <input type="text" name="schoolName" placeholder="Enter your school code" value={formData.schoolName}
                       onChange={e => setFormData(p => ({ ...p, schoolName: e.target.value }))}
                       className={inputClass.replace('pl-11', 'pl-4')} />
                     {errEl(errors.schoolName)}
+                  </div>
+                  <div>
+                    <label className={labelClass} style={labelStyle}>School Password</label>
+                    <input type="password" name="schoolPassword" placeholder="Enter your school password" value={formData.schoolPassword}
+                      onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
+                      className={inputClass.replace('pl-11', 'pl-4')} />
+                    {errEl(errors.schoolPassword)}
                   </div>
                   <div>
                     <label className={labelClass} style={labelStyle}>City</label>

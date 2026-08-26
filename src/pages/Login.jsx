@@ -10,7 +10,7 @@ import a5xLogo from '../assets/A5X logo.png'
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
 
 export default function Login() {
-  const [formData, setFormData] = useState({ email: '', password: '', role: 'student', mentorCode: '' })
+  const [formData, setFormData] = useState({ email: '', password: '', role: 'student', mentorCode: '', schoolPassword: '' })
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -49,6 +49,7 @@ export default function Login() {
     const e = {}
     if (!formData.email) e.email = 'Email is required'
     if (!formData.password) e.password = 'Password is required'
+    if (formData.role === 'student' && !formData.schoolPassword) e.schoolPassword = 'School password is required'
     if (formData.role === 'mentor' && !formData.mentorCode) e.mentorCode = 'Mentor code is required'
     return e
   }
@@ -158,6 +159,17 @@ export default function Login() {
                 </div>
               </div>
             </div>
+
+            {/* Student School Password */}
+            {formData.role === 'student' && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                <label className="block text-sm font-medium mb-2 text-gray-400">School Password</label>
+                <input type="password" name="schoolPassword" placeholder="Enter your school password"
+                  value={formData.schoolPassword} onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
+                  className={inputClass.replace('pl-11', 'pl-4')} />
+                {errors.schoolPassword && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.schoolPassword}</p>}
+              </motion.div>
+            )}
 
             {/* Mentor Code */}
             {formData.role === 'mentor' && (
