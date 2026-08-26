@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { adminAPI } from "../services/api"
-import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X } from "lucide-react"
+import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X, Download } from "lucide-react"
 import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
@@ -17,12 +17,31 @@ function PreRegisteredStudents({ showToast }) {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [updating, setUpdating] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [schoolFilter, setSchoolFilter] = useState('all')
+  const [schoolCodes, setSchoolCodes] = useState([])
+
+  // Fetch available school codes
+  const fetchSchoolCodes = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/admin/school-codes`, {
+        headers: { 'x-admin-secret': ADMIN_SECRET }
+      })
+      setSchoolCodes(res.data.data.schoolCodes || [])
+    } catch (err) {
+      console.error('Error fetching school codes:', err)
+    }
+  }
 
   const fetchStudents = async () => {
     setLoading(true)
     try {
+      const params = { status: statusFilter }
+      if (searchQuery.trim()) params.search = searchQuery.trim()
+      if (schoolFilter !== 'all') params.schoolName = schoolFilter
+      
       const res = await axios.get(`${API_URL}/admin/pre-registered`, {
-        params: { status: statusFilter },
+        params,
         headers: { 'x-admin-secret': ADMIN_SECRET }
       })
       setStudents(res.data.data.students || [])
@@ -35,8 +54,17 @@ function PreRegisteredStudents({ showToast }) {
   }
 
   useEffect(() => {
+    fetchSchoolCodes()
+  }, [])
+
+  useEffect(() => {
     fetchStudents()
-  }, [statusFilter])
+  }, [statusFilter, schoolFilter])
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    fetchStudents()
+  }
 
   const handleCreate = async (e) => {
     e.preventDefault()
@@ -131,6 +159,48 @@ function PreRegisteredStudents({ showToast }) {
     setNewStudent(prev => ({ ...prev, schoolPassword: password }))
   }
 
+  const exportToCSV = () => {
+    if (students.length === 0) {
+      showToast('No students to export', 'error')
+      return
+    }
+
+    // CSV headers
+    const headers = ['SR NO', 'NAME', 'EMAIL', 'PHONE', 'SCHOOL CODE', 'PASSWORD', 'STATUS']
+    
+    // CSV rows
+    const rows = students.map((student, index) => [
+      index + 1,
+      student.name,
+      student.email,
+      student.phone || '',
+      student.schoolName || 'Bardsley',
+      student.schoolPassword,
+      student.isUsed ? 'USED' : 'PENDING'
+    ])
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    
+    link.setAttribute('href', url)
+    link.setAttribute('download', `pre-registered-students-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    showToast(`Exported ${students.length} students successfully!`, 'success')
+  }
+
   return (
     <div>
       <div style={{ borderRadius: 18, background: 'var(--bg-tertiary)', border: '1px solid var(--border-secondary)', backdropFilter: 'blur(20px)', overflow: 'hidden', marginBottom: 24 }}>
@@ -191,20 +261,45 @@ function PreRegisteredStudents({ showToast }) {
       </div>
       <div style={{ borderRadius: 18, background: 'var(--bg-tertiary)', border: '1px solid var(--border-secondary)', backdropFilter: 'blur(20px)', overflow: 'hidden' }}>
         <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Users size={18} color="#818cf8" />
-            <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>Pre-Registered Students</span>
-            {students.length > 0 && <span style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', borderRadius: 99, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>{students.length}</span>}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(99,102,241,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Users size={18} color="#818cf8" />
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>Pre-Registered Students</span>
+              {students.length > 0 && <span style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', borderRadius: 99, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>{students.length}</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <select value={schoolFilter} onChange={e => setSchoolFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', border: '1px solid var(--border-primary)', color: '#e0e7ff', fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
+                <option value="all" style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>All Schools</option>
+                {schoolCodes.map(code => (
+                  <option key={code} value={code} style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>{code}</option>
+                ))}
+              </select>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', border: '1px solid var(--border-primary)', color: '#e0e7ff', fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
+                <option value="all" style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>All Status</option>
+                <option value="unused" style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>Unused</option>
+                <option value="used" style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>Used</option>
+              </select>
+              <button onClick={exportToCSV} style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, color: '#22c55e', cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600 }} title="Export to CSV"><Download size={14} /> Export</button>
+              <button onClick={fetchStudents} style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid var(--border-primary)', borderRadius: 8, color: '#a5b4fc', cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center' }}><RefreshCw size={14} /></button>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', border: '1px solid var(--border-primary)', color: '#a5b4fc', fontSize: 12, cursor: 'pointer', outline: 'none' }}>
-              <option value="all">All</option>
-              <option value="unused">Unused</option>
-              <option value="used">Used</option>
-            </select>
-            <button onClick={fetchStudents} style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid var(--border-primary)', borderRadius: 8, color: '#a5b4fc', cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center' }}><RefreshCw size={14} /></button>
-          </div>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{ width: '100%', padding: '8px 14px 8px 38px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+              />
+            </div>
+            <button type="submit" style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.15)', color: '#818cf8', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>Search</button>
+            {searchQuery && (
+              <button type="button" onClick={() => { setSearchQuery(''); fetchStudents(); }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(148,163,184,0.1)', color: '#94a3b8', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Clear</button>
+            )}
+          </form>
         </div>
         <div style={{ padding: '16px', maxHeight: 600, overflowY: 'auto', overflowX: 'auto' }}>
           {loading ? (
