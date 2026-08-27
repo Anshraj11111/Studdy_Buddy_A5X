@@ -75,11 +75,9 @@ function PreRegisteredStudents({ showToast }) {
 
     setCreating(true)
     try {
-      const token = localStorage.getItem('token')
       await axios.post(`${API_URL}/admin/pre-register`, newStudent, {
         headers: { 
-          'x-admin-secret': ADMIN_SECRET,
-          'Authorization': `Bearer ${token}`
+          'x-admin-secret': ADMIN_SECRET
         }
       })
       setNewStudent({ name: '', email: '', phone: '', schoolName: '', schoolPassword: '' })
@@ -131,11 +129,9 @@ function PreRegisteredStudents({ showToast }) {
 
     setUpdating(true)
     try {
-      const token = localStorage.getItem('token')
       await axios.put(`${API_URL}/admin/pre-registered/${id}`, editForm, {
         headers: { 
-          'x-admin-secret': ADMIN_SECRET,
-          'Authorization': `Bearer ${token}`
+          'x-admin-secret': ADMIN_SECRET
         }
       })
       setStudents(prev => prev.map(s => s._id === id ? { ...s, ...editForm } : s))
