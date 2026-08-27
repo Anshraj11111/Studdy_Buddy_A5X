@@ -401,10 +401,9 @@ function SchoolChannelManagement({ showToast }) {
   const fetchChannels = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
       console.log('Fetching channels from:', `${API_URL}/school-channel/admin/all`)
       const res = await axios.get(`${API_URL}/school-channel/admin/all`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'x-admin-secret': ADMIN_SECRET }
       })
       console.log('Channels response:', res.data)
       setChannels(res.data.channels || [])
@@ -426,9 +425,8 @@ function SchoolChannelManagement({ showToast }) {
 
     setLoadingMembers(prev => ({ ...prev, [channelId]: true }))
     try {
-      const token = localStorage.getItem('token')
       const res = await axios.get(`${API_URL}/school-channel/admin/${channelId}/members`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'x-admin-secret': ADMIN_SECRET }
       })
       setChannelMembers(prev => ({ ...prev, [channelId]: res.data.members || [] }))
       setExpandedChannel(channelId)
@@ -453,9 +451,8 @@ function SchoolChannelManagement({ showToast }) {
 
     setCreating(true)
     try {
-      const token = localStorage.getItem('token')
       await axios.post(`${API_URL}/school-channel/admin/create`, newChannel, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'x-admin-secret': ADMIN_SECRET }
       })
       setNewChannel({ schoolName: '', city: '', description: '' })
       fetchChannels()
@@ -471,9 +468,8 @@ function SchoolChannelManagement({ showToast }) {
   const handleDelete = async (id, schoolName) => {
     if (!window.confirm(`Delete channel "${schoolName}"? All students will lose access.`)) return
     try {
-      const token = localStorage.getItem('token')
       await axios.delete(`${API_URL}/school-channel/admin/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'x-admin-secret': ADMIN_SECRET }
       })
       setChannels(prev => prev.filter(c => c._id !== id))
       showToast('Channel deleted', 'success')
@@ -495,12 +491,11 @@ function SchoolChannelManagement({ showToast }) {
 
     setBroadcasting(true)
     try {
-      const token = localStorage.getItem('token')
       await axios.post(`${API_URL}/school-channel/admin/broadcast`, {
         message: broadcastMessage,
         channelIds: selectedChannels
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'x-admin-secret': ADMIN_SECRET }
       })
       
       setBroadcastMessage('')
@@ -1076,9 +1071,8 @@ function MessageMonitoringDashboard({ showToast }) {
 
   const fetchChannels = async () => {
     try {
-      const token = localStorage.getItem('token')
       const res = await axios.get(`${API_URL}/school-channel/admin/all`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'x-admin-secret': ADMIN_SECRET }
       })
       setChannels(res.data.channels || [])
     } catch (err) {
@@ -1089,7 +1083,6 @@ function MessageMonitoringDashboard({ showToast }) {
   const fetchMessages = async (reset = false) => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
       const params = new URLSearchParams({
         limit: '50',
         skip: reset ? '0' : String(page * 50),
@@ -1100,7 +1093,7 @@ function MessageMonitoringDashboard({ showToast }) {
       })
 
       const res = await axios.get(`${API_URL}/school-channel/admin/messages/all?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'x-admin-secret': ADMIN_SECRET }
       })
 
       const data = res.data.data
@@ -1128,9 +1121,8 @@ function MessageMonitoringDashboard({ showToast }) {
 
     setDeleting(messageId)
     try {
-      const token = localStorage.getItem('token')
       await axios.delete(`${API_URL}/school-channel/admin/messages/${messageId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'x-admin-secret': ADMIN_SECRET }
       })
       setMessages(prev => prev.filter(m => m._id !== messageId))
       showToast('Message deleted successfully', 'success')
