@@ -304,8 +304,8 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                 </div>
                 {/* Follower count */}
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: "var(--text-primary)" }}>{profile?.followersCount ?? 0}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: "var(--text-tertiary)" }}>followers</p>
+                  <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: isDark ? '#e2e8f0' : '#1e293b' }}>{profile?.followersCount ?? 0}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: isDark ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.7)' }}>followers</p>
                 </div>
               </div>
 
@@ -372,11 +372,11 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
 
               {/* ── Skills ────────────────────────────────────── */}
               {u.skills?.length > 0 && (
-                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
-                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Skills</p>
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.15)'}` }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(99,102,241,0.7)' : 'rgba(99,102,241,0.9)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Skills</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                     {u.skills.map(s => (
-                      <span key={s} style={{ fontSize: '0.78rem', padding: '4px 11px', borderRadius: 20, fontWeight: 600, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>{s}</span>
+                      <span key={s} style={{ fontSize: '0.78rem', padding: '4px 11px', borderRadius: 20, fontWeight: 600, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1' }}>{s}</span>
                     ))}
                   </div>
                 </div>
