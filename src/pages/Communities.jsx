@@ -304,8 +304,8 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                 </div>
                 {/* Follower count */}
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: isDark ? '#e2e8f0' : '#1e293b' }}>{profile?.followersCount ?? 0}</p>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: isDark ? 'rgba(148,163,184,0.7)' : 'rgba(71,85,105,0.7)' }}>followers</p>
+                  <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: isDark ? '#e2e8f0' : '#0f172a' }}>{profile?.followersCount ?? 0}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.75rem', fontWeight: 600, color: isDark ? 'rgba(148,163,184,0.7)' : '#475569' }}>followers</p>
                 </div>
               </div>
 
