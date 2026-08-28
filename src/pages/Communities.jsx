@@ -1045,7 +1045,7 @@ function FeedTab({ user }) {
 }
 
 // ─── CONNECTIONS TAB ──────────────────────────────────────────────────────────
-function ConnectionsTab({ user }) {
+function ConnectionsTab({ user, setViewProfileId }) {
   const [subTab, setSubTab] = useState('discover')
   const [discoverUsers, setDiscoverUsers] = useState([])
   const [search, setSearch] = useState('')
@@ -1142,7 +1142,7 @@ function ConnectionsTab({ user }) {
   const remove = (id) => act(id, async () => { await connectionAPI.remove(id); setMyConns(p => p.filter(c => c.connectionId !== id)) })
 
   // ── Reusable User Card ──────────────────────────────────────────────────────
-  const UserCard = ({ u, connId, isConn, showRemove }) => {
+  const UserCard = ({ u, connId, isConn, showRemove, setViewProfileId }) => {
     const uid = String(u._id || u.user?._id || '')
     const name = u.name || u.user?.name
     const role = u.role || u.user?.role
@@ -1157,9 +1157,12 @@ function ConnectionsTab({ user }) {
         style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
         <div className="p-4">
           <div className="flex items-center gap-3 mb-3">
-            <Avatar src={profileImage} name={name} size={12} />
+            <div className="cursor-pointer flex-shrink-0" onClick={() => setViewProfileId(uid)}>
+              <Avatar src={profileImage} name={name} size={12} />
+            </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm text-theme-primary truncate">{name}</p>
+              <p className="font-bold text-sm text-theme-primary truncate cursor-pointer hover:text-indigo-600 transition" 
+                 onClick={() => setViewProfileId(uid)}>{name}</p>
               <RoleBadge role={role} />
             </div>
           </div>
@@ -1265,7 +1268,7 @@ function ConnectionsTab({ user }) {
             : discoverUsers.length === 0
               ? <div className="text-center py-12 text-sm text-theme-tertiary">No users found</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {discoverUsers.map(u => <UserCard key={u._id} u={u} />)}
+                  {discoverUsers.map(u => <UserCard key={u._id} u={u} setViewProfileId={setViewProfileId} />)}
                 </div>}
         </div>
       )}
@@ -1284,9 +1287,12 @@ function ConnectionsTab({ user }) {
                     style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
                     <div className="p-4">
                       <div className="flex items-center gap-3 mb-3">
-                        <Avatar src={c.requester?.profileImage} name={c.requester?.name} size={12} />
+                        <div className="cursor-pointer flex-shrink-0" onClick={() => setViewProfileId(String(c.requester?._id))}>
+                          <Avatar src={c.requester?.profileImage} name={c.requester?.name} size={12} />
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm text-theme-primary truncate">{c.requester?.name}</p>
+                          <p className="font-bold text-sm text-theme-primary truncate cursor-pointer hover:text-indigo-600 transition" 
+                             onClick={() => setViewProfileId(String(c.requester?._id))}>{c.requester?.name}</p>
                           <RoleBadge role={c.requester?.role} />
                         </div>
                       </div>
@@ -1332,7 +1338,7 @@ function ConnectionsTab({ user }) {
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {myConns.map(c => (
                     <UserCard key={c.connectionId} u={{ ...c.user, isFollowing: c.isFollowing }}
-                      connId={c.connectionId} isConn showRemove />
+                      connId={c.connectionId} isConn showRemove setViewProfileId={setViewProfileId} />
                   ))}
                 </div>
           }
@@ -1597,10 +1603,20 @@ function TrendingSidebar() {
 export default function Communities() {
   const { user } = useAuthStore()
   const [tab, setTab] = useState('feed')
+  const [viewProfileId, setViewProfileId] = useState(null)
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       <Navbar />
+      
+      {/* User Profile Modal */}
+      {viewProfileId && (
+        <UserProfileModal
+          userId={viewProfileId}
+          currentUserId={user?._id}
+          onClose={() => setViewProfileId(null)}
+        />
+      )}
 
       <div className="flex-1 mt-16 max-w-7xl mx-auto w-full">
         <div className="px-3 sm:px-4 py-5 pb-20">
@@ -1650,7 +1666,7 @@ export default function Communities() {
                 </div>
               ) : (
                 <div className="max-w-2xl mx-auto">
-                  <ConnectionsTab user={user} />
+                  <ConnectionsTab user={user} setViewProfileId={setViewProfileId} />
                 </div>
               )}
             </motion.div>

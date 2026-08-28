@@ -56,6 +56,11 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  // Skip video call pages (WebRTC needs fresh connections)
+  if (url.pathname.startsWith('/video-call')) {
+    return
+  }
+
   // Network first strategy for navigation requests
   if (request.mode === 'navigate') {
     event.respondWith(
