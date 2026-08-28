@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { feedAPI, connectionAPI, followAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
+import { useThemeStore } from '../store/themeStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import Navbar from '../components/Navbar'
 import { getSocket } from '../services/socket'
@@ -157,6 +158,7 @@ function RoleBadge({ role }) {
 
 // ─── USER PROFILE MODAL (LinkedIn-style) ─────────────────────────────────────
 function UserProfileModal({ userId, currentUserId, onClose }) {
+  const isDark = useThemeStore(s => s.isDark)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [following, setFollowing] = useState(false)
@@ -226,10 +228,10 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
           height: 'fit-content',
           maxHeight: '92vh',
           zIndex: 99999,
-          background: 'rgba(8,6,28,0.98)',
-          border: '1px solid rgba(99,102,241,0.3)',
+          background: isDark ? 'rgba(8,6,28,0.98)' : 'rgba(255,255,255,0.98)',
+          border: `1px solid ${isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.2)'}`,
           borderRadius: '24px',
-          boxShadow: '0 28px 80px rgba(0,0,0,0.9)',
+          boxShadow: isDark ? '0 28px 80px rgba(0,0,0,0.9)' : '0 28px 80px rgba(0,0,0,0.3)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -273,8 +275,8 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
                 boxShadow: '0 0 28px rgba(99,102,241,0.55)',
-                border: '4px solid rgba(8,6,28,0.98)',
-                color: "var(--text-primary)", fontWeight: 700, fontSize: 28,
+                border: `4px solid ${isDark ? 'rgba(8,6,28,0.98)' : 'rgba(255,255,255,0.98)'}`,
+                color: '#ffffff', fontWeight: 700, fontSize: 28,
               }}>
                 {u.profileImage
                   ? <img src={u.profileImage} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
