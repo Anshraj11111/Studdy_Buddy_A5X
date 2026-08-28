@@ -1065,6 +1065,17 @@ function ConnectionsTab({ user }) {
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [user._id])
 
+  // Real-time search with debounce
+  useEffect(() => {
+    if (subTab !== 'discover') return
+    
+    const timer = setTimeout(() => {
+      fetchDiscover(search)
+    }, 300) // 300ms delay for debouncing
+
+    return () => clearTimeout(timer)
+  }, [search, subTab, fetchDiscover])
+
   const fetchPending = useCallback(async () => {
     setLoading(true)
     try { const res = await connectionAPI.getPending(); setPending(res.data.data?.connections || []) }
@@ -1231,13 +1242,18 @@ function ConnectionsTab({ user }) {
             <div className="relative flex-1">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary" />
               <input value={search} onChange={e => setSearch(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && fetchDiscover(search)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); fetchDiscover(search); } }}
                 placeholder="Search by name, skill, or role..."
                 className="w-full pl-9 pr-3 py-2.5 text-sm text-theme-primary placeholder-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                 style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }} />
+              {search && (
+                <button onClick={() => { setSearch(''); fetchDiscover(''); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-primary">
+                  <X size={14} />
+                </button>
+              )}
             </div>
             <button onClick={() => fetchDiscover(search)}
-              className="px-4 py-2.5 text-white text-sm font-semibold rounded-lg"
+              className="px-4 py-2.5 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition"
               style={{ background: '#6366f1' }}>
               Search
             </button>
