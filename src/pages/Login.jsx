@@ -49,7 +49,7 @@ export default function Login() {
     const e = {}
     if (!formData.email) e.email = 'Email is required'
     if (!formData.password) e.password = 'Password is required'
-    if (formData.role === 'student' && !formData.schoolPassword) e.schoolPassword = 'School password is required'
+    // School password is now optional - students without it can pay to access resources
     if (formData.role === 'mentor' && !formData.mentorCode) e.mentorCode = 'Mentor code is required'
     return e
   }
@@ -163,11 +163,16 @@ export default function Login() {
             {/* Student School Password */}
             {formData.role === 'student' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                <label className="block text-sm font-medium mb-2 text-gray-400">School Password</label>
-                <input type="password" name="schoolPassword" placeholder="Enter your school password"
+                <label className="block text-sm font-medium mb-2 text-gray-400">
+                  School Password <span className="text-gray-500 font-normal">(Optional)</span>
+                </label>
+                <input type="password" name="schoolPassword" placeholder="Enter your school password (optional)"
                   value={formData.schoolPassword} onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
                   className={inputClass.replace('pl-11', 'pl-4')} />
                 {errors.schoolPassword && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.schoolPassword}</p>}
+                <p className="text-xs text-gray-500 mt-1.5">
+                  💡 Have a school code? Get free access to all resources! Otherwise, you can browse and pay ₹500 to watch videos.
+                </p>
               </motion.div>
             )}
 

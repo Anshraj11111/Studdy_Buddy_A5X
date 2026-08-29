@@ -56,11 +56,8 @@ export default function Signup() {
     if (!formData.password) e.password = 'Password is required'
     if (formData.password.length < 6) e.password = 'Password must be at least 6 characters'
     if (formData.password !== formData.confirmPassword) e.confirmPassword = 'Passwords do not match'
-    if (formData.role === 'student') {
-      if (!formData.schoolName) e.schoolName = 'School code is required'
-      if (!formData.schoolPassword) e.schoolPassword = 'School password is required'
-      if (!formData.city) e.city = 'City is required'
-    }
+    // School fields are now OPTIONAL (freemium model)
+    // No validation needed - students can signup without school code
     if (formData.role === 'mentor' && !formData.mentorCode) e.mentorCode = 'Mentor code is required'
     return e
   }
@@ -205,28 +202,34 @@ export default function Signup() {
               </div>
             </div>
 
-            {/* Student-only fields (School & City) */}
+            {/* Student-only fields (School & City) - OPTIONAL for freemium */}
             <AnimatePresence>
               {formData.role === 'student' && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden">
+                  <div className="p-3 rounded-xl mb-3" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                    <p className="text-xs text-purple-300">
+                      💡 <strong>Free Access:</strong> Enter school code & password for free access to all resources. 
+                      Skip if not available - you can explore and purchase courses individually.
+                    </p>
+                  </div>
                   <div>
-                    <label className={labelClass} style={labelStyle}>School Code</label>
-                    <input type="text" name="schoolName" placeholder="Enter your school code" value={formData.schoolName}
+                    <label className={labelClass} style={labelStyle}>School Code <span className="text-xs opacity-50">(Optional)</span></label>
+                    <input type="text" name="schoolName" placeholder="Optional - Enter for free access" value={formData.schoolName}
                       onChange={e => setFormData(p => ({ ...p, schoolName: e.target.value }))}
                       className={inputClass.replace('pl-11', 'pl-4')} />
                     {errEl(errors.schoolName)}
                   </div>
                   <div>
-                    <label className={labelClass} style={labelStyle}>School Password</label>
-                    <input type="password" name="schoolPassword" placeholder="Enter your school password" value={formData.schoolPassword}
+                    <label className={labelClass} style={labelStyle}>School Password <span className="text-xs opacity-50">(Optional)</span></label>
+                    <input type="password" name="schoolPassword" placeholder="Optional - Enter for free access" value={formData.schoolPassword}
                       onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
                       className={inputClass.replace('pl-11', 'pl-4')} />
                     {errEl(errors.schoolPassword)}
                   </div>
                   <div>
-                    <label className={labelClass} style={labelStyle}>City</label>
-                    <input type="text" name="city" placeholder="Enter your city" value={formData.city}
+                    <label className={labelClass} style={labelStyle}>City <span className="text-xs opacity-50">(Optional)</span></label>
+                    <input type="text" name="city" placeholder="Optional - Your city" value={formData.city}
                       onChange={e => setFormData(p => ({ ...p, city: e.target.value }))}
                       className={inputClass.replace('pl-11', 'pl-4')} />
                     {errEl(errors.city)}

@@ -357,3 +357,20 @@ export const rewardsAPI = {
   getMe:          () => api.get('/rewards/me'),
   getLeaderboard: () => api.get('/rewards/leaderboard'),
 };
+
+
+/* ---------------- PAYMENTS ---------------- */
+export const paymentAPI = {
+  getUpiSettings: () => api.get('/payments/upi-settings'),
+  submitPayment: (data) => api.post('/payments/submit', data),
+  getMyPayments: () => api.get('/payments/my-payments'),
+};
+
+/* ---------------- ADMIN PAYMENTS ---------------- */
+export const adminPaymentAPI = {
+  getAllPayments: (params = {}) => api.get('/admin/payments', { params, headers: adminHeaders() }),
+  approvePayment: (id, data = {}) => api.put(`/admin/payments/${id}/approve`, data, { headers: adminHeaders() }),
+  rejectPayment: (id, data = {}) => api.put(`/admin/payments/${id}/reject`, data, { headers: adminHeaders() }),
+  getUpiSettings: () => api.get('/admin/upi-settings', { headers: adminHeaders() }),
+  updateUpiSettings: (data) => api.put('/admin/upi-settings', data, { headers: adminHeaders() }),
+};

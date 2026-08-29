@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { adminAPI } from "../services/api"
-import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X, Download } from "lucide-react"
+import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X, Download, DollarSign, CheckCircle, XCircle, Clock } from "lucide-react"
 import axios from 'axios'
+import { adminPaymentAPI } from '../services/api'
+import PaymentManagement from '../components/PaymentManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || "H5"
@@ -1709,6 +1711,7 @@ export default function AdminPanel() {
             { id: 'users', label: 'User Management', icon: <Users size={14} /> },
             { id: 'schools', label: 'School Channels', icon: <School size={14} /> },
             { id: 'prereg', label: 'Pre-Register Students', icon: <UserPlus size={14} /> },
+            { id: 'payments', label: 'Payment Verification', icon: <DollarSign size={14} /> },
             { id: 'messages', label: 'Message Monitor', icon: <MessageSquare size={14} /> },
           ].map(t => (
             <button key={t.id} onClick={() => setMainTab(t.id)}
@@ -1924,6 +1927,11 @@ export default function AdminPanel() {
         {/* PRE-REGISTER STUDENTS TAB */}
         {mainTab === 'prereg' && (
           <PreRegisteredStudents showToast={showToast} />
+        )}
+
+        {/* PAYMENT VERIFICATION TAB */}
+        {mainTab === 'payments' && (
+          <PaymentManagement showToast={showToast} />
         )}
 
         {/* â”€â”€ MESSAGE MONITORING TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}

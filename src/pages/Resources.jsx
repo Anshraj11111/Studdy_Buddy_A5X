@@ -6,6 +6,7 @@ import { useThemeStore } from '../store/themeStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
 import Navbar from '../components/Navbar'
 import EditResourceModal from '../components/EditResourceModal'
+import PaymentModal from '../components/PaymentModal'
 import { Download, Search, Upload, X, FileText, Film, Image, Loader2, ExternalLink, Trash2, Plus, BookOpen, Youtube, Link, Play, Maximize, Minimize, ListVideo, ChevronLeft, ChevronRight, ImageIcon, GripVertical, Edit } from 'lucide-react'
 
 const TOPICS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Entrepreneurship']
@@ -1051,6 +1052,11 @@ export default function Resources() {
   const [selectedPlaylist, setSelectedPlaylist] = useState(null) // { playlist, startIndex }
   const [editingResource, setEditingResource] = useState(null) // Resource being edited
   const [editingPlaylist, setEditingPlaylist] = useState(null) // Playlist being edited
+  const [showPayment, setShowPayment] = useState(false) // Payment modal
+  const [pendingResource, setPendingResource] = useState(null) // Resource waiting for payment
+
+  // Check if user has free access (backend sets this flag based on school credentials)
+  const hasFreeAccess = user?.hasFreeAccess || user?.role === 'mentor'
 
   const fetchResources = async () => {
     try {
@@ -1091,7 +1097,19 @@ export default function Resources() {
   const switchTab = (t) => { setTab(t); setPage(1); setSearch(''); setTopic('') }
 
   const handleDownload = async (resource) => {
-    if (resource.fileType === 'link') { setSelectedVideo(resource); return }
+    // Check if resource is a video
+    if (resource.fileType === 'link') {
+      // Freemium check: Students WITHOUT school code need to pay
+      if (user?.role === 'student' && !hasFreeAccess) {
+        setPendingResource(resource)
+        setShowPayment(true)
+        return
+      }
+      // User has free access or is a mentor - allow watch
+      setSelectedVideo(resource)
+      return
+    }
+    // Non-video resources - allow download for everyone
     try { await resourceAPI.download(resource._id); window.open(resource.fileUrl, '_blank') }
     catch { window.open(resource.fileUrl, '_blank') }
   }
@@ -1125,6 +1143,13 @@ export default function Resources() {
   }
 
   const openPlaylist = async (playlist) => {
+    // Freemium check: Students WITHOUT school code need to pay
+    if (user?.role === 'student' && !hasFreeAccess) {
+      setPendingResource(playlist)
+      setShowPayment(true)
+      return
+    }
+    // User has free access or is a mentor - allow watch
     try {
       const res = await playlistAPI.getById(playlist._id)
       const full = res.data.data?.playlist
@@ -1498,6 +1523,7 @@ export default function Resources() {
         {selectedVideo && <YouTubeModal resource={selectedVideo} onClose={() => setSelectedVideo(null)} />}
         {selectedPlaylist && <PlaylistVideoModal playlist={selectedPlaylist.playlist} initialIndex={selectedPlaylist.startIndex} onClose={() => setSelectedPlaylist(null)} />}
         {editingResource && <EditResourceModal resource={editingResource} onClose={() => setEditingResource(null)} onUpdated={() => { fetchResources(); setEditingResource(null) }} />}
+        {showPayment && <PaymentModal onClose={() => { setShowPayment(false); setPendingResource(null) }} amount={500} courseName={pendingResource?.title || 'Course Access'} />}
       </AnimatePresence>
     </div>
   )
