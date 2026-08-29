@@ -1525,6 +1525,63 @@ export default function Resources() {
         {editingResource && <EditResourceModal resource={editingResource} onClose={() => setEditingResource(null)} onUpdated={() => { fetchResources(); setEditingResource(null) }} />}
         {showPayment && <PaymentModal onClose={() => { setShowPayment(false); setPendingResource(null) }} amount={500} courseName={pendingResource?.title || 'Course Access'} />}
       </AnimatePresence>
+
+      {/* Floating Shop Button */}
+      <motion.a 
+        href="https://shop.a5x.in" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        initial={{ opacity: 0, scale: 0.8, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        whileHover={{ scale: 1.08, y: -4, boxShadow: '0 12px 32px rgba(99,102,241,0.5)' }}
+        whileTap={{ scale: 0.92 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+        className="fixed right-6 bottom-6 z-40 flex items-center gap-2.5 px-5 py-3.5 rounded-2xl text-white font-bold text-sm group"
+        style={{ 
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%)',
+          boxShadow: '0 8px 24px rgba(99,102,241,0.45), 0 0 0 1px rgba(255,255,255,0.1) inset',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,0.15)',
+        }}>
+        <motion.div
+          animate={{ rotate: [0, -10, 10, -10, 0] }}
+          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+          className="relative">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.707 15.293C4.077 15.923 4.523 17 5.414 17H17M17 17C15.895 17 15 17.895 15 19C15 20.105 15.895 21 17 21C18.105 21 19 20.105 19 19C19 17.895 18.105 17 17 17ZM9 19C9 20.105 8.105 21 7 21C5.895 21 5 20.105 5 19C5 17.895 5.895 17 7 17C8.105 17 9 17.895 9 19Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          {/* Sparkle effect */}
+          <motion.div
+            className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-yellow-300"
+            animate={{ 
+              scale: [0, 1.2, 0],
+              opacity: [0, 1, 0]
+            }}
+            transition={{ 
+              repeat: Infinity, 
+              duration: 1.5,
+              ease: 'easeInOut'
+            }}
+          />
+        </motion.div>
+        <span className="relative">
+          Shop
+          <motion.span
+            className="absolute -bottom-0.5 left-0 h-0.5 bg-white"
+            initial={{ width: 0 }}
+            whileHover={{ width: '100%' }}
+            transition={{ duration: 0.3 }}
+          />
+        </span>
+        {/* Glow effect on hover */}
+        <motion.div
+          className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100"
+          style={{
+            background: 'radial-gradient(circle at center, rgba(255,255,255,0.25) 0%, transparent 70%)',
+            transition: 'opacity 0.3s ease'
+          }}
+        />
+      </motion.a>
     </div>
   )
 }
