@@ -1,5 +1,5 @@
 // Service Worker for Studdy Buddy PWA
-const CACHE_NAME = 'studdy-buddy-v1.0.0'
+const CACHE_NAME = 'studdy-buddy-v1.0.1'
 const RUNTIME_CACHE = 'studdy-buddy-runtime'
 
 // Assets to cache on install
@@ -58,6 +58,11 @@ self.addEventListener('fetch', (event) => {
 
   // Skip video call pages (WebRTC needs fresh connections)
   if (url.pathname.startsWith('/video-call')) {
+    return
+  }
+
+  // Skip doubt pages (dynamic content needs fresh data)
+  if (url.pathname.startsWith('/doubts/')) {
     return
   }
 

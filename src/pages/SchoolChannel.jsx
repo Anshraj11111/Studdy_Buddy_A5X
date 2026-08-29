@@ -68,6 +68,7 @@ export default function SchoolChannel() {
     });
 
     socket.on('school-channel:reaction-updated', (updatedMessage) => {
+      // Always update with backend response (single source of truth)
       setMessages((prev) =>
         prev.map((m) => (m._id === updatedMessage._id ? updatedMessage : m))
       );
@@ -198,6 +199,7 @@ export default function SchoolChannel() {
   const handleReaction = async (messageId, emoji) => {
     try {
       if (socket && socket.connected && channel) {
+        // Send to backend - let socket event handle the update
         socket.emit('school-channel:react', {
           userId: user._id,
           messageId,
@@ -493,33 +495,46 @@ export default function SchoolChannel() {
                         <div className="flex items-center gap-1.5 mt-2 flex-wrap" style={{ marginLeft: '48px' }}>
                           {Object.entries(
                             message.reactions.reduce((acc, r) => {
-                              acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                              // Count UNIQUE users per emoji (WhatsApp style)
+                              const userId = r.userId?._id || r.userId;
+                              if (!acc[r.emoji]) {
+                                acc[r.emoji] = new Set();
+                              }
+                              acc[r.emoji].add(String(userId));
                               return acc;
                             }, {})
-                          ).map(([emoji, count]) => (
-                            <button
-                              key={emoji}
-                              onClick={() => handleReaction(message._id, emoji)}
-                              className="px-2.5 py-1 rounded-full text-sm flex items-center gap-1.5 hover:scale-105 transition-all shadow-sm"
-                              style={{
-                                background: isDark ? 'rgba(139,92,246,0.25)' : '#ede9fe',
-                                border: isDark ? '1.5px solid rgba(168,85,247,0.4)' : '1.5px solid #c4b5fd',
-                                color: isDark ? '#e9d5ff' : '#7c3aed',
-                                minHeight: '32px',
-                                fontFamily: 'system-ui, -apple-system, "Segoe UI Emoji", "Apple Color Emoji", sans-serif'
-                              }}
-                            >
-                              <span className="text-lg leading-none" style={{ 
-                                fontSize: '18px',
-                                lineHeight: '1',
-                                display: 'inline-flex',
-                                alignItems: 'center'
-                              }}>
-                                {emoji}
-                              </span>
-                              <span className="font-bold text-xs">{count}</span>
-                            </button>
-                          ))}
+                          ).map(([emoji, userSet]) => {
+                            const count = userSet.size; // Unique user count
+                            const hasUserReacted = userSet.has(String(user?._id));
+                            return (
+                              <button
+                                key={emoji}
+                                onClick={() => handleReaction(message._id, emoji)}
+                                className="px-2.5 py-1 rounded-full text-sm flex items-center gap-1.5 hover:scale-105 transition-all shadow-sm"
+                                style={{
+                                  background: hasUserReacted 
+                                    ? (isDark ? 'rgba(139,92,246,0.4)' : '#ddd6fe')
+                                    : (isDark ? 'rgba(139,92,246,0.15)' : '#ede9fe'),
+                                  border: hasUserReacted
+                                    ? (isDark ? '1.5px solid rgba(168,85,247,0.6)' : '1.5px solid #a78bfa')
+                                    : (isDark ? '1.5px solid rgba(168,85,247,0.3)' : '1.5px solid #c4b5fd'),
+                                  color: isDark ? '#e9d5ff' : '#7c3aed',
+                                  minHeight: '32px',
+                                  fontFamily: 'system-ui, -apple-system, "Segoe UI Emoji", "Apple Color Emoji", sans-serif'
+                                }}
+                              >
+                                <span className="text-lg leading-none" style={{ 
+                                  fontSize: '18px',
+                                  lineHeight: '1',
+                                  display: 'inline-flex',
+                                  alignItems: 'center'
+                                }}>
+                                  {emoji}
+                                </span>
+                                <span className="font-bold text-xs">{count}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                     </div>

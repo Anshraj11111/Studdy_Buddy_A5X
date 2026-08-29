@@ -229,7 +229,7 @@ export default function Doubts() {
                   border: "1px solid var(--border-primary)"
                 }}>
                 <div className="flex items-start justify-between gap-3 sm:gap-4">
-                  <Link to={`/doubts/${doubt._id}`} className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm sm:text-base mb-1.5 line-clamp-2 transition-colors"
                       style={{ color: "#6366f1" }}>
                       {doubt.title}
@@ -246,7 +246,7 @@ export default function Doubts() {
                         </button>
                       )}
                     </div>
-                  </Link>
+                  </div>
 
                   {/* Actions */}
                   <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 flex-shrink-0">
