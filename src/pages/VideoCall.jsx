@@ -206,8 +206,21 @@ export default function VideoCall() {
     const pc = new RTCPeerConnection(iceConfigRef.current)
 
     pc.ontrack = (e) => {
-      console.log('📹 ontrack:', e.track.kind, 'streams:', e.streams.length)
-      const stream = e.streams[0] || new MediaStream([e.track])
+      console.log('📹 ontrack event fired!')
+      console.log('   Track kind:', e.track.kind)
+      console.log('   Track readyState:', e.track.readyState)
+      console.log('   Streams count:', e.streams.length)
+      
+      if (!e.streams || e.streams.length === 0) {
+        console.warn('⚠️ No streams, creating manual MediaStream')
+        const stream = new MediaStream([e.track])
+        attachRemoteStream(stream)
+        return
+      }
+      
+      const stream = e.streams[0]
+      console.log('📺 Stream ID:', stream.id)
+      console.log('📺 Stream tracks:', stream.getTracks().map(t => `${t.kind}:${t.readyState}`).join(', '))
       attachRemoteStream(stream)
     }
 
@@ -1018,13 +1031,16 @@ export default function VideoCall() {
           ref={remoteVideoRef}
           autoPlay
           playsInline
+          muted={false}
           style={{
             position: 'absolute', inset: 0,
             width: '100%', height: '100%',
             objectFit: 'cover',
             background: 'var(--bg-primary)',
             zIndex: 1,
-            visibility: isConnected ? 'visible' : 'hidden',
+            display: 'block',
+            opacity: isConnected ? 1 : 0,
+            transition: 'opacity 0.3s ease-in-out',
           }}
         />
       )}
