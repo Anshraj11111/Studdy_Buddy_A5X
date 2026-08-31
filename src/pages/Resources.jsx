@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { resourceAPI, playlistAPI } from '../services/api'
+import { resourceAPI, playlistAPI, paymentAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
@@ -1054,9 +1054,30 @@ export default function Resources() {
   const [editingPlaylist, setEditingPlaylist] = useState(null) // Playlist being edited
   const [showPayment, setShowPayment] = useState(false) // Payment modal
   const [pendingResource, setPendingResource] = useState(null) // Resource waiting for payment
+  const [paymentPrice, setPaymentPrice] = useState(500) // Dynamic payment price
 
   // Check if user has free access (backend sets this flag based on school credentials)
   const hasFreeAccess = user?.hasFreeAccess || user?.role === 'mentor'
+
+  // Fetch payment price from backend
+  useEffect(() => {
+    const fetchPaymentPrice = async () => {
+      try {
+        // Add timestamp to bust cache
+        const timestamp = Date.now()
+        const res = await paymentAPI.getUpiSettings()
+        if (res.data?.data?.paymentPrice) {
+          console.log('💰 Fetched payment price from backend:', res.data.data.paymentPrice)
+          setPaymentPrice(res.data.data.paymentPrice)
+        }
+      } catch (err) {
+        console.error('Failed to fetch payment price:', err)
+      }
+    }
+    if (!hasFreeAccess) {
+      fetchPaymentPrice()
+    }
+  }, [hasFreeAccess])
 
   const fetchResources = async () => {
     try {
@@ -1523,7 +1544,7 @@ export default function Resources() {
         {selectedVideo && <YouTubeModal resource={selectedVideo} onClose={() => setSelectedVideo(null)} />}
         {selectedPlaylist && <PlaylistVideoModal playlist={selectedPlaylist.playlist} initialIndex={selectedPlaylist.startIndex} onClose={() => setSelectedPlaylist(null)} />}
         {editingResource && <EditResourceModal resource={editingResource} onClose={() => setEditingResource(null)} onUpdated={() => { fetchResources(); setEditingResource(null) }} />}
-        {showPayment && <PaymentModal onClose={() => { setShowPayment(false); setPendingResource(null) }} amount={500} courseName={pendingResource?.title || 'Course Access'} />}
+        {showPayment && <PaymentModal onClose={() => { setShowPayment(false); setPendingResource(null) }} amount={paymentPrice} courseName={pendingResource?.title || 'Course Access'} />}
       </AnimatePresence>
 
       {/* Floating Shop Button */}

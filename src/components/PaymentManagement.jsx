@@ -16,6 +16,12 @@ export default function PaymentManagement({ showToast }) {
   const [editingUpi, setEditingUpi] = useState(false)
   const [newUpiId, setNewUpiId] = useState('')
   const [updatingUpi, setUpdatingUpi] = useState(false)
+  
+  // Payment Price Settings
+  const [paymentPrice, setPaymentPrice] = useState(500)
+  const [editingPrice, setEditingPrice] = useState(false)
+  const [newPrice, setNewPrice] = useState(500)
+  const [updatingPrice, setUpdatingPrice] = useState(false)
 
   const fetchPayments = async () => {
     setLoading(true)
@@ -37,6 +43,8 @@ export default function PaymentManagement({ showToast }) {
       const res = await adminPaymentAPI.getUpiSettings()
       setUpiId(res.data.data.upiId || '')
       setNewUpiId(res.data.data.upiId || '')
+      setPaymentPrice(res.data.data.paymentPrice || 500)
+      setNewPrice(res.data.data.paymentPrice || 500)
     } catch (err) {
       console.error('Error fetching UPI settings:', err)
     }
@@ -104,6 +112,27 @@ export default function PaymentManagement({ showToast }) {
       showToast(err.response?.data?.error?.message || 'Failed to update UPI ID', 'error')
     } finally {
       setUpdatingUpi(false)
+    }
+  }
+
+  const handleUpdatePrice = async () => {
+    const price = parseInt(newPrice)
+    if (isNaN(price) || price < 0) {
+      showToast('Invalid price amount', 'error')
+      return
+    }
+    
+    setUpdatingPrice(true)
+    try {
+      await adminPaymentAPI.updateUpiSettings({ paymentPrice: price })
+      setPaymentPrice(price)
+      setEditingPrice(false)
+      showToast('Payment price updated successfully!', 'success')
+    } catch (err) {
+      console.error('Error updating price:', err)
+      showToast(err.response?.data?.error?.message || 'Failed to update price', 'error')
+    } finally {
+      setUpdatingPrice(false)
     }
   }
 
@@ -193,6 +222,61 @@ export default function PaymentManagement({ showToast }) {
               <button
                 onClick={() => setEditingUpi(true)}
                 style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(139,92,246,0.4)', background: 'rgba(139,92,246,0.15)', color: '#a78bfa', cursor: 'pointer', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <Edit2 size={14} /> Edit
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Payment Price Setting */}
+      <div style={{ borderRadius: 18, background: 'var(--bg-tertiary)', border: '1px solid var(--border-secondary)', backdropFilter: 'blur(20px)', overflow: 'hidden', marginBottom: 24 }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#22c55e,#16a34a,transparent)' }} />
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(34,197,94,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <DollarSign size={18} color="#22c55e" />
+            <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>Payment Price</span>
+          </div>
+        </div>
+        <div style={{ padding: '20px' }}>
+          {editingPrice ? (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'end' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>Price per Course (₹)</label>
+                <input
+                  type="number"
+                  value={newPrice}
+                  onChange={e => setNewPrice(e.target.value)}
+                  placeholder="500"
+                  min="0"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }}
+                />
+              </div>
+              <button
+                onClick={handleUpdatePrice}
+                disabled={updatingPrice}
+                style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: updatingPrice ? 'rgba(148,163,184,0.3)' : 'linear-gradient(135deg,#10b981,#059669)', color: 'var(--text-primary)', cursor: updatingPrice ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, opacity: updatingPrice ? 0.6 : 1 }}
+              >
+                {updatingPrice ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />Saving...</> : <><Save size={16} />Save</>}
+              </button>
+              <button
+                onClick={() => { setEditingPrice(false); setNewPrice(paymentPrice) }}
+                disabled={updatingPrice}
+                style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(148,163,184,0.1)', color: '#94a3b8', cursor: updatingPrice ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, opacity: updatingPrice ? 0.6 : 1 }}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10 }}>
+              <div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 11, marginBottom: 4, fontWeight: 600 }}>Current Price</div>
+                <div style={{ color: 'var(--text-primary)', fontSize: 24, fontWeight: 700, fontFamily: 'monospace' }}>₹{paymentPrice}</div>
+              </div>
+              <button
+                onClick={() => setEditingPrice(true)}
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.15)', color: '#22c55e', cursor: 'pointer', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
               >
                 <Edit2 size={14} /> Edit
               </button>
@@ -297,7 +381,7 @@ export default function PaymentManagement({ showToast }) {
                     <td style={{ padding: '14px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{payment.courseName}</td>
                     <td style={{ padding: '14px 16px' }}>
                       <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700, fontFamily: 'monospace' }}>
-                        ₹{payment.amount}
+                        ₹{payment.amount || paymentPrice}
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px', color: 'var(--text-secondary)', fontSize: 11, fontFamily: 'monospace' }}>

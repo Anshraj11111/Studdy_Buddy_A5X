@@ -4,29 +4,47 @@ import { X, CreditCard, Lock, IndianRupee, AlertCircle, CheckCircle, QrCode } fr
 import { useThemeStore } from '../store/themeStore'
 import { paymentAPI } from '../services/api'
 
-export default function PaymentModal({ onClose, amount = 500, courseName = 'Course Access', courseId = 'all-resources' }) {
+export default function PaymentModal({ onClose, amount: initialAmount, courseName = 'Course Access', courseId = 'all-resources' }) {
   const { theme } = useThemeStore()
   const isDark = theme === 'dark'
   const [processing, setProcessing] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState(null) // null | 'success' | 'failed'
   const [showQR, setShowQR] = useState(false)
   const [upiId, setUpiId] = useState('8269858259@upi') // Default
+  const [amount, setAmount] = useState(initialAmount || 500) // Dynamic amount
 
-  // Fetch UPI ID from backend on mount
+  console.log('💳 PaymentModal opened with initialAmount:', initialAmount, 'amount state:', amount)
+
+  // Fetch UPI ID and payment price from backend on mount
   useEffect(() => {
-    const fetchUpiId = async () => {
+    const fetchSettings = async () => {
       try {
         const res = await paymentAPI.getUpiSettings()
-        if (res.data?.success && res.data?.data?.upiId) {
-          setUpiId(res.data.data.upiId)
+        if (res.data?.success && res.data?.data) {
+          if (res.data.data.upiId) {
+            setUpiId(res.data.data.upiId)
+          }
+          // Always use backend price if no initialAmount was provided
+          // If initialAmount is provided, respect it (for custom pricing)
+          if (res.data.data.paymentPrice && !initialAmount) {
+            setAmount(res.data.data.paymentPrice)
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch UPI ID:', error)
-        // Use default UPI ID if fetch fails
+        console.error('Failed to fetch settings:', error)
+        // Use defaults if fetch fails
       }
     }
-    fetchUpiId()
-  }, [])
+    fetchSettings()
+  }, [initialAmount])
+  
+  // Update amount when initialAmount prop changes
+  useEffect(() => {
+    if (initialAmount) {
+      console.log('💳 PaymentModal updating amount to:', initialAmount)
+      setAmount(initialAmount)
+    }
+  }, [initialAmount])
 
   const UPI_NAME = 'A5X Payment'
   
