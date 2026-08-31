@@ -17,7 +17,7 @@ const ACTION_LABELS = {
   comment_received: { label: 'Comment Received',    icon: '🗨️',  color: '#8b5cf6' },
   doubt_posted:     { label: 'Doubt Posted',        icon: '🤔',  color: '#f59e0b' },
   doubt_resolved:   { label: 'Doubt Resolved',      icon: '✅',  color: '#22c55e' },
-  resource_upload:  { label: 'Resource Uploaded',   icon: '📤',  color: '#3b82f6' },
+  // resource_upload:  { label: 'Resource Uploaded',   icon: '📤',  color: '#3b82f6' },
   daily_login:      { label: 'Daily Login',         icon: '🌅',  color: '#a78bfa' },
   streak_bonus:     { label: 'Streak Bonus',        icon: '🔥',  color: '#f97316' },
 }
