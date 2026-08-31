@@ -4,7 +4,7 @@ import { X, CreditCard, Lock, IndianRupee, AlertCircle, CheckCircle, QrCode } fr
 import { useThemeStore } from '../store/themeStore'
 import { paymentAPI } from '../services/api'
 
-export default function PaymentModal({ onClose, amount: initialAmount, courseName = 'Course Access', courseId = 'all-resources' }) {
+export default function PaymentModal({ onClose, onSuccess, amount: initialAmount, courseName = 'Course Access', courseId = 'all-resources' }) {
   const { theme } = useThemeStore()
   const isDark = theme === 'dark'
   const [processing, setProcessing] = useState(false)
@@ -73,7 +73,11 @@ export default function PaymentModal({ onClose, amount: initialAmount, courseNam
         // Close modal after 3 seconds and show message
         setTimeout(() => {
           onClose()
-          alert('✅ Payment submitted successfully! Admin will verify and grant access shortly.')
+          if (onSuccess) {
+            onSuccess() // Call success callback if provided
+          } else {
+            alert('✅ Payment submitted successfully! Admin will verify and grant access shortly.')
+          }
         }, 3000)
       } else {
         throw new Error('Payment submission failed')
