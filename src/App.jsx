@@ -11,6 +11,7 @@ import InstallPWA from './components/InstallPWA'
 // Eagerly load auth pages (always needed on first visit)
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import ForgotPassword from './pages/ForgotPassword'
 
 // Lazy load all other pages — each becomes its own chunk
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -100,6 +101,7 @@ function AppShell() {
           {/* Public */}
           <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <Login />} />
           <Route path="/signup" element={token ? <Navigate to="/dashboard" replace /> : <Signup />} />
+          <Route path="/forgot-password" element={token ? <Navigate to="/dashboard" replace /> : <ForgotPassword />} />
 
           {/* Student */}
           <Route path="/dashboard" element={<StudentRoute><Dashboard /></StudentRoute>} />

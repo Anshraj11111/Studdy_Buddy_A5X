@@ -139,6 +139,11 @@ export default function Login() {
                 </button>
               </div>
               {errors.password && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.password}</p>}
+              <div className="flex justify-end mt-1.5">
+                <Link to="/forgot-password" className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition">
+                  Forgot Password?
+                </Link>
+              </div>
             </div>
 
             {/* Role */}
