@@ -120,8 +120,8 @@ export default function Signup() {
               className="w-20 h-20 mx-auto mb-4 flex items-center justify-center">
               <img src={a5xLogo} alt="A5X Logo" className="w-full h-full object-contain" />
             </motion.div>
-            <h1 className="text-3xl font-bold mb-2">
-              Join <span style={{ color: '#8b5cf6' }}>Studdy Buddy!</span>
+            <h1 className="text-3xl font-bold mb-2 text-white">
+              Join <span style={{ color: '#a78bfa' }}>Studdy Buddy!</span>
             </h1>
             <p className="text-sm" style={{ color: 'rgba(156,163,175,0.9)' }}>
               Create your <span style={{ color: '#8b5cf6' }}>Studdy Buddy</span> account

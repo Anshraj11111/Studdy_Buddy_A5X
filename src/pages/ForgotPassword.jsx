@@ -109,8 +109,8 @@ export default function ForgotPassword() {
               className="w-20 h-20 mx-auto mb-5 flex items-center justify-center">
               <img src={a5xLogo} alt="A5X Logo" className="w-full h-full object-contain" />
             </motion.div>
-            <h1 className="text-3xl font-bold mb-2">
-              <span style={{ color: '#6366f1' }}>Forgot</span> Password?
+            <h1 className="text-3xl font-bold mb-2 text-white">
+              <span style={{ color: '#818cf8' }}>Forgot</span> Password?
             </h1>
             <p className="text-sm" style={{ color: 'rgba(156,163,175,0.9)' }}>
               {step === 1 ? "We'll send you a reset code" : 'Enter the code and new password'}

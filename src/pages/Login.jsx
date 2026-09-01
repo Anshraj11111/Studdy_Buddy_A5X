@@ -104,8 +104,8 @@ export default function Login() {
               className="w-20 h-20 mx-auto mb-5 flex items-center justify-center">
               <img src={a5xLogo} alt="A5X Logo" className="w-full h-full object-contain" />
             </motion.div>
-            <h1 className="text-3xl font-bold mb-2">
-              Welcome <span style={{ color: '#6366f1' }}>Back!</span>
+            <h1 className="text-3xl font-bold mb-2 text-white">
+              Welcome <span style={{ color: '#818cf8' }}>Back!</span>
             </h1>
             <p className="text-sm" style={{ color: 'rgba(156,163,175,0.9)' }}>
               Sign in to your <span style={{ color: '#6366f1' }}>Studdy Buddy</span> account
