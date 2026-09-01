@@ -406,6 +406,7 @@ export const courseAPI = {
   getModuleLectures: (moduleId) => api.get(`/courses/modules/${moduleId}/lectures`),
   
   // Protected
+  getSecureVideoUrl: (lectureId) => api.get(`/courses/lectures/${lectureId}/video-url`),
   enroll: (courseId) => api.post(`/courses/${courseId}/enroll`),
   markComplete: (courseId, videoId) => api.post(`/courses/${courseId}/videos/${videoId}/complete`),
   getMyCourses: () => api.get('/courses/my/enrolled'),
