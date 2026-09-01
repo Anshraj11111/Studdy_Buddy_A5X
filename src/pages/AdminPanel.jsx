@@ -5,6 +5,7 @@ import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Lo
 import axios from 'axios'
 import { adminPaymentAPI } from '../services/api'
 import PaymentManagement from '../components/PaymentManagement'
+import CourseManagement from '../components/CourseManagement'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || "H5"
@@ -1711,6 +1712,7 @@ export default function AdminPanel() {
             { id: 'users', label: 'User Management', icon: <Users size={14} /> },
             { id: 'schools', label: 'School Channels', icon: <School size={14} /> },
             { id: 'prereg', label: 'Pre-Register Students', icon: <UserPlus size={14} /> },
+            { id: 'courses', label: 'Courses', icon: <BookOpen size={14} /> },
             { id: 'payments', label: 'Payment Verification', icon: <DollarSign size={14} /> },
             { id: 'messages', label: 'Message Monitor', icon: <MessageSquare size={14} /> },
           ].map(t => (
@@ -1927,6 +1929,11 @@ export default function AdminPanel() {
         {/* PRE-REGISTER STUDENTS TAB */}
         {mainTab === 'prereg' && (
           <PreRegisteredStudents showToast={showToast} />
+        )}
+
+        {/* COURSES TAB */}
+        {mainTab === 'courses' && (
+          <CourseManagement showToast={showToast} />
         )}
 
         {/* PAYMENT VERIFICATION TAB */}

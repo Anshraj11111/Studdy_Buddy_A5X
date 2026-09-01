@@ -187,7 +187,10 @@ export const doubtAPI = {
 
 export const resourceAPI = {
   create: (data) => api.post("/resources", data),
-  list: (page = 1, limit = 10) => api.get(`/resources?page=${page}&limit=${limit}`),
+  list: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/resources${queryString ? `?${queryString}` : ''}`);
+  },
   getById: (id) => api.get(`/resources/${id}`),
   search: (query) => api.get(`/resources/search?keyword=${encodeURIComponent(query)}`),
   getByTopic: (topic, page = 1) => api.get(`/resources/topic/${topic}?page=${page}`),
@@ -198,6 +201,7 @@ export const resourceAPI = {
   uploadNotes: (formData) => api.post(`/resources/upload-notes`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  clearAll: () => api.delete('/resources/clear-all'),
 };
 
 /* ---------------- PLAYLISTS ---------------- */
@@ -317,6 +321,23 @@ export const adminAPI = {
   getUsers: (params = {}) => api.get('/admin/users', { params, headers: adminHeaders() }),
   toggleUser: (id) => api.put(`/admin/users/${id}/toggle`, {}, { headers: adminHeaders() }),
   deleteUser: (id) => api.delete(`/admin/users/${id}`, { headers: adminHeaders() }),
+  
+  // Course Management
+  getAllCourses: (params = {}) => api.get('/admin/courses', { params, headers: adminHeaders() }),
+  createCourse: (data) => api.post('/admin/courses', data, { headers: adminHeaders() }),
+  updateCourse: (id, data) => api.put(`/admin/courses/${id}`, data, { headers: adminHeaders() }),
+  deleteCourse: (id) => api.delete(`/admin/courses/${id}`, { headers: adminHeaders() }),
+  getCourseModules: (courseId) => api.get(`/admin/courses/${courseId}/modules`, { headers: adminHeaders() }),
+  
+  // Module Management
+  createModule: (data) => api.post(`/admin/modules`, data, { headers: adminHeaders() }),
+  updateModule: (id, data) => api.put(`/admin/modules/${id}`, data, { headers: adminHeaders() }),
+  deleteModule: (id) => api.delete(`/admin/modules/${id}`, { headers: adminHeaders() }),
+  
+  // Lecture Management
+  createLecture: (data) => api.post(`/admin/lectures`, data, { headers: adminHeaders() }),
+  updateLecture: (id, data) => api.put(`/admin/lectures/${id}`, data, { headers: adminHeaders() }),
+  deleteLecture: (id) => api.delete(`/admin/lectures/${id}`, { headers: adminHeaders() }),
 };
 
 /* ---------------- BROADCAST CHANNELS ---------------- */
@@ -375,4 +396,17 @@ export const adminPaymentAPI = {
   rejectPayment: (id, data = {}) => api.put(`/admin/payments/${id}/reject`, data, { headers: adminHeaders() }),
   getUpiSettings: () => api.get('/admin/upi-settings', { headers: adminHeaders() }),
   updateUpiSettings: (data) => api.put('/admin/upi-settings', data, { headers: adminHeaders() }),
+};
+
+/* ---------------- COURSES ---------------- */
+export const courseAPI = {
+  // Public
+  list: (params = {}) => api.get('/courses', { params }),
+  getById: (id) => api.get(`/courses/${id}`),
+  getModuleLectures: (moduleId) => api.get(`/courses/modules/${moduleId}/lectures`),
+  
+  // Protected
+  enroll: (courseId) => api.post(`/courses/${courseId}/enroll`),
+  markComplete: (courseId, videoId) => api.post(`/courses/${courseId}/videos/${videoId}/complete`),
+  getMyCourses: () => api.get('/courses/my/enrolled'),
 };
