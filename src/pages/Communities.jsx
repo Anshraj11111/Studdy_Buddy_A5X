@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { feedAPI, connectionAPI, followAPI } from '../services/api'
+import { useNavigate } from 'react-router-dom'
+import { feedAPI, connectionAPI, followAPI, roomAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import { uploadToCloudinary } from '../utils/cloudinary'
@@ -11,7 +12,7 @@ import {
   Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
   UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
   Zap, FolderKanban, GraduationCap, Globe2, TrendingUp, BookOpen,
-  Sparkles, ChevronDown, Bell, BellOff, Edit2, MoreHorizontal
+  Sparkles, ChevronDown, Bell, BellOff, Edit2, MoreHorizontal, MessageSquare
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -1054,6 +1055,7 @@ function FeedTab({ user }) {
 
 // ─── CONNECTIONS TAB ──────────────────────────────────────────────────────────
 function ConnectionsTab({ user, setViewProfileId }) {
+  const navigate = useNavigate()
   const [subTab, setSubTab] = useState('discover')
   const [discoverUsers, setDiscoverUsers] = useState([])
   const [search, setSearch] = useState('')
@@ -1149,6 +1151,17 @@ function ConnectionsTab({ user, setViewProfileId }) {
   const reject = (id) => act(id, async () => { await connectionAPI.reject(id); setPending(p => p.filter(c => c._id !== id)) })
   const remove = (id) => act(id, async () => { await connectionAPI.remove(id); setMyConns(p => p.filter(c => c.connectionId !== id)) })
 
+  // ── Message: create/get DM room and navigate to chat ──────────────────────
+  const handleMessage = async (uid) => {
+    try {
+      const res = await roomAPI.createDirect(uid)
+      const roomId = res.data.data?.room?._id
+      if (roomId) navigate(`/chat/${roomId}`)
+    } catch (err) {
+      console.error('Failed to open chat:', err)
+    }
+  }
+
   // ── Reusable User Card ──────────────────────────────────────────────────────
   const UserCard = ({ u, connId, isConn, showRemove, setViewProfileId }) => {
     const uid = String(u._id || u.user?._id || '')
@@ -1196,13 +1209,23 @@ function ConnectionsTab({ user, setViewProfileId }) {
                 <div className="flex-1 text-center text-xs py-2 rounded-lg text-theme-tertiary"
                   style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}>Pending</div>
               ) : connStatus === 'accepted' ? (
-                <div className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg font-semibold"
-                  style={{ background: '#d1fae5', color: '#059669' }}>
-                  <UserCheck size={12} /> Connected
-                </div>
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => handleMessage(uid)}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white py-2 rounded-lg"
+                  style={{ background: '#6366f1' }}>
+                  <MessageSquare size={12} /> Message
+                </motion.button>
               ) : null
             )}
-            {/* Remove (connected tab) */}
+            {/* Message + Remove (connected tab) */}
+            {showRemove && (
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={() => handleMessage(uid)}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white py-2 rounded-lg"
+                style={{ background: '#6366f1' }}>
+                <MessageSquare size={12} /> Message
+              </motion.button>
+            )}
             {showRemove && (
               <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                 onClick={() => remove(connId)} disabled={!!actionLoading[connId]}
@@ -1318,6 +1341,13 @@ function ConnectionsTab({ user, setViewProfileId }) {
                           className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold text-white py-2 rounded-lg disabled:opacity-50"
                           style={{ background: '#10b981' }}>
                           {actionLoading[c._id] ? <Loader2 size={11} className="animate-spin" /> : <UserCheck size={11} />} Accept & Follow
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={() => handleMessage(String(c.requester?._id))}
+                          disabled={!c.requester?._id}
+                          className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold text-white py-2 rounded-lg disabled:opacity-50"
+                          style={{ background: '#6366f1' }}>
+                          <MessageSquare size={11} /> Message
                         </motion.button>
                         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                           onClick={() => reject(c._id)} disabled={!!actionLoading[c._id]}
