@@ -1224,7 +1224,7 @@ function CourseCard({ course, onOpen }) {
           <img 
             src={course.thumbnail} 
             alt={course.title}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
           />
         ) : (
           <div className="flex h-full items-center justify-center">
@@ -1635,14 +1635,13 @@ function CourseDetail({ course, onBack }) {
       <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
         {/* Course Header */}
         <div className="mb-8 overflow-hidden rounded-2xl bg-white shadow-sm">
-          <div className="relative h-[240px] bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+          <div className="relative h-[240px] bg-white">
             {data.thumbnail && (
-              <img src={data.thumbnail} alt={data.title} className="h-full w-full object-cover" />
+              <img src={data.thumbnail} alt={data.title} className="h-full w-full object-contain" />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             
             {/* Course Info Overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+            <div className="absolute bottom-0 left-0 right-0 p-6 text-white bg-gradient-to-t from-black/80 to-transparent">
               <span className="inline-block rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur-sm">
                 {data.topic}
               </span>
