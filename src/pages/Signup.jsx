@@ -5,7 +5,7 @@ import { UserPlus, Mail, Lock, User, UserCircle, Loader2, AlertCircle, Eye, EyeO
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import ThemeToggle from '../components/ThemeToggle'
-import a5xLogo from '../assets/A5X logo.png'
+import a5xLogo from '../assets/studdybuddy-logo.png'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'

@@ -1628,9 +1628,9 @@ export default function AdminPanel() {
               <div className="text-center mb-6">
                 <motion.div animate={{ boxShadow: ["0 0 0px rgba(99,102,241,0)", "0 0 24px rgba(99,102,241,0.6)", "0 0 0px rgba(99,102,241,0)"] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                  style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.25))", border: "1px solid rgba(99,102,241,0.4)" }}>
-                  <Shield size={28} style={{ color: "#818cf8" }} />
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1))", border: "1px solid rgba(99,102,241,0.4)" }}>
+                  <img src="/studdybuddy-logo.png" alt="Studdy Buddy" className="w-14 h-14 object-contain" />
                 </motion.div>
                 <h1 className="text-2xl font-bold text-theme-primary">Admin Panel</h1>
                 <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", fontFamily: "monospace" }}>Studdy Buddy Control Center</p>
@@ -1687,8 +1687,8 @@ export default function AdminPanel() {
             <motion.div animate={{ boxShadow: ["0 0 0px rgba(99,102,241,0)", "0 0 16px rgba(99,102,241,0.5)", "0 0 0px rgba(99,102,241,0)"] }}
               transition={{ duration: 3, repeat: Infinity }}
               className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.3),rgba(139,92,246,0.3))", border: "1px solid rgba(99,102,241,0.4)" }}>
-              <Shield size={18} style={{ color: "#818cf8" }} />
+              style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1))", border: "1px solid rgba(99,102,241,0.4)" }}>
+              <img src="/studdybuddy-logo.png" alt="Studdy Buddy" className="w-7 h-7 object-contain" />
             </motion.div>
             <div>
               <h1 className="font-bold text-theme-primary text-sm">Admin Panel</h1>

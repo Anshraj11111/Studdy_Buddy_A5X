@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, LogOut, Settings, Bell, Heart, MessageCircle, UserPlus } from 'lucide-react'
+import studdyBuddyLogo from '../assets/studdybuddy-logo.png'
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
 import ThemeToggle from './ThemeToggle'
@@ -88,10 +89,11 @@ export default function Navbar({ onMenuClick }) {
             )}
 
             <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center"
-                style={{ background: '#6366f1' }}>
-                <span className="text-white font-bold text-sm">SB</span>
-              </div>
+              <img 
+                src={studdyBuddyLogo} 
+                alt="Studdy Buddy" 
+                className="w-9 h-9 object-contain rounded-lg"
+              />
               <span className="font-bold text-lg hidden lg:inline text-theme-primary whitespace-nowrap">
                 Studdy Buddy
               </span>
