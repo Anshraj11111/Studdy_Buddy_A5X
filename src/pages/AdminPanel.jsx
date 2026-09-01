@@ -2124,6 +2124,11 @@ export default function AdminPanel() {
           <PaymentManagement showToast={showToast} />
         )}
 
+        {/* POST MODERATION TAB */}
+        {mainTab === 'posts' && (
+          <PostModerationDashboard showToast={showToast} />
+        )}
+
         {/* â”€â”€ MESSAGE MONITORING TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {mainTab === 'messages' && (
           <MessageMonitoringDashboard showToast={showToast} />
