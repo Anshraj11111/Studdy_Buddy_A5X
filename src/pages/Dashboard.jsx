@@ -87,10 +87,10 @@ export default function Dashboard() {
   ]
 
   const getXPLevel = (xp) => {
-    if (xp < 100)  return { level: 'Beginner',     progress: xp,       max: 100,  icon: '??', bar: 'linear-gradient(90deg,#6366f1,#8b5cf6)' }
-    if (xp < 300)  return { level: 'Intermediate', progress: xp - 100, max: 200,  icon: '?', bar: 'linear-gradient(90deg,#8b5cf6,#a78bfa)' }
-    if (xp < 700)  return { level: 'Expert',       progress: xp - 300, max: 400,  icon: '??', bar: 'linear-gradient(90deg,#06b6d4,#3b82f6)' }
-    return               { level: 'Master',        progress: xp - 700, max: 1000, icon: '??', bar: 'linear-gradient(90deg,#f59e0b,#f97316)' }
+    if (xp < 100)  return { level: 'Beginner',     progress: xp,       max: 100,   bar: 'linear-gradient(90deg,#6366f1,#8b5cf6)' }
+    if (xp < 300)  return { level: 'Intermediate', progress: xp - 100, max: 200,  bar: 'linear-gradient(90deg,#8b5cf6,#a78bfa)' }
+    if (xp < 700)  return { level: 'Expert',       progress: xp - 300, max: 400,   bar: 'linear-gradient(90deg,#06b6d4,#3b82f6)' }
+    return               { level: 'Master',        progress: xp - 700, max: 1000,  bar: 'linear-gradient(90deg,#f59e0b,#f97316)' }
   }
   const xpLevel = getXPLevel(user?.xp || 0)
 
@@ -152,7 +152,7 @@ export default function Dashboard() {
                   <motion.span className="text-3xl font-bold text-theme-primary ml-1"
                     initial={{ opacity: 0, scale: 0, rotate: -30 }} animate={{ opacity: 1, scale: 1, rotate: 0 }}
                     transition={{ delay: 0.5 + (user?.name?.split(" ")[0] || "Student").length * 0.07 + 0.1, type: "spring", stiffness: 300 }}
-                  >! ??</motion.span>
+                  >! </motion.span>
                 </div>
                 <motion.p className="text-theme-secondary" style={{ fontSize: "0.8rem", marginBottom: "1rem" }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }}>
                   <span style={{ color: "#6366f1" }}>&gt;</span> Learn. Connect. Innovate.
@@ -302,7 +302,7 @@ export default function Dashboard() {
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="rounded-lg max-w-xl w-full max-h-[88vh] overflow-y-auto" style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-primary)" }} onClick={(e) => e.stopPropagation()}>
               <div className="p-5 flex justify-between items-start rounded-t-lg" style={{ background: "var(--bg-primary)", borderBottom: "1px solid var(--border-primary)" }}>
                 <div>
-                  <h2 className="text-lg font-bold text-theme-primary mb-0.5">?? Match Found!</h2>
+                  <h2 className="text-lg font-bold text-theme-primary mb-0.5"> Match Found!</h2>
                   <p className="text-indigo-500 text-xs">You have been matched with another student</p>
                 </div>
                 <button onClick={() => setShowMatchModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"><X size={18} className="text-theme-secondary" /></button>
