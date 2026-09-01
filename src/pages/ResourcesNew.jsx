@@ -1162,17 +1162,6 @@ function ResourcesGrid() {
    GLOBAL COMPONENTS
 ========================================================= */
 
-function XPBadge() {
-  const { user } = useAuthStore();
-  
-  return (
-    <div className="flex shrink-0 items-center gap-2 rounded-full border border-purple-100 bg-white px-4 py-2 shadow-sm">
-      <Hexagon size={18} strokeWidth={2.5} className="fill-purple-600 text-purple-600" />
-      <span className="text-sm font-bold text-slate-800">{user?.xp?.toLocaleString() || 0} XP</span>
-    </div>
-  );
-}
-
 function TopNavbar({ title, onBack, showSearch = false, onSearchChange, currentView }) {
   return (
     <header className="border-b border-slate-100 bg-white">
@@ -1203,7 +1192,6 @@ function TopNavbar({ title, onBack, showSearch = false, onSearchChange, currentV
               />
             </div>
           )}
-          <XPBadge />
         </div>
       </div>
     </header>
