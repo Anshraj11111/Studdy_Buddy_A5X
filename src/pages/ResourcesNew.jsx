@@ -1163,10 +1163,12 @@ function ResourcesGrid() {
 ========================================================= */
 
 function XPBadge() {
+  const { user } = useAuthStore();
+  
   return (
     <div className="flex shrink-0 items-center gap-2 rounded-full border border-purple-100 bg-white px-4 py-2 shadow-sm">
       <Hexagon size={18} strokeWidth={2.5} className="fill-purple-600 text-purple-600" />
-      <span className="text-sm font-bold text-slate-800">2,450 XP</span>
+      <span className="text-sm font-bold text-slate-800">{user?.xp?.toLocaleString() || 0} XP</span>
     </div>
   );
 }
