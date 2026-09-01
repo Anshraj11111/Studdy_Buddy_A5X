@@ -339,6 +339,10 @@ export const adminAPI = {
   createLecture: (data) => api.post(`/admin/lectures`, data, { headers: adminHeaders() }),
   updateLecture: (id, data) => api.put(`/admin/lectures/${id}`, data, { headers: adminHeaders() }),
   deleteLecture: (id) => api.delete(`/admin/lectures/${id}`, { headers: adminHeaders() }),
+
+  // Post Moderation
+  getAllPosts: (params = {}) => api.get('/admin/posts', { params, headers: adminHeaders() }),
+  deletePost: (id) => api.delete(`/admin/posts/${id}`, { headers: adminHeaders() }),
 };
 
 /* ---------------- BROADCAST CHANNELS ---------------- */

@@ -1057,6 +1057,188 @@ function SchoolChannelManagement({ showToast }) {
 }
 
 // â”€â”€ Message Monitoring Dashboard Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+// -- Post Moderation Dashboard Component ------------------------------------------
+function PostModerationDashboard({ showToast }) {
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [deleting, setDeleting] = useState(null)
+
+  const fetchPosts = async (p = 1, s = '') => {
+    setLoading(true)
+    try {
+      const res = await adminAPI.getAllPosts({ page: p, limit: 20, search: s })
+      if (res.data?.success) {
+        setPosts(res.data.data.posts)
+        setTotal(res.data.data.total)
+        setTotalPages(res.data.data.totalPages)
+      }
+    } catch (err) {
+      showToast('Failed to fetch posts', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchPosts(page, search) }, [page])
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    setPage(1)
+    fetchPosts(1, search)
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this post? This action cannot be undone.')) return
+    setDeleting(id)
+    try {
+      await adminAPI.deletePost(id)
+      setPosts(prev => prev.filter(p => p._id !== id))
+      setTotal(prev => prev - 1)
+      showToast('Post deleted successfully')
+    } catch (err) {
+      showToast('Failed to delete post', 'error')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  const timeAgo = (date) => {
+    const diff = Date.now() - new Date(date).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
+  }
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10,8,30,0.7)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+      <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-5 py-4" style={{ borderBottom: "1px solid rgba(99,102,241,0.15)" }}>
+        <div>
+          <h2 className="text-base font-bold text-theme-primary flex items-center gap-2">
+            <MessageSquare size={16} style={{ color: '#6366f1' }} /> Post Moderation
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-tertiary)" }}>{total} total posts</p>
+        </div>
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search posts..."
+            className="px-3 py-1.5 rounded-lg text-xs outline-none"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--text-primary)", width: 200 }}
+          />
+          <button type="submit" className="px-3 py-1.5 rounded-lg text-xs font-semibold transition" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white" }}>
+            Search
+          </button>
+        </form>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={28} className="animate-spin" style={{ color: '#6366f1' }} />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-2">
+          <MessageSquare size={40} style={{ color: "rgba(148,163,184,0.3)" }} />
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>No posts found</p>
+        </div>
+      ) : (
+        <div className="divide-y" style={{ borderColor: "rgba(99,102,241,0.1)" }}>
+          {posts.map(post => (
+            <div key={post._id} className="px-5 py-4 hover:bg-white/[0.02] transition">
+              <div className="flex items-start justify-between gap-3">
+                {/* User info */}
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-white text-sm font-bold"
+                    style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                    {post.userId?.profileImage
+                      ? <img src={post.userId.profileImage} alt="" className="w-full h-full object-cover" />
+                      : post.userId?.name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                        {post.userId?.name || 'Deleted User'}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                        style={{ background: post.userId?.role === 'mentor' ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)', color: post.userId?.role === 'mentor' ? '#fbbf24' : '#818cf8' }}>
+                        {post.userId?.role || 'user'}
+                      </span>
+                      <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                        {timeAgo(post.createdAt)}
+                      </span>
+                      {post.category && post.category !== 'All' && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399" }}>
+                          {post.category}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm mt-1.5 leading-relaxed" style={{ color: "var(--text-secondary)", wordBreak: "break-word" }}>
+                      {post.content}
+                    </p>
+                    {post.mediaUrl && (
+                      <div className="mt-2">
+                        {post.mediaType === 'image'
+                          ? <img src={post.mediaUrl} alt="media" className="rounded-lg max-h-40 object-cover" />
+                          : <video src={post.mediaUrl} className="rounded-lg max-h-40" controls />
+                        }
+                      </div>
+                    )}
+                    <div className="flex items-center gap-4 mt-2 text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                      <span>?? {post.likes?.length || 0} likes</span>
+                      <span>?? {post.comments?.length || 0} comments</span>
+                      <span className="font-mono text-[10px] opacity-50">{post._id}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delete button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                  onClick={() => handleDelete(post._id)}
+                  disabled={deleting === post._id}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                  style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+                  {deleting === post._id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  Delete
+                </motion.button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: "1px solid rgba(99,102,241,0.1)" }}>
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>Page {page} of {totalPages} ({total} posts)</p>
+          <div className="flex gap-2">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-30"
+              style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "#818cf8" }}>
+              Prev
+            </button>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-30"
+              style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "#818cf8" }}>
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 function MessageMonitoringDashboard({ showToast }) {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -1714,7 +1896,8 @@ export default function AdminPanel() {
             { id: 'prereg', label: 'Pre-Register Students', icon: <UserPlus size={14} /> },
             { id: 'courses', label: 'Courses', icon: <BookOpen size={14} /> },
             { id: 'payments', label: 'Payment Verification', icon: <DollarSign size={14} /> },
-            { id: 'messages', label: 'Message Monitor', icon: <MessageSquare size={14} /> },
+            { id: 'posts', label: 'Post Moderation', icon: <MessageSquare size={14} /> },
+            { id: 'messages', label: 'Message Monitor', icon: <Radio size={14} /> },
           ].map(t => (
             <button key={t.id} onClick={() => setMainTab(t.id)}
               style={{
