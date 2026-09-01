@@ -53,10 +53,10 @@ const inputStyle = {
 }
 
 const SOCIAL_FIELDS = [
-  { key: 'github', label: 'GitHub', icon: Github, placeholder: 'https://github.com/username', color: "var(--text-primary)" },
-  { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, placeholder: 'https://linkedin.com/in/username', color: '#60a5fa' },
-  { key: 'instagram', label: 'Instagram', icon: Instagram, placeholder: 'https://instagram.com/username', color: '#f472b6' },
-  { key: 'website', label: 'Website / Portfolio', icon: Globe, placeholder: 'https://yourwebsite.com', color: '#34d399' },
+  { key: 'github', label: 'GitHub', icon: Github, placeholder: 'https://github.com/yourname (share your coding projects)', color: "var(--text-primary)" },
+  { key: 'linkedin', label: 'LinkedIn', icon: Linkedin, placeholder: 'https://linkedin.com/in/yourname', color: '#60a5fa' },
+  { key: 'instagram', label: 'Instagram', icon: Instagram, placeholder: 'https://instagram.com/yourname', color: '#f472b6' },
+  { key: 'website', label: 'Website / Portfolio', icon: Globe, placeholder: 'https://yourportfolio.com (your projects website)', color: '#34d399' },
 ]
 
 // ── Shared hook for portal dropdown positioning ───────────────────────
@@ -732,9 +732,9 @@ export default function Settings() {
               ) : (
                 <div className="space-y-3">
                   {[
-                    { key: 'institution', label: 'School / College / University', placeholder: 'e.g., IIT Bombay, MIT, Delhi University' },
-                    { key: 'degree', label: 'Degree / Class', placeholder: 'e.g., B.Tech, 12th Grade, B.Sc' },
-                    { key: 'field', label: 'Field of Study / Stream', placeholder: 'e.g., Computer Science, PCM, Electronics' },
+                    { key: 'institution', label: 'School / College / University', placeholder: 'e.g., Delhi Public School, Ryan International, St. Xavier\'s' },
+                    { key: 'degree', label: 'Degree / Class', placeholder: 'e.g., 8th Grade, 9th Grade, 10th Grade, 11th, 12th' },
+                    { key: 'field', label: 'Field of Study / Stream', placeholder: 'e.g., Science (PCM), Commerce, Arts, Robotics' },
                   ].map(({ key, label, placeholder }) => (
                     <div key={key}>
                       <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>{label}</label>
@@ -758,7 +758,7 @@ export default function Settings() {
                   <div>
                     <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--text-secondary)" }}>Description</label>
                     <textarea value={formData.education.description} onChange={e => setFormData(p => ({ ...p, education: { ...p.education, description: e.target.value } }))}
-                      maxLength={500} rows={3} placeholder="Clubs, achievements, projects, activities..."
+                      maxLength={500} rows={3} placeholder="e.g., Science olympiad winner, robotics club, coding competitions, projects..."
                       style={{ ...inputStyle, resize: 'none', borderColor: 'rgba(52,211,153,0.2)' }}
                       onFocus={e => e.target.style.borderColor = 'rgba(52,211,153,0.5)'}
                       onBlur={e => e.target.style.borderColor = 'rgba(52,211,153,0.2)'} />
