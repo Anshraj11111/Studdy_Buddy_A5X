@@ -470,6 +470,9 @@ function PostComposer({ user, onPost }) {
     try {
       await onPost({ content, category, mediaUrl: media?.dataUrl || null, mediaType: media?.type || null })
       setContent(''); setCategory('All'); setMedia(null); setOpen(false)
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || 'Failed to post'
+      alert('⚠️ ' + msg)
     } finally { setPosting(false) }
   }
 
@@ -904,8 +907,13 @@ function FeedTab({ user }) {
   }
 
   const handlePost = async (data) => {
-    const res = await feedAPI.createPost(data)
-    setPosts(prev => [res.data.data.post, ...prev])
+    try {
+      const res = await feedAPI.createPost(data)
+      setPosts(prev => [res.data.data.post, ...prev])
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || 'Failed to create post'
+      throw new Error(msg) // propagate to composer's catch
+    }
   }
 
   const handleLike = async (id) => {
