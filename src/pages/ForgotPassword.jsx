@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { Mail, Lock, Loader2, AlertCircle, CheckCircle, KeyRound, ArrowLeft } from 'lucide-react'
 import { authAPI } from '../services/api'
-import a5xLogo from '../assets/studdybuddy-logo.png'
+const a5xLogo = '/studdybuddy-logo.png'
 
 export default function ForgotPassword() {
   const [step, setStep] = useState(1) // 1: Email, 2: Code + New Password

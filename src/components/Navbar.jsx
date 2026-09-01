@@ -2,10 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, LogOut, Settings, Bell, Heart, MessageCircle, UserPlus } from 'lucide-react'
-import studdyBuddyLogo from '../assets/studdybuddy-logo.png'
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
 import ThemeToggle from './ThemeToggle'
+
+const LOGO_URL = '/studdybuddy-logo.png'
 
 function NotifIcon({ type }) {
   if (type === 'like') return <Heart size={11} className="text-red-400" fill="currentColor" />
@@ -90,7 +91,7 @@ export default function Navbar({ onMenuClick }) {
 
             <Link to="/" className="flex items-center gap-2.5 group flex-shrink-0">
               <img 
-                src={studdyBuddyLogo} 
+                src={LOGO_URL} 
                 alt="Studdy Buddy" 
                 className="w-9 h-9 object-contain rounded-lg"
               />
