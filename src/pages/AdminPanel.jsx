@@ -1853,10 +1853,10 @@ export default function AdminPanel() {
       {/* Toast */}
       <AnimatePresence>
         {toast && (
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-            className="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-semibold shadow-xl"
-            style={{ background: toast.type === "error" ? "rgba(239,68,68,0.9)" : "rgba(52,211,153,0.9)", backdropFilter: "blur(12px)" }}>
-            {toast.msg}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 z-[9999] px-5 py-3 rounded-xl text-sm font-semibold shadow-xl flex items-center gap-2"
+            style={{ background: toast.type === "error" ? "rgba(239,68,68,0.95)" : "rgba(52,211,153,0.95)", backdropFilter: "blur(12px)", color: 'white', minWidth: 250 }}>
+            {toast.type === "error" ? "❌" : "✅"} {toast.msg}
           </motion.div>
         )}
       </AnimatePresence>
