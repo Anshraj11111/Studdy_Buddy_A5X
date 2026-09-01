@@ -215,24 +215,34 @@ export default function Mentors() {
                     </div>
                   </div>
 
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-2 mb-4 pb-4"
-                    style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                    {[
-                      { icon: Clock, label: 'Experience', value: '2+ Yrs', color: '#6366f1' },
-                      { icon: Award, label: 'Sessions', value: '250+', color: '#f59e0b' },
-                    ].map(s => {
-                      const Icon = s.icon
-                      return (
-                        <div key={s.label} className="rounded-lg p-2.5 text-center"
-                          style={{ background: 'var(--bg-primary)' }}>
-                          <Icon size={14} className="mx-auto mb-1" style={{ color: s.color }} />
-                          <p className="text-theme-tertiary text-xs mb-0.5">{s.label}</p>
-                          <p className="text-theme-primary font-semibold text-sm">{s.value}</p>
-                        </div>
-                      )
-                    })}
-                  </div>
+                  {/* Stats - only show if mentor has filled experience data */}
+                  {(mentor.experience?.startYear || mentor.experience?.company) && (
+                    <div className="grid grid-cols-2 gap-2 mb-4 pb-4"
+                      style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                      {/* Experience */}
+                      <div className="rounded-lg p-2.5 text-center"
+                        style={{ background: 'var(--bg-primary)' }}>
+                        <Clock size={14} className="mx-auto mb-1" style={{ color: '#6366f1' }} />
+                        <p className="text-theme-tertiary text-xs mb-0.5">Experience</p>
+                        <p className="text-theme-primary font-semibold text-sm">
+                          {mentor.experience?.startYear
+                            ? `${new Date().getFullYear() - parseInt(mentor.experience.startYear)}+ Yrs`
+                            : mentor.experience?.role || 'N/A'}
+                        </p>
+                      </div>
+                      {/* Company/Role */}
+                      <div className="rounded-lg p-2.5 text-center"
+                        style={{ background: 'var(--bg-primary)' }}>
+                        <Award size={14} className="mx-auto mb-1" style={{ color: '#f59e0b' }} />
+                        <p className="text-theme-tertiary text-xs mb-0.5">
+                          {mentor.experience?.company ? 'Company' : 'Role'}
+                        </p>
+                        <p className="text-theme-primary font-semibold text-sm truncate">
+                          {mentor.experience?.company || mentor.experience?.role || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Buttons */}
                   <div className="flex gap-2">
