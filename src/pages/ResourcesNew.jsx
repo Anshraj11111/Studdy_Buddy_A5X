@@ -94,14 +94,11 @@ function VideoPlayerModal({ resource, onClose }) {
 
   useEffect(() => {
     let cancelled = false;
-    console.log('🎥 VideoPlayerModal - Resource:', resource);
     
     // If resource has URL directly (old resources), use it
     if (resource?.url) {
-      console.log('🎥 Using direct URL from resource');
       if (isYouTubeUrl(resource.url)) {
         const extractedId = getYouTubeId(resource.url);
-        console.log('🎥 Extracted YouTube ID:', extractedId);
         if (extractedId) {
           setVideoId(extractedId);
           setTokenError('');
@@ -114,20 +111,14 @@ function VideoPlayerModal({ resource, onClose }) {
       return () => { cancelled = true };
     }
     
-    // Otherwise fetch secure URL from backend
+    // Fetch secure URL from backend using lecture ID
     if (resource?._id) {
-      console.log('🔒 Fetching secure video URL for lecture:', resource._id);
-      
       courseAPI.getSecureVideoUrl(resource._id)
         .then(res => {
           if (!cancelled) {
             const videoUrl = res.data?.data?.url;
-            console.log('🔒 Received secure URL');
-            
             if (videoUrl && isYouTubeUrl(videoUrl)) {
               const extractedId = getYouTubeId(videoUrl);
-              console.log('🎥 Extracted YouTube ID:', extractedId);
-              
               if (extractedId) {
                 setVideoId(extractedId);
                 setTokenError('');
@@ -140,15 +131,13 @@ function VideoPlayerModal({ resource, onClose }) {
           }
         })
         .catch((err) => {
-          console.error('🔒 Failed to fetch secure video URL:', err);
           if (!cancelled) {
             const errMsg = err.response?.data?.error?.message || 'Failed to load video';
             setTokenError(errMsg);
           }
         });
     } else {
-      console.warn('🎥 No resource ID or URL provided');
-      setTokenError('Video URL not available');
+      setTokenError('Video not available');
     }
     
     return () => { cancelled = true };
@@ -1942,28 +1931,15 @@ function LectureView({ module, course, onBack }) {
   const fetchLectures = async () => {
     try {
       setLoading(true);
-      console.log('📚 Fetching lectures for module:', module._id);
       const res = await courseAPI.getModuleLectures(module._id);
-      console.log('📚 API Response:', res.data);
       const moduleData = res.data?.data?.module || {};
       const fetchedLectures = moduleData.resources || [];
-      console.log('📚 Lectures fetched:', fetchedLectures);
-      console.log('📚 First lecture detail:', fetchedLectures[0]);
-      console.log('📚 First lecture URL:', fetchedLectures[0]?.url);
-      console.log('📚 First lecture fileUrl:', fetchedLectures[0]?.fileUrl);
       setLectures(fetchedLectures);
-      
-      // Auto-select first lecture
       if (fetchedLectures.length > 0) {
         setSelectedLecture(fetchedLectures[0]);
-        console.log('📚 Auto-selected first lecture:', fetchedLectures[0].title);
-      } else {
-        console.warn('📚 No lectures found in module');
       }
     } catch (error) {
-      console.error('❌ Failed to fetch lectures:', error);
-      console.error('❌ Error details:', error.response?.data || error.message);
-      alert('Failed to load lectures: ' + (error.response?.data?.error?.message || error.message));
+      console.error('Failed to fetch lectures:', error);
     } finally {
       setLoading(false);
     }
@@ -2013,7 +1989,6 @@ function LectureView({ module, course, onBack }) {
 
   return (
     <>
-      {console.log('🎬 LectureView rendering - Module:', module?.title, 'Lectures:', lectures.length, 'Selected:', selectedLecture?.title)}
       <div className="min-h-screen bg-[#f5f6f9]">
         {/* Back to Course Navbar */}
         <div className="sticky top-0 z-50 bg-white border-b border-slate-200">

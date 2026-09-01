@@ -80,35 +80,40 @@ export const useAuthStore = create((set) => ({
       set({ token, user: parsedUser, isInitialized: true, isTokenValidated: false })
 
       // Silently validate token + refresh user data in background
-      let retryCount = 0
-      const maxRetries = 3
-      
-      while (retryCount < maxRetries) {
+      // Only logout on confirmed TOKEN_EXPIRED or INVALID_TOKEN - never on network failures
+      try {
+        const { data } = await authAPI.getProfile()
+        const freshUser = data.data.user
+        localStorage.setItem('user', JSON.stringify(freshUser))
+        set({ user: freshUser, isTokenValidated: true })
+
+        // Proactively refresh token if it was issued > 7 days ago (keep session fresh)
         try {
-          const { data } = await authAPI.getProfile()
-          const freshUser = data.data.user
-          localStorage.setItem('user', JSON.stringify(freshUser))
-          set({ user: freshUser, isTokenValidated: true }) // Mark token as validated
-          return // Success - exit early
-        } catch (error) {
-          retryCount++
-          
-          if (retryCount < maxRetries) {
-            // Retry with exponential backoff (maybe different server will work)
-            console.warn(`🔄 Token validation failed, retrying (${retryCount}/${maxRetries})`)
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
-          } else {
-            // All retries failed - token is truly invalid
-            console.warn('🔒 Token validation failed after retries, logging out')
-            localStorage.removeItem('token')
-            localStorage.removeItem('user')
-            set({ token: null, user: null, isTokenValidated: false })
-            
-            // Only redirect if not already on login/signup pages
-            if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
-              window.location.href = '/login'
-            }
+          const res = await authAPI.refreshToken()
+          if (res.data?.data?.token) {
+            localStorage.setItem('token', res.data.data.token)
+            set({ token: res.data.data.token })
           }
+        } catch {
+          // Refresh failed silently - token still valid, continue
+        }
+      } catch (error) {
+        const errorCode = error.response?.data?.error?.code
+        const status = error.response?.status
+
+        // ONLY logout on confirmed invalid/expired token (401 with specific codes)
+        // Do NOT logout on network errors, timeouts, or server cold-starts (5xx, no response)
+        if (status === 401 && (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN' || errorCode === 'USER_NOT_FOUND')) {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          set({ token: null, user: null, isTokenValidated: false })
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+            window.location.href = '/login'
+          }
+        } else {
+          // Network error / server down / cold start — keep user logged in with cached data
+          console.warn('⚠️ Could not validate token (network issue) — using cached session')
+          set({ isTokenValidated: true }) // Allow app to work with cached data
         }
       }
     } else {
