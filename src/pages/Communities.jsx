@@ -339,7 +339,7 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                     <RoleBadge role={u.role} />
                     {u.address && (
-                      <span style={{ fontSize: '0.75rem', color: "var(--text-tertiary)" }}>
+                      <span style={{ fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.9)' : '#374151', fontWeight: 500 }}>
                         📍 {u.address.split(',').slice(0, 2).join(',')}
                       </span>
                     )}
@@ -375,18 +375,18 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
 
               {/* ── About ─────────────────────────────────────── */}
               {u.bio && (
-                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
-                  <p style={{ margin: '0 0 8px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About</p>
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.2)'}` }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(99,102,241,0.9)' : '#4f46e5', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About</p>
                   <p style={{ margin: 0, fontSize: '0.87rem', lineHeight: 1.65, color: isDark ? 'rgba(226,232,240,0.85)' : '#334155' }}>{u.bio}</p>
                 </div>
               )}
 
               {/* ── Education ─────────────────────────────────── */}
               {hasEdu && (
-                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
-                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(52,211,153,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🎓 Education</p>
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.2)'}` }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(52,211,153,0.9)' : '#059669', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🎓 Education</p>
                   <div style={{ display: 'flex', gap: 13 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.25)' }}>🎓</div>
+                    <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: isDark ? 'rgba(52,211,153,0.1)' : 'rgba(5,150,105,0.08)', border: `1px solid ${isDark ? 'rgba(52,211,153,0.25)' : 'rgba(5,150,105,0.2)'}` }}>🎓</div>
                     <div style={{ flex: 1 }}>
                       <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{u.education.institution}</p>
                       {u.education.degree && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{u.education.degree}{u.education.field ? ` · ${u.education.field}` : ''}</p>}
@@ -399,10 +399,10 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
 
               {/* ── Experience ────────────────────────────────── */}
               {hasExp && (
-                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
-                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(196,181,253,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Experience</p>
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.2)'}` }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(196,181,253,0.9)' : '#7c3aed', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Experience</p>
                   <div style={{ display: 'flex', gap: 13 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)' }}>🏢</div>
+                    <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: isDark ? 'rgba(139,92,246,0.1)' : 'rgba(124,58,237,0.08)', border: `1px solid ${isDark ? 'rgba(139,92,246,0.25)' : 'rgba(124,58,237,0.2)'}` }}>🏢</div>
                     <div style={{ flex: 1 }}>
                       <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{u.experience.role || u.experience.company}</p>
                       {u.experience.role && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{u.experience.company}</p>}
@@ -642,6 +642,7 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate 
   const [showShare, setShowShare] = useState(false)
   const [copied, setCopied] = useState(false)
   const [viewProfileId, setViewProfileId] = useState(null)
+  const [showImageLightbox, setShowImageLightbox] = useState(false)
   const shareRef = useRef(null)
   const isLiked = (post.likes || []).map(String).includes(String(user?._id))
   const isOwner = String(post.userId?._id) === String(user?._id)
@@ -808,9 +809,52 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate 
         {post.mediaUrl && (
           <div className="rounded-lg overflow-hidden mb-3" style={{ border: "1px solid var(--border-primary)" }}>
             {post.mediaType === 'image'
-              ? <img src={post.mediaUrl} alt="post media" className="w-full max-h-96 object-cover" />
+              ? <img
+                  src={post.mediaUrl}
+                  alt="post media"
+                  className="w-full max-h-96 object-cover cursor-zoom-in"
+                  onClick={() => setShowImageLightbox(true)}
+                />
               : <video src={post.mediaUrl} controls className="w-full max-h-96" />}
           </div>
+        )}
+
+        {/* Image Lightbox */}
+        {showImageLightbox && post.mediaUrl && createPortal(
+          <div
+            onClick={() => setShowImageLightbox(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 999999,
+              background: 'rgba(0,0,0,0.92)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(8px)',
+              cursor: 'zoom-out',
+            }}>
+            <img
+              src={post.mediaUrl}
+              alt="post"
+              onClick={e => e.stopPropagation()}
+              style={{
+                maxWidth: '95vw', maxHeight: '95vh',
+                borderRadius: '12px',
+                boxShadow: '0 0 60px rgba(0,0,0,0.8)',
+                objectFit: 'contain',
+              }}
+            />
+            <button
+              onClick={() => setShowImageLightbox(false)}
+              style={{
+                position: 'fixed', top: 16, right: 16,
+                width: 40, height: 40, borderRadius: '50%',
+                background: 'rgba(255,255,255,0.15)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: 'white',
+              }}>
+              <X size={20} />
+            </button>
+          </div>,
+          document.body
         )}
 
         {/* Stats */}

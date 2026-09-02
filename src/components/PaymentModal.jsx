@@ -145,14 +145,56 @@ export default function PaymentModal({ onClose, onSuccess, amount: initialAmount
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="text-center py-6">
-                <div className="w-14 h-14 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ background: '#dcfce7' }}>
-                  <CheckCircle size={28} style={{ color: '#16a34a' }} />
+                className="text-center py-4 space-y-4">
+
+                {/* Icon */}
+                <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center" style={{ background: '#dcfce7' }}>
+                  <CheckCircle size={32} style={{ color: '#16a34a' }} />
                 </div>
-                <h4 className="text-base font-bold mb-2" style={{ color: textPrimary }}>Payment Successful!</h4>
-                <p className="text-xs" style={{ color: textSecondary }}>
-                  You now have lifetime access to this course.
-                </p>
+
+                {/* Title */}
+                <div>
+                  <h4 className="text-lg font-bold mb-1" style={{ color: textPrimary }}>Payment Submitted! 🎉</h4>
+                  <p className="text-sm font-medium" style={{ color: '#16a34a' }}>Thank you for your payment</p>
+                </div>
+
+                {/* Verification Info */}
+                <div className="rounded-xl p-4 text-left space-y-3" style={{ background: isDark ? 'rgba(99,102,241,0.1)' : '#f0f4ff', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg flex-shrink-0">🔍</span>
+                    <div>
+                      <p className="text-sm font-bold mb-0.5" style={{ color: textPrimary }}>Under Verification</p>
+                      <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
+                        Your payment is being verified by our admin team. This usually takes <span className="font-bold" style={{ color: '#6366f1' }}>within 24 hours</span>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg flex-shrink-0">✅</span>
+                    <div>
+                      <p className="text-sm font-bold mb-0.5" style={{ color: textPrimary }}>After Approval</p>
+                      <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
+                        Once verified, you'll get <span className="font-bold" style={{ color: '#6366f1' }}>instant access</span> to the full course content.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Support */}
+                <div className="rounded-xl p-3" style={{ background: isDark ? 'rgba(251,191,36,0.1)' : '#fffbeb', border: '1px solid rgba(251,191,36,0.3)' }}>
+                  <p className="text-xs" style={{ color: isDark ? '#fbbf24' : '#92400e' }}>
+                    💡 <span className="font-bold">Not received access after 24 hours?</span>
+                    <br />
+                    Email us at{' '}
+                    <a
+                      href="mailto:anshrajbaghel30@gmail.com"
+                      className="font-bold underline"
+                      style={{ color: '#6366f1' }}>
+                      anshrajbaghel30@gmail.com
+                    </a>
+                  </p>
+                </div>
               </motion.div>
             ) : showQR ? (
               // QR Code View
