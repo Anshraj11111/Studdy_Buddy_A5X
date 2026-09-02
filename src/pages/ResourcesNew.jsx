@@ -246,10 +246,11 @@ function VideoPlayerModal({ resource, onClose }) {
         </div>
 
         {/* Video area */}
-        <div className="relative w-full bg-black" style={{
-          flex: '1 1 auto',
-          minHeight: 0,
-          aspectRatio: isFullscreen ? undefined : '16/9',
+        <div className="relative w-full bg-black flex-shrink-0" style={{
+          paddingBottom: isFullscreen ? '0' : '56.25%',
+          height: isFullscreen ? '0' : undefined,
+          flex: isFullscreen ? '1 1 0%' : undefined,
+          minHeight: isFullscreen ? '0' : undefined,
         }}>
           {tokenError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
