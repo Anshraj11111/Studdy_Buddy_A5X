@@ -165,6 +165,18 @@ function VideoPlayerModal({ resource, onClose }) {
     setIsFullscreen(prev => !prev);
   };
 
+  // Detect if mobile in portrait mode (needs rotation)
+  const [needsRotation, setNeedsRotation] = useState(false);
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setNeedsRotation(isMobile && window.innerHeight > window.innerWidth);
+    };
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    return () => window.removeEventListener('resize', checkOrientation);
+  }, []);
+
   const embedSrc = videoId
     ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&fs=0&disablekb=0&mute=${isMuted ? 1 : 0}&playsinline=1`
     : null;
@@ -186,13 +198,37 @@ function VideoPlayerModal({ resource, onClose }) {
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
         className="flex flex-col w-full overflow-hidden"
         style={{
-          maxWidth: isFullscreen ? '100vw' : '960px',
-          width: isFullscreen ? '100vw' : '100%',
-          height: isFullscreen ? '100dvh' : 'auto',
-          maxHeight: isFullscreen ? '100dvh' : 'calc(100vh - 32px)',
-          background: isFullscreen ? '#000' : '#fff',
-          boxShadow: isFullscreen ? 'none' : '0 32px 80px rgba(0,0,0,0.7)',
-          borderRadius: isFullscreen ? '0' : '16px',
+          ...(isFullscreen && needsRotation ? {
+            // Mobile portrait: rotate 90deg to landscape
+            position: 'fixed',
+            width: '100dvh',
+            height: '100dvw',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%) rotate(90deg)',
+            transformOrigin: 'center center',
+            background: '#000',
+            borderRadius: '0',
+            boxShadow: 'none',
+          } : isFullscreen ? {
+            // Desktop or landscape: normal fullscreen
+            maxWidth: '100vw',
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100dvh',
+            background: '#000',
+            borderRadius: '0',
+            boxShadow: 'none',
+          } : {
+            // Normal modal
+            maxWidth: '960px',
+            width: '100%',
+            height: 'auto',
+            maxHeight: 'calc(100vh - 32px)',
+            background: '#fff',
+            borderRadius: '16px',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
+          }),
         }}
         onClick={e => e.stopPropagation()}
       >
