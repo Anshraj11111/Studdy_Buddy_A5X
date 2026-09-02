@@ -156,7 +156,7 @@ function VideoPlayerModal({ resource, onClose }) {
   };
 
   const embedSrc = videoId
-    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&fs=1&disablekb=0&mute=${isMuted ? 1 : 0}&playsinline=0`
+    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&fs=0&disablekb=0&mute=${isMuted ? 1 : 0}&playsinline=1`
     : null;
 
   return (
