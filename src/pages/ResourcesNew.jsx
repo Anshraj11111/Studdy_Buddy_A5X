@@ -195,8 +195,8 @@ function VideoPlayerModal({ resource, onClose }) {
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className={`flex items-center justify-between px-5 py-3.5 flex-shrink-0 ${
-          isFullscreen ? 'bg-black/80 text-white' : 'bg-white border-b border-slate-200'
+        <div className={`flex items-center justify-between flex-shrink-0 ${
+          isFullscreen ? 'px-3 py-2 bg-black/80 text-white' : 'px-5 py-3.5 bg-white border-b border-slate-200'
         }`}>
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#fef2f2' }}>
@@ -247,8 +247,9 @@ function VideoPlayerModal({ resource, onClose }) {
 
         {/* Video area */}
         <div className="relative w-full bg-black" style={{
+          flex: '1 1 auto',
+          minHeight: 0,
           aspectRatio: isFullscreen ? undefined : '16/9',
-          flex: isFullscreen ? '1' : undefined,
         }}>
           {tokenError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -284,7 +285,7 @@ function VideoPlayerModal({ resource, onClose }) {
                 allowFullScreen
                 referrerPolicy="strict-origin"
                 className="absolute inset-0 w-full h-full"
-                style={{ border: 'none' }}
+                style={{ border: 'none', display: 'block' }}
               />
               {/* Block YouTube logo (bottom-right) and link icon (bottom-left) */}
               {/* Bottom bar - covers YouTube logo, link icon, and controls */}
