@@ -1,5 +1,5 @@
 // Service Worker for Studdy Buddy PWA
-const CACHE_NAME = 'studdy-buddy-v1.0.1'
+const CACHE_NAME = 'studdy-buddy-v1.0.5'
 const RUNTIME_CACHE = 'studdy-buddy-runtime'
 
 // Assets to cache on install

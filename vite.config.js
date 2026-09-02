@@ -12,6 +12,9 @@ export default defineConfig({
       },
     },
   },
+  resolve: {
+    dedupe: ['react', 'react-dom', 'react-router-dom'],
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,
@@ -20,21 +23,19 @@ export default defineConfig({
       compress: {
         drop_console: true,
         drop_debugger: true,
-        passes: 2,       // extra compression pass
+        passes: 2,
       },
       mangle: true,
     },
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'router': ['react-router-dom'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'motion': ['framer-motion'],
           'socket': ['socket.io-client'],
           'ui': ['lucide-react'],
           'state': ['zustand', 'axios'],
         },
-        // Add content hash to filenames for long-term caching
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',

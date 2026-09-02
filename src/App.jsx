@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
@@ -8,44 +8,35 @@ import Navbar from './components/Navbar'
 import IncomingCallModal from './components/IncomingCallModal'
 import InstallPWA from './components/InstallPWA'
 
-// Eagerly load auth pages (always needed on first visit)
+// Eagerly load ALL pages — no lazy loading to avoid duplicate React issues
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
+import Dashboard from './pages/Dashboard'
+import MentorDashboard from './pages/MentorDashboard'
+import Doubts from './pages/Doubts'
+import PostDoubt from './pages/PostDoubt'
+import EditDoubt from './pages/EditDoubt'
+import Resources from './pages/ResourcesNew'
+import Communities from './pages/Communities'
+import Profile from './pages/Profile'
+import Chats from './pages/Chats'
+import Chat from './pages/Chat'
+import VideoCall from './pages/VideoCall'
+import Mentors from './pages/Mentors'
+import AIBot from './pages/AIBot'
+import Settings from './pages/Settings'
+import AdminPanel from './pages/AdminPanel'
+import Rewards from './pages/Rewards'
+import GeneralGroup from './pages/GeneralGroup'
+import Broadcast from './pages/Broadcast'
+import BroadcastLive from './pages/BroadcastLive'
+import SchoolChannel from './pages/SchoolChannel'
+import SchoolChannelAdmin from './pages/SchoolChannelAdmin'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsConditions from './pages/TermsConditions'
 
-// Lazy load all other pages — each becomes its own chunk
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const MentorDashboard = lazy(() => import('./pages/MentorDashboard'))
-const Doubts = lazy(() => import('./pages/Doubts'))
-const PostDoubt = lazy(() => import('./pages/PostDoubt'))
-const EditDoubt = lazy(() => import('./pages/EditDoubt'))
-const Resources = lazy(() => import('./pages/ResourcesNew'))
-const Communities = lazy(() => import('./pages/Communities'))
-const Profile = lazy(() => import('./pages/Profile'))
-const Chats = lazy(() => import('./pages/Chats'))
-const Chat = lazy(() => import('./pages/Chat'))
-const VideoCall = lazy(() => import('./pages/VideoCall'))
-const Mentors = lazy(() => import('./pages/Mentors'))
-const AIBot = lazy(() => import('./pages/AIBot'))
-const Settings = lazy(() => import('./pages/Settings'))
-const AdminPanel = lazy(() => import('./pages/AdminPanel'))
-const Rewards = lazy(() => import('./pages/Rewards'))
-const GeneralGroup = lazy(() => import('./pages/GeneralGroup'))
-const Broadcast = lazy(() => import('./pages/Broadcast'))
-const BroadcastLive = lazy(() => import('./pages/BroadcastLive'))
-const SchoolChannel = lazy(() => import('./pages/SchoolChannel'))
-const SchoolChannelAdmin = lazy(() => import('./pages/SchoolChannelAdmin'))
-const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
-const TermsConditions = lazy(() => import('./pages/TermsConditions'))
-
-// Minimal page-level skeleton shown while a lazy chunk loads
-function PageLoader() {
-  return (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
-}
+// No PageLoader needed - all pages eagerly loaded
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -96,7 +87,6 @@ function AppShell() {
     <div className="min-h-screen" style={{ position: 'relative', background: 'var(--bg-primary)' }}>
       {token && !isAdminRoute && <Navbar />}
       {token && !isAdminRoute && <IncomingCallModal />}
-      <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public */}
           <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <Login />} />
@@ -147,7 +137,6 @@ function AppShell() {
             }
           />
         </Routes>
-      </Suspense>
     </div>
   )
 }

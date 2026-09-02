@@ -42,9 +42,6 @@ export default function Dashboard() {
   const isDark = theme === 'dark'
   const navigate = useNavigate()
   
-  // Debug: Log theme value
-  console.log('Dashboard theme:', theme, 'isDark:', isDark)
-  
   const [doubts, setDoubts] = useState([])
   const [communities, setCommunities] = useState([])
   const [loading, setLoading] = useState(true)

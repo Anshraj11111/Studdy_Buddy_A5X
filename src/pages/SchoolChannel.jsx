@@ -237,7 +237,7 @@ export default function SchoolChannel() {
     return (
       <div className="min-h-screen" style={{ background: isDark ? '#0a0814' : '#f5f0ff' }}>
         <Navbar />
-        <div className="container mx-auto px-4 py-12 text-center max-w-2xl">
+        <div className="container mx-auto px-4 py-12 text-center max-w-2xl mt-16">
           <div className="rounded-2xl p-12"
             style={{
               background: isDark ? 'rgba(15,12,31,0.9)' : '#ffffff',
