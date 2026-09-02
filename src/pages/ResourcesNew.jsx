@@ -150,34 +150,9 @@ function VideoPlayerModal({ resource, onClose }) {
   }, []);
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      // On mobile: request fullscreen on the iframe directly for proper landscape
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      if (isMobile) {
-        // Try iframe fullscreen first (gives proper landscape on mobile)
-        const iframe = containerRef.current?.querySelector('iframe');
-        const el = iframe || containerRef.current;
-        const reqFS = el?.requestFullscreen || el?.webkitRequestFullscreen || el?.mozRequestFullScreen;
-        if (reqFS) reqFS.call(el);
-      } else {
-        containerRef.current?.requestFullscreen?.();
-      }
-      // Lock landscape orientation
-      try {
-        if (screen.orientation?.lock) {
-          screen.orientation.lock('landscape').catch(() => {});
-        } else if (screen.lockOrientation) {
-          screen.lockOrientation('landscape');
-        }
-      } catch (e) {}
-    } else {
-      document.exitFullscreen?.();
-      // Unlock orientation
-      try {
-        if (screen.orientation?.unlock) screen.orientation.unlock();
-        else if (screen.unlockOrientation) screen.unlockOrientation();
-      } catch (e) {}
-    }
+    // Use CSS fullscreen instead of browser native fullscreen
+    // This keeps our overlays working and blocks YouTube links
+    setIsFullscreen(prev => !prev);
   };
 
   const embedSrc = videoId
@@ -185,7 +160,15 @@ function VideoPlayerModal({ resource, onClose }) {
     : null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.95)' }} onClick={onClose}>
+    <div 
+      className="fixed z-[100] flex items-center justify-center" 
+      style={{ 
+        inset: 0,
+        background: 'rgba(0,0,0,0.95)',
+        padding: isFullscreen ? '0' : '16px'
+      }} 
+      onClick={onClose}
+    >
       <motion.div
         ref={containerRef}
         initial={{ opacity: 0, scale: 0.95, y: 16 }} 
@@ -194,9 +177,12 @@ function VideoPlayerModal({ resource, onClose }) {
         className="flex flex-col w-full rounded-2xl overflow-hidden"
         style={{
           maxWidth: isFullscreen ? '100vw' : '960px',
+          width: isFullscreen ? '100vw' : '100%',
+          height: isFullscreen ? '100vh' : 'auto',
           maxHeight: isFullscreen ? '100vh' : 'calc(100vh - 32px)',
           background: isFullscreen ? '#000' : '#fff',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
+          boxShadow: isFullscreen ? 'none' : '0 32px 80px rgba(0,0,0,0.7)',
+          borderRadius: isFullscreen ? '0' : '16px',
         }}
         onClick={e => e.stopPropagation()}
       >
