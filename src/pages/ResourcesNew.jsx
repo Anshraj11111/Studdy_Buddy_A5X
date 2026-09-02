@@ -92,6 +92,16 @@ function VideoPlayerModal({ resource, onClose }) {
   const [isMuted, setIsMuted] = useState(false);
   const containerRef = useRef(null);
 
+  // Lock body scroll and hide browser UI when fullscreen
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isFullscreen]);
+
   useEffect(() => {
     let cancelled = false;
     
@@ -165,7 +175,7 @@ function VideoPlayerModal({ resource, onClose }) {
       style={{ 
         inset: 0,
         background: 'rgba(0,0,0,0.95)',
-        padding: isFullscreen ? '0' : '16px'
+        padding: isFullscreen ? '0' : '16px',
       }} 
       onClick={onClose}
     >
@@ -174,12 +184,12 @@ function VideoPlayerModal({ resource, onClose }) {
         initial={{ opacity: 0, scale: 0.95, y: 16 }} 
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 16 }}
-        className="flex flex-col w-full rounded-2xl overflow-hidden"
+        className="flex flex-col w-full overflow-hidden"
         style={{
           maxWidth: isFullscreen ? '100vw' : '960px',
           width: isFullscreen ? '100vw' : '100%',
-          height: isFullscreen ? '100vh' : 'auto',
-          maxHeight: isFullscreen ? '100vh' : 'calc(100vh - 32px)',
+          height: isFullscreen ? '100dvh' : 'auto',
+          maxHeight: isFullscreen ? '100dvh' : 'calc(100vh - 32px)',
           background: isFullscreen ? '#000' : '#fff',
           boxShadow: isFullscreen ? 'none' : '0 32px 80px rgba(0,0,0,0.7)',
           borderRadius: isFullscreen ? '0' : '16px',
