@@ -151,14 +151,37 @@ function VideoPlayerModal({ resource, onClose }) {
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen?.();
+      // On mobile: request fullscreen on the iframe directly for proper landscape
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) {
+        // Try iframe fullscreen first (gives proper landscape on mobile)
+        const iframe = containerRef.current?.querySelector('iframe');
+        const el = iframe || containerRef.current;
+        const reqFS = el?.requestFullscreen || el?.webkitRequestFullscreen || el?.mozRequestFullScreen;
+        if (reqFS) reqFS.call(el);
+      } else {
+        containerRef.current?.requestFullscreen?.();
+      }
+      // Lock landscape orientation
+      try {
+        if (screen.orientation?.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
+        } else if (screen.lockOrientation) {
+          screen.lockOrientation('landscape');
+        }
+      } catch (e) {}
     } else {
       document.exitFullscreen?.();
+      // Unlock orientation
+      try {
+        if (screen.orientation?.unlock) screen.orientation.unlock();
+        else if (screen.unlockOrientation) screen.unlockOrientation();
+      } catch (e) {}
     }
   };
 
   const embedSrc = videoId
-    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&fs=0&disablekb=0&mute=${isMuted ? 1 : 0}`
+    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&fs=1&disablekb=0&mute=${isMuted ? 1 : 0}&playsinline=0`
     : null;
 
   return (
@@ -263,7 +286,8 @@ function VideoPlayerModal({ resource, onClose }) {
                 key={embedSrc}
                 src={embedSrc}
                 title={resource?.title || 'Video'}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen; screen-orientation"
+                allowFullScreen
                 referrerPolicy="strict-origin"
                 className="absolute inset-0 w-full h-full"
                 style={{ border: 'none' }}
