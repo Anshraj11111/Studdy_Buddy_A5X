@@ -1003,15 +1003,22 @@ function FeedTab({ user }) {
     }
   }
 
-  const handleLike = async (id) => {
-    try {
-      await feedAPI.likePost(id)
+  const handleLike = (id) => {
+    // Optimistic update - instantly toggle like in UI
+    setPosts(prev => prev.map(p => {
+      if (p._id !== id) return p
+      const liked = (p.likes || []).map(String).includes(String(user._id))
+      return { ...p, likes: liked ? (p.likes || []).filter(l => String(l) !== String(user._id)) : [...(p.likes || []), user._id] }
+    }))
+    // Background API call (no await - fire and forget)
+    feedAPI.likePost(id).catch(() => {
+      // Revert on failure
       setPosts(prev => prev.map(p => {
         if (p._id !== id) return p
-        const liked = (p.likes || []).map(String).includes(String(user._id))
+        const liked = !(p.likes || []).map(String).includes(String(user._id))
         return { ...p, likes: liked ? (p.likes || []).filter(l => String(l) !== String(user._id)) : [...(p.likes || []), user._id] }
       }))
-    } catch { /* ignore */ }
+    })
   }
 
   const handleDelete = async (id) => {
