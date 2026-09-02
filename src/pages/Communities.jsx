@@ -198,6 +198,7 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
   const hasEdu = u?.education?.institution
   const hasExp = u?.experience?.company
   const hasSocial = u?.socialLinks && Object.values(u.socialLinks).some(Boolean)
+  const [showPhoto, setShowPhoto] = useState(false)
 
   return createPortal(
     <AnimatePresence>
@@ -268,21 +269,62 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                 </button>
               </div>
               {/* Avatar anchored to bottom of banner, sticks out below */}
-              <div style={{
-                position: 'absolute',
-                bottom: -46,
-                left: 22,
-                width: 92, height: 92, borderRadius: '50%', overflow: 'hidden',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                boxShadow: '0 0 28px rgba(99,102,241,0.55)',
-                border: `4px solid ${isDark ? 'rgba(8,6,28,0.98)' : 'rgba(255,255,255,0.98)'}`,
-                color: '#ffffff', fontWeight: 700, fontSize: 28,
-              }}>
+              <div
+                onClick={() => u.profileImage && setShowPhoto(true)}
+                style={{
+                  position: 'absolute',
+                  bottom: -46,
+                  left: 22,
+                  width: 92, height: 92, borderRadius: '50%', overflow: 'hidden',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                  boxShadow: '0 0 28px rgba(99,102,241,0.55)',
+                  border: `4px solid ${isDark ? 'rgba(8,6,28,0.98)' : 'rgba(255,255,255,0.98)'}`,
+                  color: '#ffffff', fontWeight: 700, fontSize: 28,
+                  cursor: u.profileImage ? 'pointer' : 'default',
+                }}>
                 {u.profileImage
                   ? <img src={u.profileImage} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : u.name?.[0]?.toUpperCase()}
               </div>
+
+              {/* Full photo lightbox */}
+              {showPhoto && u.profileImage && createPortal(
+                <div
+                  onClick={() => setShowPhoto(false)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 999999,
+                    background: 'rgba(0,0,0,0.92)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(8px)',
+                    cursor: 'zoom-out',
+                  }}>
+                  <img
+                    src={u.profileImage}
+                    alt={u.name}
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      maxWidth: '90vw', maxHeight: '90vh',
+                      borderRadius: '16px',
+                      boxShadow: '0 0 60px rgba(0,0,0,0.8)',
+                      objectFit: 'contain',
+                    }}
+                  />
+                  <button
+                    onClick={() => setShowPhoto(false)}
+                    style={{
+                      position: 'fixed', top: 16, right: 16,
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: 'white',
+                    }}>
+                    <X size={20} />
+                  </button>
+                </div>,
+                document.body
+              )}
             </div>
 
             {/* Profile content with padding-top to clear the avatar */}
@@ -290,9 +332,9 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
               {/* Name + info row */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2 }}>{u.name}</h2>
+                  <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: isDark ? '#f1f5f9' : '#0f172a', lineHeight: 1.2 }}>{u.name}</h2>
                   {u.headline && (
-                    <p style={{ margin: '5px 0 0', fontSize: '0.88rem', color: 'rgba(148,163,184,0.85)', lineHeight: 1.4 }}>{u.headline}</p>
+                    <p style={{ margin: '5px 0 0', fontSize: '0.88rem', color: isDark ? 'rgba(148,163,184,0.85)' : '#475569', lineHeight: 1.4 }}>{u.headline}</p>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                     <RoleBadge role={u.role} />
@@ -335,7 +377,7 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
               {u.bio && (
                 <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
                   <p style={{ margin: '0 0 8px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About</p>
-                  <p style={{ margin: 0, fontSize: '0.87rem', lineHeight: 1.65, color: 'rgba(226,232,240,0.85)' }}>{u.bio}</p>
+                  <p style={{ margin: 0, fontSize: '0.87rem', lineHeight: 1.65, color: isDark ? 'rgba(226,232,240,0.85)' : '#334155' }}>{u.bio}</p>
                 </div>
               )}
 
@@ -346,10 +388,10 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                   <div style={{ display: 'flex', gap: 13 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.25)' }}>🎓</div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: "var(--text-primary)" }}>{u.education.institution}</p>
-                      {u.education.degree && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'rgba(148,163,184,0.75)' }}>{u.education.degree}{u.education.field ? ` · ${u.education.field}` : ''}</p>}
-                      {(u.education.startYear || u.education.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: "var(--text-tertiary)" }}>{u.education.startYear}{u.education.startYear && u.education.endYear ? ' – ' : ''}{u.education.endYear}</p>}
-                      {u.education.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: 'rgba(148,163,184,0.65)' }}>{u.education.description}</p>}
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{u.education.institution}</p>
+                      {u.education.degree && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{u.education.degree}{u.education.field ? ` · ${u.education.field}` : ''}</p>}
+                      {(u.education.startYear || u.education.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>{u.education.startYear}{u.education.startYear && u.education.endYear ? ' – ' : ''}{u.education.endYear}</p>}
+                      {u.education.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: isDark ? 'rgba(148,163,184,0.65)' : '#475569' }}>{u.education.description}</p>}
                     </div>
                   </div>
                 </div>
@@ -362,10 +404,10 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                   <div style={{ display: 'flex', gap: 13 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)' }}>🏢</div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: "var(--text-primary)" }}>{u.experience.role || u.experience.company}</p>
-                      {u.experience.role && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'rgba(148,163,184,0.75)' }}>{u.experience.company}</p>}
-                      {(u.experience.startYear || u.experience.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: "var(--text-tertiary)" }}>{u.experience.startYear}{u.experience.startYear && u.experience.endYear ? ' – ' : ''}{u.experience.endYear || 'Present'}</p>}
-                      {u.experience.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: 'rgba(148,163,184,0.65)' }}>{u.experience.description}</p>}
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{u.experience.role || u.experience.company}</p>
+                      {u.experience.role && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{u.experience.company}</p>}
+                      {(u.experience.startYear || u.experience.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>{u.experience.startYear}{u.experience.startYear && u.experience.endYear ? ' – ' : ''}{u.experience.endYear || 'Present'}</p>}
+                      {u.experience.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: isDark ? 'rgba(148,163,184,0.65)' : '#475569' }}>{u.experience.description}</p>}
                     </div>
                   </div>
                 </div>
@@ -390,7 +432,7 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {u.socialLinks?.github && (
                       <a href={u.socialLinks.github} target="_blank" rel="noopener noreferrer"
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(226,232,240,0.08)', border: '1px solid rgba(226,232,240,0.15)', color: "var(--text-primary)", textDecoration: 'none' }}>
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: isDark ? 'rgba(226,232,240,0.08)' : 'rgba(15,23,42,0.06)', border: isDark ? '1px solid rgba(226,232,240,0.15)' : '1px solid rgba(15,23,42,0.15)', color: isDark ? '#e2e8f0' : '#0f172a', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                         GitHub
                       </a>
