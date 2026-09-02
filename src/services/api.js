@@ -39,12 +39,17 @@ if (!isLocalDev) {
   console.log('🔥 Keep-alive enabled for all 3 servers');
 }
 
-// Simple in-memory cache for GET requests (5 min TTL)
+// Simple in-memory cache for GET requests (stale-while-revalidate)
 const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000;
+const CACHE_TTL = 10 * 60 * 1000; // 10 min fresh
+const CACHE_STALE_TTL = 30 * 60 * 1000; // 30 min stale (serve stale while fetching fresh)
+
 const getCached = (key) => {
   const entry = cache.get(key);
-  if (entry && Date.now() - entry.ts < CACHE_TTL) return entry.data;
+  if (!entry) return null;
+  const age = Date.now() - entry.ts;
+  if (age < CACHE_TTL) return { data: entry.data, stale: false }; // fresh
+  if (age < CACHE_STALE_TTL) return { data: entry.data, stale: true }; // stale but usable
   cache.delete(key);
   return null;
 };
@@ -66,12 +71,13 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Check cache for GET requests
+  // Check cache for GET requests - serve stale data instantly while fetching fresh
   if (config.method === 'get') {
     const cacheKey = config.url + JSON.stringify(config.params || {});
     const cached = getCached(cacheKey);
     if (cached) {
-      config.adapter = () => Promise.resolve({ data: cached, status: 200, statusText: 'OK', headers: {}, config });
+      // Always return cached data instantly (fresh or stale)
+      config.adapter = () => Promise.resolve({ data: cached.data, status: 200, statusText: 'OK (cached)', headers: {}, config });
     }
   }
 

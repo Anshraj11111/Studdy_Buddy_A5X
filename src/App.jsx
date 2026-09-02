@@ -56,8 +56,20 @@ function AppShell() {
   useEffect(() => {
     initTheme()
     initAuth()
-    // Pre-warm backend immediately when app boots
-    fetch(`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://studdy-buddy-backend-a5x.onrender.com'}/ping`).catch(() => {})
+    // Pre-warm all 3 backend servers immediately when app boots
+    const servers = [
+      import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://studdy-buddy-backend-a5x.onrender.com',
+      'https://studdy-buddy-backend-2-a5x.onrender.com',
+      'https://studdy-buddy-backend-3-a5x.onrender.com',
+    ]
+    servers.forEach(url => fetch(`${url}/ping`).catch(() => {}))
+
+    // Keep-alive ping every 10 minutes to prevent Render cold starts
+    const keepAlive = setInterval(() => {
+      servers.forEach(url => fetch(`${url}/ping`).catch(() => {}))
+    }, 10 * 60 * 1000) // 10 minutes
+
+    return () => clearInterval(keepAlive)
   }, [initAuth, initTheme])
 
   useEffect(() => {
