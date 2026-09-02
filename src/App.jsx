@@ -87,6 +87,7 @@ function AppShell() {
     <div className="min-h-screen" style={{ position: 'relative', background: 'var(--bg-primary)' }}>
       {token && !isAdminRoute && <Navbar />}
       {token && !isAdminRoute && <IncomingCallModal />}
+      {token && !isAdminRoute && <InstallPWA />}
         <Routes>
           {/* Public */}
           <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <Login />} />

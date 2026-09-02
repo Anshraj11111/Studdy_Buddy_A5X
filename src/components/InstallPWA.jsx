@@ -12,10 +12,14 @@ export default function InstallPWA() {
       return // Already installed, don't show prompt
     }
 
-    // Check if user previously dismissed
+    // Check if user previously dismissed - only skip for 3 days
     const dismissed = localStorage.getItem('pwa-install-dismissed')
-    if (dismissed) {
-      return
+    const dismissedTime = localStorage.getItem('pwa-install-dismissed-time')
+    if (dismissed && dismissedTime) {
+      const threeDays = 3 * 24 * 60 * 60 * 1000
+      if (Date.now() - parseInt(dismissedTime) < threeDays) {
+        return // Dismissed within 3 days, don't show
+      }
     }
 
     // Listen for beforeinstallprompt event
@@ -23,10 +27,10 @@ export default function InstallPWA() {
       e.preventDefault()
       setDeferredPrompt(e)
       
-      // Show install prompt after 30 seconds
+      // Show install prompt after 3 seconds (was 30 seconds)
       setTimeout(() => {
         setShowInstallPrompt(true)
-      }, 30000)
+      }, 3000)
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -51,6 +55,7 @@ export default function InstallPWA() {
   const handleDismiss = () => {
     setShowInstallPrompt(false)
     localStorage.setItem('pwa-install-dismissed', 'true')
+    localStorage.setItem('pwa-install-dismissed-time', Date.now().toString())
   }
 
   return (
