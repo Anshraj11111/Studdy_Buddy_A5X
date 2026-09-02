@@ -292,14 +292,30 @@ function VideoPlayerModal({ resource, onClose }) {
                 className="absolute inset-0 w-full h-full"
                 style={{ border: 'none' }}
               />
-              {/* Hide YouTube branding */}
-              <div className="absolute left-0 right-0 bg-black pointer-events-none z-50" 
+              {/* Block YouTube logo (bottom-right) and link icon (bottom-left) */}
+              {/* Bottom bar - covers YouTube logo, link icon, and controls */}
+              <div className="absolute left-0 right-0 z-50" 
                 style={{ 
                   bottom: '0px',
                   width: '100%',
-                  height: '60px',
-                  background: '#000000'
+                  height: '65px',
+                  background: '#000000',
+                  pointerEvents: 'all',
+                  cursor: 'default',
                 }} 
+                onClick={e => e.stopPropagation()}
+                onContextMenu={e => e.preventDefault()}
+              />
+              {/* Top bar - blocks channel name/title link */}
+              <div className="absolute left-0 right-0 top-0 z-50"
+                style={{
+                  width: '100%',
+                  height: '50px',
+                  background: 'transparent',
+                  pointerEvents: 'all',
+                  cursor: 'default',
+                }}
+                onClick={e => e.stopPropagation()}
               />
             </>
           )}
