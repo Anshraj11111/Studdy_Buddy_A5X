@@ -1220,21 +1220,32 @@ function ConnectionsTab({ user, setViewProfileId }) {
     finally { setActionLoading(p => ({ ...p, [key]: false })) }
   }
 
-  const sendReq = (uid) => act(uid + '_conn', async () => {
-    await connectionAPI.sendRequest(uid)
+  const sendReq = (uid) => {
+    // Optimistic update - instantly show Pending
     setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionStatus: 'pending', iRequested: true } : u))
-  })
-  const toggleFollow = (uid, isFollowing) => act(uid + '_follow', async () => {
-    if (isFollowing) {
-      await followAPI.unfollow(uid)
-      setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, isFollowing: false } : u))
-      setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: false } : c))
-    } else {
-      await followAPI.follow(uid)
-      setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, isFollowing: true } : u))
-      setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: true } : c))
-    }
-  })
+    setActionLoading(p => ({ ...p, [uid + '_conn']: true }))
+    connectionAPI.sendRequest(uid)
+      .catch(() => {
+        // Revert on failure
+        setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionStatus: null, iRequested: false } : u))
+      })
+      .finally(() => setActionLoading(p => ({ ...p, [uid + '_conn']: false })))
+  }
+
+  const toggleFollow = (uid, isFollowing) => {
+    // Optimistic update - instantly toggle follow state
+    setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, isFollowing: !isFollowing } : u))
+    setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: !isFollowing } : c))
+    setActionLoading(p => ({ ...p, [uid + '_follow']: true }))
+    const apiCall = isFollowing ? followAPI.unfollow(uid) : followAPI.follow(uid)
+    apiCall
+      .catch(() => {
+        // Revert on failure
+        setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, isFollowing: isFollowing } : u))
+        setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: isFollowing } : c))
+      })
+      .finally(() => setActionLoading(p => ({ ...p, [uid + '_follow']: false })))
+  }
   const accept = (id, requesterId) => act(id, async () => {
     await connectionAPI.accept(id)
     setPending(p => p.filter(c => c._id !== id))
