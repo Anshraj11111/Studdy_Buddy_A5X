@@ -1225,9 +1225,16 @@ function ConnectionsTab({ user, setViewProfileId }) {
     setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionStatus: 'pending', iRequested: true } : u))
     setActionLoading(p => ({ ...p, [uid + '_conn']: true }))
     connectionAPI.sendRequest(uid)
+      .then(res => {
+        // Store the connectionId returned from backend so we can cancel later
+        const connId = res.data?.data?.connection?._id || res.data?.data?._id
+        if (connId) {
+          setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionId: connId } : u))
+        }
+      })
       .catch(() => {
         // Revert on failure
-        setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionStatus: null, iRequested: false } : u))
+        setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionStatus: null, iRequested: false, connectionId: null } : u))
       })
       .finally(() => setActionLoading(p => ({ ...p, [uid + '_conn']: false })))
   }
@@ -1276,6 +1283,7 @@ function ConnectionsTab({ user, setViewProfileId }) {
     const isFollowing = !!u.isFollowing
     const connStatus = u.connectionStatus
     const iReq = u.iRequested
+    const pendingConnId = u.connectionId  // ID of pending connection to cancel
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         className="rounded-lg overflow-hidden"
@@ -1310,8 +1318,44 @@ function ConnectionsTab({ user, setViewProfileId }) {
                   {actionLoading[uid + '_conn'] ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />} Connect
                 </motion.button>
               ) : connStatus === 'pending' && iReq ? (
-                <div className="flex-1 text-center text-xs py-2 rounded-lg text-theme-tertiary"
-                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}>Pending</div>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={async () => {
+                    setActionLoading(p => ({ ...p, [uid + '_conn']: true }))
+                    try {
+                      let connIdToUse = pendingConnId
+                      // If we don't have connectionId locally, fetch from backend
+                      if (!connIdToUse) {
+                        const res = await connectionAPI.getUsers('', 1)
+                        const found = (res.data?.data?.users || []).find(u2 => String(u2._id) === uid)
+                        connIdToUse = found?.connectionId
+                      }
+                      if (connIdToUse) {
+                        await connectionAPI.remove(connIdToUse)
+                      }
+                      // Optimistic update - revert to Connect
+                      setDiscoverUsers(p => p.map(u2 =>
+                        u2._id === uid
+                          ? { ...u2, connectionStatus: null, iRequested: false, connectionId: null }
+                          : u2
+                      ))
+                    } catch {
+                      // silently fail - state stays as pending
+                    } finally {
+                      setActionLoading(p => ({ ...p, [uid + '_conn']: false }))
+                    }
+                  }}
+                  disabled={!!actionLoading[uid + '_conn']}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: '#f59e0b' }}
+                >
+                  {actionLoading[uid + '_conn']
+                    ? <Loader2 size={12} className="animate-spin" />
+                    : <X size={12} />
+                  }
+                  Pending
+                </motion.button>
               ) : connStatus === 'accepted' ? (
                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                   onClick={() => handleMessage(uid)}
