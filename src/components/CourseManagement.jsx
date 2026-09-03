@@ -826,63 +826,69 @@ function ModuleManagement({ course, onBack, showToast }) {
       {/* Edit Lecture Modal */}
       {editingLecture && (
         <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-              <h3 className="text-lg font-bold text-slate-900">Edit Lecture</h3>
-              <button onClick={() => setEditingLecture(null)} className="rounded-lg p-2 hover:bg-slate-100 transition">
+          <div className="w-full max-w-lg rounded-2xl shadow-2xl" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4" style={{ borderColor: '#e2e8f0' }}>
+              <h3 className="text-lg font-bold" style={{ color: '#0f172a' }}>Edit Lecture</h3>
+              <button onClick={() => setEditingLecture(null)} className="rounded-lg p-2 hover:bg-slate-100 transition" style={{ color: '#64748b' }}>
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleUpdateLecture} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-bold mb-1.5 text-slate-700">Title *</label>
+                <label className="block text-sm font-bold mb-1.5" style={{ color: '#374151' }}>Title *</label>
                 <input
                   type="text"
                   value={editLectureForm.title}
                   onChange={e => setEditLectureForm(f => ({ ...f, title: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none"
+                  style={{ backgroundColor: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1' }}
                   placeholder="Lecture title"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold mb-1.5 text-slate-700">YouTube URL *</label>
+                <label className="block text-sm font-bold mb-1.5" style={{ color: '#374151' }}>YouTube URL *</label>
                 <input
                   type="url"
                   value={editLectureForm.fileUrl}
                   onChange={e => setEditLectureForm(f => ({ ...f, fileUrl: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none"
+                  style={{ backgroundColor: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1' }}
                   placeholder="https://www.youtube.com/watch?v=..."
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold mb-1.5 text-slate-700">Description</label>
+                <label className="block text-sm font-bold mb-1.5" style={{ color: '#374151' }}>Description</label>
                 <textarea
                   value={editLectureForm.description}
                   onChange={e => setEditLectureForm(f => ({ ...f, description: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none"
+                  style={{ backgroundColor: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1' }}
                   placeholder="Lecture description"
                   rows={3}
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold mb-1.5 text-slate-700">Duration (e.g. 15m)</label>
+                <label className="block text-sm font-bold mb-1.5" style={{ color: '#374151' }}>Duration (e.g. 15m)</label>
                 <input
                   type="text"
                   value={editLectureForm.duration}
                   onChange={e => setEditLectureForm(f => ({ ...f, duration: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="w-full rounded-lg border px-4 py-2.5 text-sm outline-none"
+                  style={{ backgroundColor: '#ffffff', color: '#0f172a', borderColor: '#cbd5e1' }}
                   placeholder="e.g. 15m, 1h 30m"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingLecture(null)}
-                  className="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">
+                  className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition"
+                  style={{ border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#475569' }}>
                   Cancel
                 </button>
                 <button type="submit" disabled={editLectureLoading}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 transition disabled:opacity-50">
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition disabled:opacity-50"
+                  style={{ backgroundColor: '#4f46e5', color: '#ffffff' }}>
                   {editLectureLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                   Save Changes
                 </button>
