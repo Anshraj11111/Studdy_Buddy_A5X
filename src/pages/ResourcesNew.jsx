@@ -101,7 +101,6 @@ function VideoPlayerModal({ resource, onClose }) {
 
     checkOrientation(); // initial check
 
-    // Use screen orientation API if available, fallback to resize
     if (window.screen?.orientation) {
       window.screen.orientation.addEventListener('change', checkOrientation);
     }
@@ -116,6 +115,35 @@ function VideoPlayerModal({ resource, onClose }) {
       window.removeEventListener('orientationchange', checkOrientation);
     };
   }, []);
+
+  // Try to force landscape via screen orientation API (mobile)
+  const goFullscreenLandscape = async () => {
+    try {
+      // Try native fullscreen first
+      if (containerRef.current?.requestFullscreen) {
+        await containerRef.current.requestFullscreen();
+      }
+      // Then lock to landscape
+      if (window.screen?.orientation?.lock) {
+        await window.screen.orientation.lock('landscape');
+      }
+    } catch {
+      // Fallback: just set isLandscape manually (CSS-based fullscreen)
+      setIsLandscape(true);
+    }
+  };
+
+  const exitFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+      if (window.screen?.orientation?.unlock) {
+        window.screen.orientation.unlock();
+      }
+    } catch { /* ignore */ }
+    setIsLandscape(false);
+  };
 
   // Lock body scroll always when modal is open
   useEffect(() => {
@@ -231,13 +259,23 @@ function VideoPlayerModal({ resource, onClose }) {
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 ml-3">
               {embedSrc && (
-                <button
-                  onClick={() => setIsMuted(!isMuted)}
-                  className="p-2 rounded-lg transition text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                  title={isMuted ? 'Unmute' : 'Mute'}
-                >
-                  {isMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
-                </button>
+                <>
+                  <button
+                    onClick={() => setIsMuted(!isMuted)}
+                    className="p-2 rounded-lg transition text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    title={isMuted ? 'Unmute' : 'Mute'}
+                  >
+                    {isMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+                  </button>
+                  {/* Fullscreen / Landscape button */}
+                  <button
+                    onClick={goFullscreenLandscape}
+                    className="p-2 rounded-lg transition text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    title="Fullscreen"
+                  >
+                    <Maximize size={17} />
+                  </button>
+                </>
               )}
               <button 
                 onClick={onClose} 
@@ -265,29 +303,52 @@ function VideoPlayerModal({ resource, onClose }) {
             flex: '0 0 auto',
           }}
         >
-          {/* Close button overlay for landscape mode */}
+          {/* Close & exit fullscreen buttons for landscape mode */}
           {isLandscape && (
-            <button
-              onClick={onClose}
-              style={{
-                position: 'absolute',
-                top: 12,
-                right: 12,
-                zIndex: 200,
-                background: 'rgba(0,0,0,0.6)',
-                border: 'none',
-                borderRadius: '50%',
-                width: 36,
-                height: 36,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#fff',
-              }}
-            >
-              <X size={18} />
-            </button>
+            <div style={{
+              position: 'absolute',
+              top: 12,
+              right: 12,
+              zIndex: 200,
+              display: 'flex',
+              gap: 8,
+            }}>
+              <button
+                onClick={exitFullscreen}
+                style={{
+                  background: 'rgba(0,0,0,0.6)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#fff',
+                }}
+                title="Exit fullscreen"
+              >
+                <Minimize size={18} />
+              </button>
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'rgba(0,0,0,0.6)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#fff',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
           )}
 
           {tokenError ? (
