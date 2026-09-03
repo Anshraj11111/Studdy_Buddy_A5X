@@ -313,10 +313,11 @@ export default function Signup() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
-                if (window.google?.accounts?.id) {
+                const hiddenBtn = document.querySelector('#google-btn-hidden-signup div[role="button"]')
+                if (hiddenBtn) {
+                  hiddenBtn.click()
+                } else if (window.google?.accounts?.id) {
                   window.google.accounts.id.prompt()
-                } else {
-                  alert('Google sign-in not available. Please try again.')
                 }
               }}
               disabled={googleLoading}
