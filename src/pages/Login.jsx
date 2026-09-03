@@ -21,20 +21,18 @@ export default function Login() {
   const googleBtnRef = useRef(null)
 
   useEffect(() => {
-    if (window.google && googleBtnRef.current) {
+    if (window.google) {
       try {
-        window.google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleResponse })
-        window.google.accounts.id.renderButton(googleBtnRef.current, {
-          theme: isDark ? 'filled_black' : 'outline',
-          size: 'large', width: 380, text: 'signin_with', shape: 'rectangular',
+        window.google.accounts.id.initialize({ 
+          client_id: GOOGLE_CLIENT_ID, 
+          callback: handleGoogleResponse,
+          auto_select: false,
         })
       } catch (error) {
-        // Silently handle Google Sign-In initialization errors
-        // This prevents 403 errors from breaking the page
         console.warn('Google Sign-In initialization failed:', error)
       }
     }
-  }, [isDark])
+  }, [])
 
   const handleGoogleResponse = async (response) => {
     setGoogleLoading(true)
