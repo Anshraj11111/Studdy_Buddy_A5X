@@ -88,19 +88,40 @@ function isYouTubeUrl(url) {
 function VideoPlayerModal({ resource, onClose }) {
   const [videoId, setVideoId] = useState(null);
   const [tokenError, setTokenError] = useState('');
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const containerRef = useRef(null);
 
-  // Lock body scroll and hide browser UI when fullscreen
+  // Detect orientation changes - go fullscreen layout when landscape
   useEffect(() => {
-    if (isFullscreen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+    const checkOrientation = () => {
+      const landscape = window.innerWidth > window.innerHeight;
+      setIsLandscape(landscape);
+    };
+
+    checkOrientation(); // initial check
+
+    // Use screen orientation API if available, fallback to resize
+    if (window.screen?.orientation) {
+      window.screen.orientation.addEventListener('change', checkOrientation);
     }
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+
+    return () => {
+      if (window.screen?.orientation) {
+        window.screen.orientation.removeEventListener('change', checkOrientation);
+      }
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
+
+  // Lock body scroll always when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
-  }, [isFullscreen]);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,16 +174,6 @@ function VideoPlayerModal({ resource, onClose }) {
     return () => { cancelled = true };
   }, [resource]);
 
-  useEffect(() => {
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onChange);
-    return () => document.removeEventListener('fullscreenchange', onChange);
-  }, []);
-
-  const toggleFullscreen = () => {
-    setIsFullscreen(prev => !prev);
-  };
-
   const embedSrc = videoId
     ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&fs=0&disablekb=0&mute=${isMuted ? 1 : 0}&playsinline=1`
     : null;
@@ -172,85 +183,113 @@ function VideoPlayerModal({ resource, onClose }) {
       className="fixed z-[100] flex items-center justify-center" 
       style={{ 
         inset: 0,
-        background: 'rgba(0,0,0,0.95)',
-        padding: isFullscreen ? '0' : '16px',
+        background: '#000',
       }} 
       onClick={onClose}
     >
       <motion.div
         ref={containerRef}
-        initial={{ opacity: 0, scale: 0.95, y: 16 }} 
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        initial={{ opacity: 0, scale: 0.95 }} 
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
         className="flex flex-col w-full overflow-hidden"
-        style={{
-          maxWidth: isFullscreen ? '100vw' : '960px',
-          width: isFullscreen ? '100vw' : '100%',
-          height: isFullscreen ? '100dvh' : 'auto',
-          maxHeight: isFullscreen ? '100dvh' : 'calc(100vh - 32px)',
-          background: isFullscreen ? '#000' : '#fff',
-          boxShadow: isFullscreen ? 'none' : '0 32px 80px rgba(0,0,0,0.7)',
-          borderRadius: isFullscreen ? '0' : '16px',
+        style={isLandscape ? {
+          // Landscape: full screen, no header
+          width: '100vw',
+          height: '100dvh',
+          maxWidth: '100vw',
+          background: '#000',
+          borderRadius: 0,
+        } : {
+          // Portrait: card style with header
+          maxWidth: '960px',
+          width: '100%',
+          background: '#fff',
+          borderRadius: '16px',
+          margin: '16px',
+          maxHeight: 'calc(100vh - 32px)',
+          overflow: 'hidden',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className={`flex items-center justify-between flex-shrink-0 ${
-          isFullscreen ? 'px-3 py-2 bg-black/80 text-white' : 'px-5 py-3.5 bg-white border-b border-slate-200'
-        }`}>
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#fef2f2' }}>
-              <Youtube size={18} style={{ color: '#ef4444' }} />
+        {/* Header - only shown in portrait */}
+        {!isLandscape && (
+          <div className="flex items-center justify-between flex-shrink-0 px-5 py-3.5 bg-white border-b border-slate-200">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#fef2f2' }}>
+                <Youtube size={18} style={{ color: '#ef4444' }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold truncate" style={{ color: '#0f172a' }}>
+                  {resource?.title || 'Video'}
+                </p>
+                <p className="text-xs" style={{ color: '#64748b' }}>
+                  by {resource?.uploadedBy?.name || 'Mentor'}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className={`text-sm font-bold truncate ${isFullscreen ? 'text-white' : 'text-slate-900'}`}>
-                {resource?.title || 'Video'}
-              </p>
-              <p className={`text-xs ${isFullscreen ? 'text-white/60' : 'text-slate-500'}`}>
-                by {resource?.uploadedBy?.name || 'Mentor'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-            {embedSrc && (
-              <>
+            <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+              {embedSrc && (
                 <button
                   onClick={() => setIsMuted(!isMuted)}
-                  className={`p-2 rounded-lg transition ${
-                    isFullscreen ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                  }`}
+                  className="p-2 rounded-lg transition text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                   title={isMuted ? 'Unmute' : 'Mute'}
                 >
                   {isMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
                 </button>
-                <button
-                  onClick={toggleFullscreen}
-                  className={`p-2 rounded-lg transition ${
-                    isFullscreen ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                  }`}
-                  title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                >
-                  {isFullscreen ? <Minimize size={17} /> : <Maximize size={17} />}
-                </button>
-              </>
-            )}
-            <button 
-              onClick={onClose} 
-              className={`p-2 rounded-lg transition ${
-                isFullscreen ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-              }`}
+              )}
+              <button 
+                onClick={onClose} 
+                className="p-2 rounded-lg transition text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Video area */}
+        <div
+          className="relative bg-black"
+          style={isLandscape ? {
+            // Landscape: fill entire screen
+            width: '100vw',
+            height: '100dvh',
+            flex: '1 1 auto',
+          } : {
+            // Portrait: 16:9 ratio
+            position: 'relative',
+            width: '100%',
+            aspectRatio: '16/9',
+            flex: '0 0 auto',
+          }}
+        >
+          {/* Close button overlay for landscape mode */}
+          {isLandscape && (
+            <button
+              onClick={onClose}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                zIndex: 200,
+                background: 'rgba(0,0,0,0.6)',
+                border: 'none',
+                borderRadius: '50%',
+                width: 36,
+                height: 36,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#fff',
+              }}
             >
               <X size={18} />
             </button>
-          </div>
-        </div>
+          )}
 
-        {/* Video area */}
-        <div className="relative w-full bg-black" style={{
-          flex: '1 1 auto',
-          minHeight: 0,
-          aspectRatio: isFullscreen ? undefined : '16/9',
-        }}>
           {tokenError ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Youtube size={48} style={{ color: '#ef4444', opacity: 0.5 }} />
@@ -287,25 +326,25 @@ function VideoPlayerModal({ resource, onClose }) {
                 className="absolute inset-0 w-full h-full"
                 style={{ border: 'none', display: 'block' }}
               />
-              {/* Block YouTube logo (bottom-right) and link icon (bottom-left) */}
-              {/* Bottom bar - covers YouTube logo, link icon, and controls */}
-              <div className="absolute left-0 right-0 z-50" 
+              {/* Bottom bar - covers YouTube logo/controls */}
+              <div
+                className="absolute left-0 right-0 z-50"
                 style={{ 
-                  bottom: '0px',
+                  bottom: 0,
                   width: '100%',
-                  height: '65px',
-                  background: '#000000',
+                  height: isLandscape ? '50px' : '50px',
+                  background: '#000',
                   pointerEvents: 'all',
                   cursor: 'default',
                 }} 
                 onClick={e => e.stopPropagation()}
                 onContextMenu={e => e.preventDefault()}
               />
-              {/* Top bar - blocks channel name/title link */}
+              {/* Top bar - blocks channel title link */}
               <div className="absolute left-0 right-0 top-0 z-50"
                 style={{
                   width: '100%',
-                  height: '50px',
+                  height: '40px',
                   background: 'transparent',
                   pointerEvents: 'all',
                   cursor: 'default',
@@ -316,10 +355,10 @@ function VideoPlayerModal({ resource, onClose }) {
           )}
         </div>
 
-        {/* Footer */}
-        {resource?.description && !isFullscreen && (
+        {/* Footer - only in portrait */}
+        {resource?.description && !isLandscape && (
           <div className="px-5 py-4 flex-shrink-0 border-t border-slate-200 bg-white">
-            <p className="text-sm text-slate-600 leading-relaxed">{resource.description}</p>
+            <p className="text-sm leading-relaxed" style={{ color: '#475569' }}>{resource.description}</p>
             {resource.topic && (
               <span className="inline-block mt-3 text-xs px-3 py-1 rounded-full font-medium bg-indigo-50 text-indigo-600">
                 {resource.topic}
