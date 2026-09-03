@@ -657,6 +657,54 @@ function ModuleManagement({ course, onBack, showToast }) {
     }
   };
 
+  const [editingLecture, setEditingLecture] = useState(null);
+  const [editLectureForm, setEditLectureForm] = useState({});
+  const [editLectureLoading, setEditLectureLoading] = useState(false);
+
+  const handleEditLecture = async (lecture) => {
+    setEditingLecture(lecture);
+    // Fetch full lecture details including fileUrl from backend
+    try {
+      const res = await adminAPI.getLecture(lecture._id);
+      const fullLecture = res.data?.data?.lecture || lecture;
+      setEditLectureForm({
+        title: fullLecture.title || '',
+        description: fullLecture.description || '',
+        fileUrl: fullLecture.fileUrl || '',
+        duration: fullLecture.duration || '',
+        notesUrl: fullLecture.notesUrl || '',
+      });
+    } catch {
+      // Fallback to whatever data we have
+      setEditLectureForm({
+        title: lecture.title || '',
+        description: lecture.description || '',
+        fileUrl: lecture.fileUrl || '',
+        duration: lecture.duration || '',
+        notesUrl: lecture.notesUrl || '',
+      });
+    }
+  };
+
+  const handleUpdateLecture = async (e) => {
+    e.preventDefault();
+    if (!editLectureForm.title || !editLectureForm.fileUrl) {
+      showToast('Title and video URL are required', 'error');
+      return;
+    }
+    try {
+      setEditLectureLoading(true);
+      await adminAPI.updateLecture(editingLecture._id, editLectureForm);
+      showToast('Lecture updated successfully!', 'success');
+      setEditingLecture(null);
+      fetchModules();
+    } catch (error) {
+      showToast('Failed to update lecture', 'error');
+    } finally {
+      setEditLectureLoading(false);
+    }
+  };
+
   return (
     <div>
       {/* Header */}
@@ -711,6 +759,7 @@ function ModuleManagement({ course, onBack, showToast }) {
                 setShowLectureModal(true);
               }}
               onDeleteLecture={handleDeleteLecture}
+              onEditLecture={handleEditLecture}
             />
           ))}
         </div>
@@ -773,12 +822,81 @@ function ModuleManagement({ course, onBack, showToast }) {
           showToast={showToast}
         />
       )}
+
+      {/* Edit Lecture Modal */}
+      {editingLecture && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <h3 className="text-lg font-bold text-slate-900">Edit Lecture</h3>
+              <button onClick={() => setEditingLecture(null)} className="rounded-lg p-2 hover:bg-slate-100 transition">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateLecture} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-bold mb-1.5 text-slate-700">Title *</label>
+                <input
+                  type="text"
+                  value={editLectureForm.title}
+                  onChange={e => setEditLectureForm(f => ({ ...f, title: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  placeholder="Lecture title"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1.5 text-slate-700">YouTube URL *</label>
+                <input
+                  type="url"
+                  value={editLectureForm.fileUrl}
+                  onChange={e => setEditLectureForm(f => ({ ...f, fileUrl: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1.5 text-slate-700">Description</label>
+                <textarea
+                  value={editLectureForm.description}
+                  onChange={e => setEditLectureForm(f => ({ ...f, description: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  placeholder="Lecture description"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1.5 text-slate-700">Duration (e.g. 15m)</label>
+                <input
+                  type="text"
+                  value={editLectureForm.duration}
+                  onChange={e => setEditLectureForm(f => ({ ...f, duration: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  placeholder="e.g. 15m, 1h 30m"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditingLecture(null)}
+                  className="flex-1 rounded-xl border border-slate-300 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">
+                  Cancel
+                </button>
+                <button type="submit" disabled={editLectureLoading}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 transition disabled:opacity-50">
+                  {editLectureLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // Module Card Component
-function ModuleCard({ module, index, onEdit, onDelete, onAddLecture, onDeleteLecture }) {
+function ModuleCard({ module, index, onEdit, onDelete, onAddLecture, onDeleteLecture, onEditLecture }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -875,6 +993,13 @@ function ModuleCard({ module, index, onEdit, onDelete, onAddLecture, onDeleteLec
                           >
                             <Video size={14} className="inline mr-1" />
                             Play
+                          </button>
+                          <button
+                            onClick={() => onEditLecture && onEditLecture(lecture)}
+                            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-amber-600 hover:bg-amber-50 transition"
+                          >
+                            <Edit2 size={14} className="inline mr-1" />
+                            Edit
                           </button>
                           <button
                             onClick={() => onDeleteLecture(lecture._id)}

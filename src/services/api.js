@@ -343,6 +343,7 @@ export const adminAPI = {
   
   // Lecture Management
   createLecture: (data) => api.post(`/admin/lectures`, data, { headers: adminHeaders() }),
+  getLecture: (id) => api.get(`/admin/lectures/${id}`, { headers: adminHeaders() }),
   updateLecture: (id, data) => api.put(`/admin/lectures/${id}`, data, { headers: adminHeaders() }),
   deleteLecture: (id) => api.delete(`/admin/lectures/${id}`, { headers: adminHeaders() }),
 
