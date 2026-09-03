@@ -1345,23 +1345,6 @@ function CourseCard({ course, onOpen }) {
           {course.description}
         </p>
 
-        {/* Stats */}
-        <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-1">
-            <Star size={14} className="fill-yellow-400 text-yellow-400" />
-            <span className="font-bold text-slate-700">{course.rating || 0}</span>
-            <span>({course.reviewCount || 0})</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Users size={14} />
-            <span>{course.enrolledCount || 0} students</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Clock size={14} />
-            <span>{course.totalDuration || '0h'}</span>
-          </div>
-        </div>
-
         {/* Progress or CTA */}
         <div className="mt-4">
           {isEnrolled ? (
@@ -1691,9 +1674,9 @@ function CourseDetail({ course, onBack }) {
       <main className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
         {/* Course Header */}
         <div className="mb-8 overflow-hidden rounded-2xl bg-white shadow-sm">
-          <div className="relative h-[240px] bg-white">
+          <div className="relative bg-white overflow-hidden" style={{ maxHeight: '320px' }}>
             {data.thumbnail && (
-              <img src={data.thumbnail} alt={data.title} className="h-full w-full object-contain" />
+              <img src={data.thumbnail} alt={data.title} className="w-full h-full object-contain" />
             )}
             
             {/* Course Info Overlay */}
@@ -1702,20 +1685,6 @@ function CourseDetail({ course, onBack }) {
                 {data.topic}
               </span>
               <h1 className="mt-3 text-2xl font-black leading-tight">{data.title}</h1>
-              <div className="mt-2 flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-1">
-                  <Star size={14} className="fill-yellow-400 text-yellow-400" />
-                  <span className="font-bold">{data.rating || 0}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Users size={14} />
-                  <span>{data.enrolledCount || 0} students</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock size={14} />
-                  <span>{data.totalDuration || '0h'}</span>
-                </div>
-              </div>
             </div>
           </div>
 
