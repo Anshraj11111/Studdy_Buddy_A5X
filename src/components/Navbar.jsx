@@ -5,6 +5,7 @@ import { Menu, X, LogOut, Settings, Bell, Heart, MessageCircle, UserPlus } from 
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
 import ThemeToggle from './ThemeToggle'
+import api from '../services/api'
 
 const LOGO_URL = '/studdybuddy-logo.png'
 
@@ -43,6 +44,37 @@ export default function Navbar({ onMenuClick }) {
   }, [])
 
   const handleLogout = () => { logout(); navigate('/login') }
+
+  const handleNotifClick = async (n) => {
+    setNotifOpen(false)
+    // Mark as read
+    if (!n.read) {
+      try { await api.put(`/notifications/${n._id}/read`) } catch {}
+    }
+    // Navigate based on notification type
+    switch (n.type) {
+      case 'message':
+        // Find the room and navigate to chat
+        navigate('/chats')
+        break
+      case 'like':
+      case 'comment':
+        // Go to communities where the post is
+        navigate('/communities')
+        break
+      case 'connection_request':
+      case 'connection':
+        // Go to communities connections tab
+        navigate('/communities')
+        break
+      case 'follow':
+        // Go to communities to see follower's profile
+        navigate('/communities')
+        break
+      default:
+        navigate('/communities')
+    }
+  }
 
   const openNotif = () => {
     setNotifOpen(v => !v)
@@ -159,6 +191,7 @@ export default function Navbar({ onMenuClick }) {
                             </div>
                           ) : notifications.map(n => (
                             <div key={n._id}
+                              onClick={() => handleNotifClick(n)}
                               className="flex items-start gap-3 px-4 py-3 transition hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
                               style={{ 
                                 borderBottom: '1px solid var(--border-primary)', 
