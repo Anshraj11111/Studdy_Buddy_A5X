@@ -307,12 +307,18 @@ export default function Signup() {
               <span className="text-xs text-gray-500">or continue with</span>
               <div className="flex-1 h-px bg-gray-700" />
             </div>
-            <div ref={googleBtnRef} className="hidden" />
+            <div ref={googleBtnRef} className="hidden" id="google-btn-hidden-signup" />
             <motion.button
               type="button"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => window.google?.accounts?.id?.prompt()}
+              onClick={() => {
+                if (window.google?.accounts?.id) {
+                  window.google.accounts.id.prompt()
+                } else {
+                  alert('Google sign-in not available. Please try again.')
+                }
+              }}
               disabled={googleLoading}
               className="w-full flex items-center justify-center gap-3 py-3 rounded-xl font-semibold text-sm transition disabled:opacity-60"
               style={{

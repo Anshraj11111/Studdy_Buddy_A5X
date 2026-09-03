@@ -21,16 +21,33 @@ export default function Login() {
   const googleBtnRef = useRef(null)
 
   useEffect(() => {
-    if (window.google) {
-      try {
-        window.google.accounts.id.initialize({ 
-          client_id: GOOGLE_CLIENT_ID, 
-          callback: handleGoogleResponse,
-          auto_select: false,
-        })
-      } catch (error) {
-        console.warn('Google Sign-In initialization failed:', error)
+    const initGoogle = () => {
+      if (window.google && GOOGLE_CLIENT_ID) {
+        try {
+          window.google.accounts.id.initialize({ 
+            client_id: GOOGLE_CLIENT_ID, 
+            callback: handleGoogleResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          })
+          // Render on hidden div - needed for SDK to work
+          const hiddenDiv = document.getElementById('google-btn-hidden-login')
+          if (hiddenDiv) {
+            window.google.accounts.id.renderButton(hiddenDiv, {
+              theme: 'outline', size: 'large', width: 1
+            })
+          }
+        } catch (error) {
+          console.warn('Google init failed:', error)
+        }
       }
+    }
+    // Try immediately or wait for script to load
+    if (window.google) {
+      initGoogle()
+    } else {
+      window.addEventListener('load', initGoogle)
+      return () => window.removeEventListener('load', initGoogle)
     }
   }, [])
 
@@ -222,12 +239,18 @@ export default function Login() {
               <span className="text-xs text-gray-500">or continue with</span>
               <div className="flex-1 h-px bg-gray-700" />
             </div>
-            <div ref={googleBtnRef} className="hidden" />
+            <div ref={googleBtnRef} className="hidden" id="google-btn-hidden-login" />
             <motion.button
               type="button"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => window.google?.accounts?.id?.prompt()}
+              onClick={() => {
+                if (window.google?.accounts?.id) {
+                  window.google.accounts.id.prompt()
+                } else {
+                  alert('Google sign-in not available. Please try again.')
+                }
+              }}
               disabled={googleLoading}
               className="w-full flex items-center justify-center gap-3 py-3 rounded-xl font-semibold text-sm transition disabled:opacity-60"
               style={{
