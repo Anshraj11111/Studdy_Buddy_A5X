@@ -78,9 +78,12 @@ function AppShell() {
       setupPushNotifications()
     } else {
       offNotification()
-      // Unsubscribe push on logout
-      if (!token) teardownPushNotifications()
       disconnectSocket()
+      // Only teardown push on explicit logout (token gone AND app was initialized)
+      // NOT on page load / token validation in progress
+      if (!token && isInitialized) {
+        teardownPushNotifications()
+      }
     }
     return () => offNotification()
   }, [token, user, isTokenValidated])
