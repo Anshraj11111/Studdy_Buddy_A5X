@@ -172,17 +172,17 @@ export default function Navbar({ onMenuClick }) {
                     {notifOpen && (
                       <motion.div initial={{ opacity: 0, y: -8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -8, scale: 0.95 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                        className="absolute top-full mt-2 rounded-lg overflow-hidden z-50"
+                        className="fixed rounded-lg overflow-hidden z-[999]"
                         style={{
                           background: 'var(--bg-card)',
                           border: '1px solid var(--border-primary)',
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-                          // Mobile: fixed to screen edges with margin
-                          // Desktop: anchored to right of bell icon, 320px wide
-                          right: 0,
-                          width: 'min(320px, calc(100vw - 16px))',
-                          // On small screens, align to right but clamp so it doesn't go off left edge
-                          maxWidth: 'calc(100vw - 16px)',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                          top: '64px',
+                          right: '8px',
+                          left: '8px',
+                          width: 'auto',
+                          maxWidth: '360px',
+                          marginLeft: 'auto',
                         }}>
                         <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--border-primary)' }}>
                           <span className="font-bold text-sm flex items-center gap-2 text-theme-primary">
