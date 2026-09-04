@@ -124,32 +124,46 @@ self.addEventListener('fetch', (event) => {
 // Handle push notifications
 self.addEventListener('push', (event) => {
   console.log('[SW] Push notification received')
-  
-  const options = {
-    body: event.data ? event.data.text() : 'New notification from Studdy Buddy',
+
+  let payload = {
+    title: 'Studdy Buddy',
+    body: 'You have a new notification',
     icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
+    badge: '/icons/icon-192x192.png',
+    url: '/',
+    type: 'general',
+  }
+
+  // Parse JSON payload sent from backend webPush.service.js
+  if (event.data) {
+    try {
+      const data = event.data.json()
+      payload = { ...payload, ...data }
+    } catch {
+      payload.body = event.data.text()
+    }
+  }
+
+  const options = {
+    body: payload.body,
+    icon: payload.icon || '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
     vibrate: [200, 100, 200],
+    tag: payload.type || 'general',        // collapses duplicate notifications of same type
+    renotify: true,                         // vibrate even if same tag
     data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
+      url: payload.url || '/',
+      type: payload.type,
+      timestamp: payload.timestamp || Date.now(),
     },
     actions: [
-      {
-        action: 'explore',
-        title: 'Open App',
-        icon: '/icons/icon-96x96.png'
-      },
-      {
-        action: 'close',
-        title: 'Close',
-        icon: '/icons/icon-96x96.png'
-      }
-    ]
+      { action: 'open', title: 'Open' },
+      { action: 'dismiss', title: 'Dismiss' },
+    ],
   }
 
   event.waitUntil(
-    self.registration.showNotification('Studdy Buddy', options)
+    self.registration.showNotification(payload.title, options)
   )
 })
 
@@ -158,11 +172,28 @@ self.addEventListener('notificationclick', (event) => {
   console.log('[SW] Notification clicked:', event.action)
   event.notification.close()
 
-  if (event.action === 'explore') {
-    event.waitUntil(
-      clients.openWindow('/')
-    )
-  }
+  // Dismiss action — just close
+  if (event.action === 'dismiss') return
+
+  // Open action or direct click — navigate to the relevant URL
+  const targetUrl = event.notification.data?.url || '/'
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // If app is already open in a tab, focus it and navigate
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.focus()
+          client.navigate(targetUrl)
+          return
+        }
+      }
+      // App not open — open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl)
+      }
+    })
+  )
 })
 
 // Handle background sync

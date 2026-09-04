@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
 import { useNotificationStore } from './store/notificationStore'
 import { initSocket, disconnectSocket, onNotification, offNotification } from './services/socket'
+import { setupPushNotifications, teardownPushNotifications } from './services/pushNotification'
 import Navbar from './components/Navbar'
 import IncomingCallModal from './components/IncomingCallModal'
 import InstallPWA from './components/InstallPWA'
@@ -73,8 +74,12 @@ function AppShell() {
       initSocket(token, user._id, user.name || '', user.profileImage || '', user.role || '')
       fetchNotifications()
       onNotification((notif) => addNew(notif))
+      // Setup background push notifications (WhatsApp-style)
+      setupPushNotifications()
     } else {
       offNotification()
+      // Unsubscribe push on logout
+      if (!token) teardownPushNotifications()
       disconnectSocket()
     }
     return () => offNotification()

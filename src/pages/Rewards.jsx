@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
-import { rewardsAPI } from '../services/api'
+import { rewardsAPI, referralAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import {
   Zap, Flame, Trophy, Star, TrendingUp, Gift, Crown,
@@ -20,6 +20,7 @@ const ACTION_LABELS = {
   // resource_upload:  { label: 'Resource Uploaded',   icon: '📤',  color: '#3b82f6' },
   daily_login:      { label: 'Daily Login',         icon: '🌅',  color: '#a78bfa' },
   streak_bonus:     { label: 'Streak Bonus',        icon: '🔥',  color: '#f97316' },
+  referral_reward:  { label: 'Referral Reward',     icon: '🎁',  color: '#10b981' },
 }
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100]
@@ -129,16 +130,20 @@ export default function Rewards() {
   const [lb, setLb]             = useState([])
   const [loading, setLoading]   = useState(true)
   const [tab, setTab]           = useState('overview') // overview | leaderboard | history
+  const [referral, setReferral] = useState(null)
+  const [codeCopied, setCodeCopied] = useState(false)
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [meRes, lbRes] = await Promise.all([
+        const [meRes, lbRes, refRes] = await Promise.all([
           rewardsAPI.getMe(),
           rewardsAPI.getLeaderboard(),
+          referralAPI.getMyCode().catch(() => null),
         ])
         setData(meRes.data.data)
         setLb(lbRes.data.data?.leaderboard || [])
+        if (refRes?.data?.success) setReferral(refRes.data.data)
       } catch (err) {
         console.error('Rewards load error:', err)
       } finally {
@@ -244,6 +249,147 @@ export default function Rewards() {
           <StatCard icon="🔥" label="Current Streak" value={`${streak?.current || 0}d`}         sub={`Best: ${streak?.longest || 0}d`} color="#f97316" delay={0.25} />
           <StatCard icon="✍️" label="Posts Made"   value={data?.totalPosts || 0}                sub="total posts"         color="#22c55e" delay={0.3} />
         </div>
+
+        {/* ── REFERRAL CARD ────────────────────────────────────────────────── */}
+        {referral && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="rounded-xl p-5"
+            style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.15)' }}>
+                  <Gift size={18} style={{ color: '#10b981' }} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-theme-primary">Referral Program</p>
+                  <p className="text-[10px] text-theme-tertiary">Invite friends · Earn XP</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold" style={{ color: '#10b981' }}>{referral.referralsMade} referral{referral.referralsMade !== 1 ? 's' : ''}</p>
+                <p className="text-[10px] text-theme-tertiary">+{referral.xpEarned} XP earned</p>
+              </div>
+            </div>
+
+            {/* How it works */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {[
+                { icon: '📤', title: 'Share Code', desc: 'Send to friends', clickable: true },
+                { icon: '💰', title: 'They Save', desc: `${referral.discountPercent}% off course` },
+                { icon: '⚡', title: 'You Earn', desc: `+${referral.rewardPerReferral} XP each` },
+              ].map(({ icon, title, desc, clickable }) => (
+                <div
+                  key={title}
+                  className="rounded-lg p-2.5 text-center transition"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-primary)',
+                    cursor: clickable ? 'pointer' : 'default',
+                  }}
+                  onClick={clickable ? async () => {
+                    const shareText = `🎓 Join Studdy Buddy - the best platform for Robotics & AI students!\n\nUse my referral code *${referral.referralCode}* to get ${referral.discountPercent}% OFF on your course purchase! 🎉\n\n👉 Sign up at: https://studdybuddy.a5x.in`
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: 'Join Studdy Buddy 🚀',
+                          text: shareText,
+                          url: 'https://studdybuddy.a5x.in',
+                        })
+                      } catch (e) {
+                        // user dismissed share sheet - no action needed
+                        if (e.name !== 'AbortError') {
+                          await navigator.clipboard.writeText(shareText)
+                          setCodeCopied(true)
+                          setTimeout(() => setCodeCopied(false), 2000)
+                        }
+                      }
+                    } else {
+                      // Fallback: copy to clipboard
+                      await navigator.clipboard.writeText(shareText)
+                      setCodeCopied(true)
+                      setTimeout(() => setCodeCopied(false), 2000)
+                    }
+                  } : undefined}
+                >
+                  <div className="text-xl mb-1">{icon}</div>
+                  <p className="text-[11px] font-bold text-theme-primary">{title}</p>
+                  <p className="text-[10px] text-theme-tertiary">{desc}</p>
+                  {clickable && (
+                    <p className="text-[9px] mt-1 font-semibold" style={{ color: '#10b981' }}>tap to share</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Code + copy + share buttons */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 px-4 py-2.5 rounded-xl font-mono font-bold text-sm tracking-widest text-center"
+                style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--text-primary)', letterSpacing: '0.18em' }}>
+                {referral.referralCode}
+              </div>
+              {/* Share button - opens native share sheet */}
+              <button
+                onClick={async () => {
+                  const shareText = `🎓 Join Studdy Buddy - the best platform for Robotics & AI students!\n\nUse my referral code *${referral.referralCode}* to get ${referral.discountPercent}% OFF on your course purchase! 🎉\n\n👉 Sign up at: https://studdybuddy.a5x.in`
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: 'Join Studdy Buddy 🚀',
+                        text: shareText,
+                        url: 'https://studdybuddy.a5x.in',
+                      })
+                    } catch (e) {
+                      if (e.name !== 'AbortError') {
+                        await navigator.clipboard.writeText(shareText)
+                        setCodeCopied(true)
+                        setTimeout(() => setCodeCopied(false), 2000)
+                      }
+                    }
+                  } else {
+                    await navigator.clipboard.writeText(shareText)
+                    setCodeCopied(true)
+                    setTimeout(() => setCodeCopied(false), 2000)
+                  }
+                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                style={{
+                  background: 'rgba(99,102,241,0.15)',
+                  border: '1px solid rgba(99,102,241,0.4)',
+                  color: '#818cf8',
+                  minWidth: 72,
+                }}
+              >
+                📤 Share
+              </button>
+              {/* Copy button */}
+              <button
+                onClick={async () => {
+                  await navigator.clipboard.writeText(referral.referralCode)
+                  setCodeCopied(true)
+                  setTimeout(() => setCodeCopied(false), 2000)
+                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold transition"
+                style={{
+                  background: codeCopied ? 'rgba(22,163,74,0.2)' : 'rgba(16,185,129,0.15)',
+                  border: `1px solid ${codeCopied ? 'rgba(22,163,74,0.5)' : 'rgba(16,185,129,0.4)'}`,
+                  color: codeCopied ? '#16a34a' : '#10b981',
+                  minWidth: 72,
+                }}
+              >
+                {codeCopied ? '✓ Copied!' : 'Copy'}
+              </button>
+            </div>
+
+            <p className="text-[10px] text-theme-tertiary text-center mt-2">
+              XP is credited automatically when referred user's payment is approved
+            </p>
+          </motion.div>
+        )}
 
         {/* ── TABS ───────────────────────────────────────────────────────── */}
         <div className="flex gap-2">

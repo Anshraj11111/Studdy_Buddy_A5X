@@ -401,6 +401,12 @@ export const paymentAPI = {
   getMyPayments: () => api.get('/payments/my-payments'),
 };
 
+/* ---------------- REFERRAL ---------------- */
+export const referralAPI = {
+  validate: (code) => api.get(`/referral/validate/${encodeURIComponent(code)}`),
+  getMyCode: () => api.get('/referral/my-code'),
+};
+
 /* ---------------- ADMIN PAYMENTS ---------------- */
 export const adminPaymentAPI = {
   getAllPayments: (params = {}) => api.get('/admin/payments', { params, headers: adminHeaders() }),

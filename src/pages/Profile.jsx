@@ -5,6 +5,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import Badge from '../components/Badge'
+import { referralAPI } from '../services/api'
 
 const XP_LEVELS = [
   { name: 'Beginner', min: 0, max: 99, color: 'bg-slate-500' },
@@ -26,6 +27,22 @@ const getProgress = (xp) => {
 export default function Profile() {
   const { user, updateProfile, loading } = useAuthStore()
   const [isEditing, setIsEditing] = useState(false)
+  const [referralStats, setReferralStats] = useState(null)
+  const [codeCopied, setCodeCopied] = useState(false)
+  const [referralLoading, setReferralLoading] = useState(false)
+
+  // Fetch referral info on first render
+  useState(() => {
+    const fetchReferral = async () => {
+      setReferralLoading(true)
+      try {
+        const res = await referralAPI.getMyCode()
+        if (res.data?.success) setReferralStats(res.data.data)
+      } catch { /* ignore */ }
+      finally { setReferralLoading(false) }
+    }
+    fetchReferral()
+  }, [])
   const [formData, setFormData] = useState({
     name: user?.name || '',
     skills: user?.skills?.join(', ') || '',
@@ -137,9 +154,66 @@ export default function Profile() {
             })()}
 
             {!isEditing && (
-              <Button variant="primary" onClick={() => setIsEditing(true)}>
-                Edit Profile
-              </Button>
+              <>
+                {/* Referral Code Card */}
+                {(referralStats || user?.referralCode) && (
+                  <div className="mb-4 rounded-xl p-4" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.12) 100%)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-base">🎁</span>
+                      <p className="text-sm font-bold text-theme-primary">Your Referral Code</p>
+                    </div>
+                    <p className="text-[11px] text-theme-tertiary mb-3 leading-relaxed">
+                      Share this code with friends. They get <span className="font-bold text-indigo-400">10% off</span> their course purchase, and you earn <span className="font-bold text-indigo-400">+50 XP</span> when their payment is approved.
+                    </p>
+                    {/* Code display + copy */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex-1 px-3 py-2 rounded-lg font-mono font-bold text-sm tracking-widest text-center"
+                        style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: 'var(--text-primary)', letterSpacing: '0.15em' }}>
+                        {referralStats?.referralCode || user?.referralCode || '---'}
+                      </div>
+                      <button
+                        onClick={async () => {
+                          const code = referralStats?.referralCode || user?.referralCode
+                          if (code) {
+                            await navigator.clipboard.writeText(code)
+                            setCodeCopied(true)
+                            setTimeout(() => setCodeCopied(false), 2000)
+                          }
+                        }}
+                        className="px-3 py-2 rounded-lg text-xs font-bold transition"
+                        style={{
+                          background: codeCopied ? 'rgba(22,163,74,0.2)' : 'rgba(99,102,241,0.2)',
+                          border: `1px solid ${codeCopied ? 'rgba(22,163,74,0.4)' : 'rgba(99,102,241,0.4)'}`,
+                          color: codeCopied ? '#16a34a' : '#818cf8',
+                        }}
+                      >
+                        {codeCopied ? '✓ Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                    {/* Stats row */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-lg px-3 py-2 text-center"
+                        style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                        <p className="text-lg font-bold" style={{ color: '#818cf8' }}>
+                          {referralStats?.referralsMade ?? user?.referralsMade ?? 0}
+                        </p>
+                        <p className="text-[10px] text-theme-tertiary">Referrals Made</p>
+                      </div>
+                      <div className="rounded-lg px-3 py-2 text-center"
+                        style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                        <p className="text-lg font-bold" style={{ color: '#fbbf24' }}>
+                          +{referralStats?.xpEarned ?? ((user?.referralsMade || 0) * 50)}
+                        </p>
+                        <p className="text-[10px] text-theme-tertiary">XP Earned</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Button variant="primary" onClick={() => setIsEditing(true)}>
+                  Edit Profile
+                </Button>
+              </>
             )}
           </Card>
 

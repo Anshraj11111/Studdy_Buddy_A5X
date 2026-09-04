@@ -1,347 +1,416 @@
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { X, CreditCard, Lock, IndianRupee, AlertCircle, CheckCircle, QrCode } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  X, Lock, IndianRupee, AlertCircle, CheckCircle,
+  QrCode, Tag, Loader2, Gift, Sparkles, ArrowRight
+} from 'lucide-react'
 import { useThemeStore } from '../store/themeStore'
-import { paymentAPI } from '../services/api'
+import { paymentAPI, referralAPI } from '../services/api'
 
-export default function PaymentModal({ onClose, onSuccess, amount: initialAmount, courseName = 'Course Access', courseId = 'all-resources' }) {
+export default function PaymentModal({
+  onClose,
+  onSuccess,
+  amount: initialAmount,
+  courseName = 'Course Access',
+  courseId = 'all-resources',
+}) {
   const { theme } = useThemeStore()
   const isDark = theme === 'dark'
-  const [processing, setProcessing] = useState(false)
-  const [paymentStatus, setPaymentStatus] = useState(null) // null | 'success' | 'failed'
-  const [showQR, setShowQR] = useState(false)
-  const [upiId, setUpiId] = useState('8269858259@upi') // Default
-  const [amount, setAmount] = useState(initialAmount || 500) // Dynamic amount
 
-  console.log('💳 PaymentModal opened with initialAmount:', initialAmount, 'amount state:', amount)
+  const [processing, setProcessing]       = useState(false)
+  const [paymentStatus, setPaymentStatus] = useState(null)   // null | 'success'
+  const [showQR, setShowQR]               = useState(false)
+  const [upiId, setUpiId]                 = useState('8269858259@upi')
+  const [baseAmount, setBaseAmount]       = useState(initialAmount || 500)
 
-  // Fetch UPI ID and payment price from backend on mount
+  // Referral state
+  const [referralInput, setReferralInput]   = useState('')
+  const [referralStatus, setReferralStatus] = useState(null) // null | 'checking' | 'valid' | 'invalid'
+  const [referralData, setReferralData]     = useState(null)
+  const [referralError, setReferralError]   = useState('')
+  const debounceRef = useRef(null)
+
+  const discountAmount = referralData?.discountAmount || 0
+  const finalAmount    = referralData?.discountedPrice || baseAmount
+  const hasDiscount    = discountAmount > 0
+
+  // ── Fetch UPI settings on mount ───────────────────────────────────────────
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await paymentAPI.getUpiSettings()
-        if (res.data?.success && res.data?.data) {
-          if (res.data.data.upiId) {
-            setUpiId(res.data.data.upiId)
-          }
-          // Always use backend price if no initialAmount was provided
-          // If initialAmount is provided, respect it (for custom pricing)
-          if (res.data.data.paymentPrice && !initialAmount) {
-            setAmount(res.data.data.paymentPrice)
-          }
+    paymentAPI.getUpiSettings()
+      .then(res => {
+        if (res.data?.success) {
+          if (res.data.data.upiId) setUpiId(res.data.data.upiId)
+          if (res.data.data.paymentPrice && !initialAmount)
+            setBaseAmount(res.data.data.paymentPrice)
         }
-      } catch (error) {
-        console.error('Failed to fetch settings:', error)
-        // Use defaults if fetch fails
-      }
-    }
-    fetchSettings()
-  }, [initialAmount])
-  
-  // Update amount when initialAmount prop changes
-  useEffect(() => {
-    if (initialAmount) {
-      console.log('💳 PaymentModal updating amount to:', initialAmount)
-      setAmount(initialAmount)
-    }
+      })
+      .catch(() => {})
   }, [initialAmount])
 
-  const UPI_NAME = 'A5X Payment'
-  
-  // Generate UPI payment URL with dynamic UPI ID
-  const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(UPI_NAME)}&am=${amount}&cu=INR&tn=${encodeURIComponent(courseName)}`
-  
-  // Generate QR code URL using QR Server API (more reliable)
+  useEffect(() => {
+    if (initialAmount) setBaseAmount(initialAmount)
+  }, [initialAmount])
+
+  // ── Debounced referral validation ─────────────────────────────────────────
+  useEffect(() => {
+    const code = referralInput.trim().toUpperCase()
+    setReferralError('')
+
+    if (!code || code.length < 4) {
+      setReferralStatus(null)
+      setReferralData(null)
+      return
+    }
+
+    setReferralStatus('checking')
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await referralAPI.validate(code)
+        if (res.data?.success && res.data?.data?.valid) {
+          setReferralStatus('valid')
+          setReferralData(res.data.data)
+          setReferralError('')
+        } else {
+          setReferralStatus('invalid')
+          setReferralData(null)
+        }
+      } catch (err) {
+        const msg = err.response?.data?.error?.message || ''
+        setReferralStatus('invalid')
+        setReferralData(null)
+        setReferralError(msg)
+      }
+    }, 600)
+
+    return () => clearTimeout(debounceRef.current)
+  }, [referralInput])
+
+  // ── UPI URLs ──────────────────────────────────────────────────────────────
+  const upiUrl   = `upi://pay?pa=${upiId}&pn=${encodeURIComponent('A5X Payment')}&am=${finalAmount}&cu=INR&tn=${encodeURIComponent(courseName)}`
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`
 
-  // Submit payment for admin verification
+  // ── Submit ────────────────────────────────────────────────────────────────
   const handlePayment = async () => {
     setProcessing(true)
-    
     try {
       const res = await paymentAPI.submitPayment({
-        amount,
+        amount: finalAmount,
         courseName,
         courseId,
         upiId,
+        referralCode: referralStatus === 'valid' ? referralInput.trim().toUpperCase() : undefined,
       })
-
       if (res.data?.success) {
         setPaymentStatus('success')
         setProcessing(false)
-        
-        // Close modal after 3 seconds and show message
         setTimeout(() => {
           onClose()
-          if (onSuccess) {
-            onSuccess() // Call success callback if provided
-          } else {
-            alert('✅ Payment submitted successfully! Admin will verify and grant access shortly.')
-          }
+          if (onSuccess) onSuccess()
+          else alert('✅ Payment submitted! Admin will verify and grant access shortly.')
         }, 3000)
-      } else {
-        throw new Error('Payment submission failed')
-      }
-    } catch (error) {
-      console.error('Payment submission error:', error)
-      setPaymentStatus('failed')
+      } else throw new Error('failed')
+    } catch {
       setProcessing(false)
       alert('❌ Failed to submit payment. Please try again.')
     }
   }
 
-  const bgPrimary = isDark ? '#1a1a2e' : '#ffffff'
-  const bgSecondary = isDark ? '#0f0f1a' : '#f8fafc'
-  const textPrimary = isDark ? 'rgba(255,255,255,0.95)' : '#0f172a'
-  const textSecondary = isDark ? 'rgba(255,255,255,0.7)' : '#64748b'
-  const textTertiary = isDark ? 'rgba(255,255,255,0.5)' : '#94a3b8'
-  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'
+  // ── Theme tokens ──────────────────────────────────────────────────────────
+  const bg       = isDark ? '#13131f' : '#ffffff'
+  const bgCard   = isDark ? '#1a1a2e' : '#f8fafc'
+  const txtMain  = isDark ? 'rgba(255,255,255,0.95)' : '#0f172a'
+  const txtSub   = isDark ? 'rgba(255,255,255,0.6)'  : '#64748b'
+  const txtMuted = isDark ? 'rgba(255,255,255,0.4)'  : '#94a3b8'
+  const border   = isDark ? 'rgba(255,255,255,0.1)'  : '#e2e8f0'
 
   return (
-    <>
-      {/* Backdrop */}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.7)' }}
-        onClick={onClose}>
-        
-        {/* Modal */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="w-full max-w-md rounded-2xl overflow-hidden flex flex-col"
-          style={{ 
-            background: bgPrimary, 
-            border: `1px solid ${borderColor}`, 
-            boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
-            maxHeight: '85vh'
-          }}
-          onClick={e => e.stopPropagation()}>
+        initial={{ opacity: 0, scale: 0.94, y: 24 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: 24 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+        className="w-full max-w-md flex flex-col rounded-2xl overflow-hidden"
+        style={{ background: bg, border: `1px solid ${border}`, boxShadow: '0 32px 80px rgba(0,0,0,0.5)', maxHeight: '92vh' }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0" style={{ borderBottom: `1px solid ${border}` }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#fef3c7' }}>
+              <IndianRupee size={18} style={{ color: '#d97706' }} />
+            </div>
+            <div>
+              <p className="text-sm font-bold" style={{ color: txtMain }}>Premium Access</p>
+              <p className="text-[10px]" style={{ color: txtMuted }}>One-time · Lifetime access</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5">
+            <X size={16} style={{ color: txtSub }} />
+          </button>
+        </div>
 
-          {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3.5 flex-shrink-0" style={{ borderBottom: `1px solid ${borderColor}` }}>
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background: '#fef3c7' }}>
-                <IndianRupee size={18} style={{ color: '#d97706' }} />
+        {/* ── Scrollable body ──────────────────────────────────────────────── */}
+        <div className="overflow-y-auto flex-1 px-5 py-5 space-y-4">
+
+          {paymentStatus === 'success' ? (
+            /* ── Success ───────────────────────────────────────────────── */
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center py-6 space-y-4">
+              <div className="w-20 h-20 rounded-full mx-auto flex items-center justify-center" style={{ background: '#dcfce7' }}>
+                <CheckCircle size={40} style={{ color: '#16a34a' }} />
               </div>
               <div>
-                <h3 className="font-bold text-sm" style={{ color: textPrimary }}>Premium Access Required</h3>
-                <p className="text-[10px]" style={{ color: textTertiary }}>One-time payment for lifetime access</p>
+                <h4 className="text-xl font-bold mb-1" style={{ color: txtMain }}>Payment Submitted! 🎉</h4>
+                <p className="text-sm" style={{ color: '#16a34a' }}>Admin will verify within 24 hours</p>
+              </div>
+              <div className="rounded-xl p-4 text-left" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                <p className="text-xs leading-relaxed" style={{ color: txtSub }}>
+                  Once approved, you'll get <strong style={{ color: '#6366f1' }}>instant full access</strong> to all course content. Questions? Email{' '}
+                  <a href="mailto:anshrajbaghel30@gmail.com" className="underline font-bold" style={{ color: '#6366f1' }}>anshrajbaghel30@gmail.com</a>
+                </p>
+              </div>
+            </motion.div>
+
+          ) : showQR ? (
+            /* ── QR View ───────────────────────────────────────────────── */
+            <div className="space-y-4">
+              {hasDiscount && (
+                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                  style={{ background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.3)' }}>
+                  <Gift size={14} style={{ color: '#16a34a' }} />
+                  <p className="text-xs font-semibold" style={{ color: '#16a34a' }}>
+                    Referral by {referralData.referrerName} · ₹{discountAmount} off applied!
+                  </p>
+                </motion.div>
+              )}
+
+              <div className="text-center space-y-3">
+                <div className="p-4 bg-white rounded-2xl mx-auto w-fit border-2 border-gray-200 shadow-sm">
+                  <img src={qrCodeUrl} alt="UPI QR Code" className="w-52 h-52" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold" style={{ color: txtMain }}>Scan with any UPI App</p>
+                  <p className="text-xs mt-0.5" style={{ color: txtSub }}>Google Pay · PhonePe · Paytm · Any UPI</p>
+                </div>
+              </div>
+
+              {/* UPI ID */}
+              <div className="rounded-xl px-4 py-3" style={{ background: bgCard, border: `1px solid ${border}` }}>
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: txtMuted }}>UPI ID</p>
+                <p className="text-sm font-mono font-bold select-all" style={{ color: txtMain }}>{upiId}</p>
+              </div>
+
+              {/* Amount */}
+              <div className="rounded-xl px-4 py-3 text-center" style={{ background: bgCard, border: `1px solid ${border}` }}>
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: txtMuted }}>Amount to Pay</p>
+                {hasDiscount && (
+                  <p className="text-sm line-through" style={{ color: txtMuted }}>₹{baseAmount}</p>
+                )}
+                <p className="text-3xl font-bold" style={{ color: '#6366f1' }}>₹{finalAmount}</p>
+                {hasDiscount && (
+                  <p className="text-xs font-bold mt-1" style={{ color: '#16a34a' }}>You saved ₹{discountAmount} 🎉</p>
+                )}
               </div>
             </div>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition flex-shrink-0">
-              <X size={16} style={{ color: textSecondary }} />
-            </button>
-          </div>
 
-          {/* Content - Scrollable */}
-          <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
-            {paymentStatus === 'success' ? (
-              // Success State
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="text-center py-4 space-y-4">
+          ) : (
+            /* ── Main Payment View ─────────────────────────────────────── */
+            <div className="space-y-4">
 
-                {/* Icon */}
-                <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center" style={{ background: '#dcfce7' }}>
-                  <CheckCircle size={32} style={{ color: '#16a34a' }} />
-                </div>
+              {/* ── Price Card ── */}
+              <div className="rounded-xl p-4" style={{ background: bgCard, border: `1px solid ${border}` }}>
+                <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: txtMuted }}>Course</p>
+                <p className="text-sm font-bold mb-3 leading-snug" style={{ color: txtMain }}>{courseName}</p>
 
-                {/* Title */}
-                <div>
-                  <h4 className="text-lg font-bold mb-1" style={{ color: textPrimary }}>Payment Submitted! 🎉</h4>
-                  <p className="text-sm font-medium" style={{ color: '#16a34a' }}>Thank you for your payment</p>
-                </div>
+                {/* Animated price */}
+                <div className="flex items-end gap-3">
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={finalAmount}
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                      className="text-3xl font-bold"
+                      style={{ color: hasDiscount ? '#16a34a' : '#6366f1' }}
+                    >
+                      ₹{finalAmount}
+                    </motion.span>
+                  </AnimatePresence>
 
-                {/* Verification Info */}
-                <div className="rounded-xl p-4 text-left space-y-3" style={{ background: isDark ? 'rgba(99,102,241,0.1)' : '#f0f4ff', border: '1px solid rgba(99,102,241,0.2)' }}>
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg flex-shrink-0">🔍</span>
-                    <div>
-                      <p className="text-sm font-bold mb-0.5" style={{ color: textPrimary }}>Under Verification</p>
-                      <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
-                        Your payment is being verified by our admin team. This usually takes <span className="font-bold" style={{ color: '#6366f1' }}>within 24 hours</span>.
-                      </p>
+                  {hasDiscount ? (
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm line-through" style={{ color: txtMuted }}>₹{baseAmount}</span>
+                      <motion.span
+                        initial={{ scale: 0 }} animate={{ scale: 1 }}
+                        className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: '#dcfce7', color: '#16a34a' }}
+                      >
+                        -{discountAmount} OFF 🎉
+                      </motion.span>
                     </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg flex-shrink-0">✅</span>
-                    <div>
-                      <p className="text-sm font-bold mb-0.5" style={{ color: textPrimary }}>After Approval</p>
-                      <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>
-                        Once verified, you'll get <span className="font-bold" style={{ color: '#6366f1' }}>instant access</span> to the full course content.
-                      </p>
+                  ) : (
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm line-through" style={{ color: txtMuted }}>₹999</span>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: '#dcfce7', color: '#16a34a' }}>50% OFF</span>
                     </div>
+                  )}
+                </div>
+
+                {/* Referral success banner */}
+                <AnimatePresence>
+                  {hasDiscount && referralData && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg overflow-hidden"
+                      style={{ background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.25)' }}
+                    >
+                      <Sparkles size={13} style={{ color: '#16a34a', flexShrink: 0 }} />
+                      <p className="text-[11px] font-semibold" style={{ color: '#16a34a' }}>
+                        Referred by {referralData.referrerName} — ₹{discountAmount} discount applied!
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* ── Referral Code Input ── */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: txtMuted }}>
+                  <Tag size={11} />
+                  Referral Code <span style={{ color: txtMuted, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional — get extra discount)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={referralInput}
+                    onChange={e => setReferralInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                    placeholder="e.g. ANSH4X2B"
+                    maxLength={12}
+                    className="w-full px-4 py-3 rounded-xl text-sm font-mono font-bold outline-none transition-all"
+                    style={{
+                      background: bgCard,
+                      border: `2px solid ${
+                        referralStatus === 'valid'   ? '#16a34a' :
+                        referralStatus === 'invalid' ? '#ef4444' :
+                        referralStatus === 'checking' ? '#6366f1' :
+                        border
+                      }`,
+                      color: txtMain,
+                      letterSpacing: '0.1em',
+                    }}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {referralStatus === 'checking' && <Loader2 size={16} className="animate-spin" style={{ color: '#6366f1' }} />}
+                    {referralStatus === 'valid'    && <CheckCircle size={16} style={{ color: '#16a34a' }} />}
+                    {referralStatus === 'invalid'  && <X size={16} style={{ color: '#ef4444' }} />}
                   </div>
                 </div>
 
-                {/* Support */}
-                <div className="rounded-xl p-3" style={{ background: isDark ? 'rgba(251,191,36,0.1)' : '#fffbeb', border: '1px solid rgba(251,191,36,0.3)' }}>
-                  <p className="text-xs" style={{ color: isDark ? '#fbbf24' : '#92400e' }}>
-                    💡 <span className="font-bold">Not received access after 24 hours?</span>
-                    <br />
-                    Email us at{' '}
-                    <a
-                      href="mailto:anshrajbaghel30@gmail.com"
-                      className="font-bold underline"
-                      style={{ color: '#6366f1' }}>
-                      anshrajbaghel30@gmail.com
-                    </a>
-                  </p>
-                </div>
-              </motion.div>
-            ) : showQR ? (
-              // QR Code View
+                <AnimatePresence mode="wait">
+                  {referralStatus === 'valid' && referralData && (
+                    <motion.div key="ok"
+                      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="mt-2 flex items-center gap-2"
+                    >
+                      <CheckCircle size={13} style={{ color: '#16a34a' }} />
+                      <p className="text-[11px] font-semibold" style={{ color: '#16a34a' }}>
+                        Valid! {referralData.discountPercent}% off → Pay ₹{referralData.discountedPrice} (save ₹{referralData.discountAmount})
+                      </p>
+                    </motion.div>
+                  )}
+                  {referralStatus === 'invalid' && referralInput.length >= 4 && (
+                    <motion.p key="err"
+                      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="mt-2 text-[11px]" style={{ color: '#ef4444' }}
+                    >
+                      {referralError || 'Invalid referral code. Please check and try again.'}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Features */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: txtMuted }}>Included</p>
+                {[
+                  'Lifetime access to all course videos',
+                  'Download study materials & resources',
+                  'Certificate of completion',
+                  'Community support & doubt solving',
+                ].map((f, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <CheckCircle size={13} style={{ color: '#16a34a', flexShrink: 0 }} />
+                    <p className="text-xs" style={{ color: txtSub }}>{f}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Note */}
+              <div className="flex items-start gap-2 p-3 rounded-xl" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)' }}>
+                <AlertCircle size={13} style={{ color: '#6366f1', flexShrink: 0, marginTop: 1 }} />
+                <p className="text-[10px] leading-relaxed" style={{ color: isDark ? '#c7d2fe' : '#4f46e5' }}>
+                  Students with a school code get <strong>free access</strong>. Contact your institution for the code.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-1.5">
+                <Lock size={11} style={{ color: txtMuted }} />
+                <p className="text-[10px]" style={{ color: txtMuted }}>Secure UPI payment · Admin verified</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer ──────────────────────────────────────────────────────── */}
+        {paymentStatus !== 'success' && (
+          <div className="px-5 py-4 space-y-2 flex-shrink-0" style={{ borderTop: `1px solid ${border}` }}>
+            {showQR ? (
               <>
-                <div className="text-center space-y-3">
-                  <div className="p-4 bg-white rounded-xl mx-auto w-fit border-2 border-gray-200">
-                    <img 
-                      src={qrCodeUrl} 
-                      alt="UPI QR Code" 
-                      className="w-48 h-48"
-                      onError={(e) => {
-                        // Fallback: show UPI ID if QR fails to load
-                        e.target.style.display = 'none'
-                        console.error('QR code failed to load')
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold" style={{ color: textPrimary }}>Scan QR with any UPI App</p>
-                    <p className="text-xs" style={{ color: textSecondary }}>
-                      Google Pay, PhonePe, Paytm, or any UPI app
-                    </p>
-                  </div>
-                  <div className="p-3 rounded-lg" style={{ background: bgSecondary, border: `1px solid ${borderColor}` }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: textTertiary }}>UPI ID</p>
-                    <p className="text-xs font-mono font-bold select-all" style={{ color: textPrimary }}>{upiId}</p>
-                    <p className="text-[9px] mt-1" style={{ color: textTertiary }}>Tap to copy • You can also pay directly using this UPI ID</p>
-                  </div>
-                  <div className="p-3 rounded-lg" style={{ background: bgSecondary, border: `1px solid ${borderColor}` }}>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: textTertiary }}>AMOUNT TO PAY</p>
-                    <p className="text-xl font-bold" style={{ color: '#6366f1' }}>₹{amount}</p>
-                  </div>
-                  <div className="p-3 rounded-lg flex items-start gap-2" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                    <AlertCircle size={13} className="flex-shrink-0 mt-0.5" style={{ color: '#6366f1' }} />
-                    <p className="text-[10px] leading-relaxed text-left" style={{ color: isDark ? '#c7d2fe' : '#6366f1' }}>
-                      After payment, click "I have paid" below to confirm and get instant access.
-                    </p>
-                  </div>
-                </div>
+                <motion.button
+                  whileHover={{ scale: processing ? 1 : 1.02 }} whileTap={{ scale: processing ? 1 : 0.97 }}
+                  onClick={handlePayment} disabled={processing}
+                  className="w-full py-3.5 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)', boxShadow: '0 4px 20px rgba(22,163,74,0.35)' }}
+                >
+                  {processing
+                    ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Verifying...</>
+                    : <><CheckCircle size={17} />I have paid ₹{finalAmount}</>
+                  }
+                </motion.button>
+                <button onClick={() => setShowQR(false)} className="w-full text-center text-xs py-2 rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5" style={{ color: txtSub }}>
+                  ← Back
+                </button>
               </>
             ) : (
-              // Payment Options View
               <>
-                {/* Course Info */}
-                <div className="p-3.5 rounded-xl" style={{ background: bgSecondary, border: `1px solid ${borderColor}` }}>
-                  <p className="text-[10px] font-semibold mb-2 uppercase tracking-wider" style={{ color: textTertiary }}>COURSE</p>
-                  <p className="font-bold text-xs mb-2.5 leading-snug" style={{ color: textPrimary }}>{courseName}</p>
-                  
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold" style={{ color: '#6366f1' }}>₹{amount}</span>
-                    <span className="text-xs line-through" style={{ color: textTertiary }}>₹999</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: '#dcfce7', color: '#16a34a' }}>
-                      50% OFF
-                    </span>
-                  </div>
-                </div>
-
-                {/* Features */}
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: textTertiary }}>WHAT'S INCLUDED</p>
-                  {[
-                    'Lifetime access to all course videos',
-                    'Download study materials',
-                    'Certificate of completion',
-                    'Community support & doubt solving',
-                  ].map((feature, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <CheckCircle size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#16a34a' }} />
-                      <p className="text-xs leading-relaxed" style={{ color: textSecondary }}>{feature}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Info Banner */}
-                <div className="p-3 rounded-lg flex items-start gap-2" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                  <AlertCircle size={13} className="flex-shrink-0 mt-0.5" style={{ color: '#6366f1' }} />
-                  <p className="text-[10px] leading-relaxed" style={{ color: isDark ? '#c7d2fe' : '#6366f1' }}>
-                    <strong>Note:</strong> Students with school code get free access. Contact your institution for the code.
-                  </p>
-                </div>
-
-                {/* Security Badge */}
-                <div className="flex items-center justify-center gap-1.5 py-2">
-                  <Lock size={12} style={{ color: textTertiary }} />
-                  <p className="text-[10px] font-medium" style={{ color: textTertiary }}>Secure UPI payment</p>
-                </div>
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => setShowQR(true)}
+                  className="w-full py-3.5 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 4px 20px rgba(99,102,241,0.35)' }}
+                >
+                  <QrCode size={17} />
+                  Pay ₹{finalAmount} with UPI
+                  {hasDiscount && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: 'rgba(255,255,255,0.2)' }}>-₹{discountAmount}</span>}
+                </motion.button>
+                <button onClick={onClose} className="w-full text-center text-xs py-2 rounded-lg transition hover:bg-black/5 dark:hover:bg-white/5" style={{ color: txtSub }}>
+                  Maybe Later
+                </button>
               </>
             )}
           </div>
-
-          {/* Footer - Fixed at bottom */}
-          {paymentStatus !== 'success' && (
-            <div className="px-5 py-3.5 space-y-2.5 flex-shrink-0" style={{ borderTop: `1px solid ${borderColor}` }}>
-              {showQR ? (
-                // QR Code Actions
-                <>
-                  <motion.button
-                    whileHover={{ scale: processing ? 1 : 1.02 }}
-                    whileTap={{ scale: processing ? 1 : 0.98 }}
-                    onClick={handlePayment}
-                    disabled={processing}
-                    className="w-full py-3 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 disabled:opacity-50 transition"
-                    style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', boxShadow: '0 4px 20px rgba(22,163,74,0.4)' }}>
-                    {processing ? (
-                      <>
-                        <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Verifying Payment...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle size={16} />
-                        I have paid ₹{amount}
-                      </>
-                    )}
-                  </motion.button>
-                  <button
-                    onClick={() => setShowQR(false)}
-                    className="w-full text-center text-xs py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
-                    style={{ color: textSecondary }}>
-                    ← Back to Payment Options
-                  </button>
-                </>
-              ) : (
-                // Payment Options
-                <>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowQR(true)}
-                    className="w-full py-3 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 transition"
-                    style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
-                    <QrCode size={16} />
-                    Pay ₹{amount} with UPI QR Code
-                  </motion.button>
-
-                  <button
-                    onClick={onClose}
-                    className="w-full text-center text-xs py-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition"
-                    style={{ color: textSecondary }}>
-                    Maybe Later
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </motion.div>
+        )}
       </motion.div>
-    </>
+    </motion.div>
   )
 }
