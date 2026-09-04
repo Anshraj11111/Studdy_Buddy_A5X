@@ -37,6 +37,14 @@ if ('serviceWorker' in navigator) {
       .catch((error) => {
         console.error('❌ Service Worker registration failed:', error)
       })
+
+    // Handle PUSH_NAVIGATE messages from service worker
+    // When user taps a push notification, SW sends this to navigate React Router
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data?.type === 'PUSH_NAVIGATE' && event.data?.url) {
+        window.location.href = event.data.url
+      }
+    })
   })
 }
 

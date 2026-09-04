@@ -11,12 +11,23 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)))
 }
 
+// Guard: prevent concurrent setup calls
+let _setupInProgress = false
+let _setupDone = false
+
 /**
  * Full flow: get VAPID key → request permission → subscribe → save to backend
- * Call this after user logs in.
+ * Call this after user logs in. Safe to call multiple times — idempotent.
  * @returns {boolean} true if successfully subscribed
  */
 export async function setupPushNotifications() {
+  // Already set up this session — skip
+  if (_setupDone) return true
+  // Another call already in progress — skip
+  if (_setupInProgress) return false
+
+  _setupInProgress = true
+
   try {
     // 1. Check browser support
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -33,6 +44,7 @@ export async function setupPushNotifications() {
       // Already subscribed — just make sure backend has it saved (idempotent)
       await saveSubscriptionToBackend(existing)
       console.log('[Push] Already subscribed, subscription refreshed on backend')
+      _setupDone = true
       return true
     }
 
@@ -50,19 +62,21 @@ export async function setupPushNotifications() {
 
     // 6. Subscribe via PushManager
     const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true, // required — must show notification for every push
+      userVisibleOnly: true,
       applicationServerKey,
     })
 
     // 7. Save subscription to backend
     await saveSubscriptionToBackend(subscription)
 
+    _setupDone = true
     console.log('[Push] Successfully subscribed to push notifications')
     return true
   } catch (err) {
-    // Don't crash the app — push is a nice-to-have
     console.warn('[Push] Setup failed:', err.message)
     return false
+  } finally {
+    _setupInProgress = false
   }
 }
 
@@ -93,15 +107,17 @@ export async function teardownPushNotifications() {
     const subscription = await registration.pushManager.getSubscription()
 
     if (subscription) {
-      // Tell backend to remove this subscription first
       await api.delete('/push/unsubscribe', {
         data: { endpoint: subscription.endpoint },
       })
-      // Then unsubscribe in browser
       await subscription.unsubscribe()
       console.log('[Push] Unsubscribed from push notifications')
     }
   } catch (err) {
     console.warn('[Push] Teardown failed:', err.message)
+  } finally {
+    // Reset flags so next login can re-subscribe
+    _setupDone = false
+    _setupInProgress = false
   }
 }

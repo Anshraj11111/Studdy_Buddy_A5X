@@ -144,13 +144,24 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // Use unique tag per message so notifications don't collapse each other
+  // For messages: unique per timestamp, for others: per type
+  const isMessage = payload.type === 'message'
+  const notifTag = isMessage
+    ? `message-${payload.timestamp || Date.now()}`
+    : payload.type || 'general'
+
   const options = {
     body: payload.body,
     icon: payload.icon || '/icons/icon-192x192.png',
     badge: '/icons/icon-192x192.png',
-    vibrate: [200, 100, 200],
-    tag: payload.type || 'general',        // collapses duplicate notifications of same type
-    renotify: true,                         // vibrate even if same tag
+    // Strong vibration pattern — ensures phone vibrates and wakes screen
+    vibrate: [300, 100, 300, 100, 300],
+    tag: notifTag,
+    renotify: true,        // always vibrate + sound even if same tag
+    silent: false,         // explicitly enable sound (Android default channel)
+    // Keep message notifications on screen until user interacts
+    requireInteraction: isMessage,
     data: {
       url: payload.url || '/',
       type: payload.type,
@@ -177,20 +188,22 @@ self.addEventListener('notificationclick', (event) => {
 
   // Open action or direct click — navigate to the relevant URL
   const targetUrl = event.notification.data?.url || '/'
+  const fullUrl = self.location.origin + targetUrl
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       // If app is already open in a tab, focus it and navigate
       for (const client of windowClients) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
+        if ('focus' in client) {
           client.focus()
-          client.navigate(targetUrl)
+          // Use postMessage to navigate — more reliable than client.navigate()
+          client.postMessage({ type: 'PUSH_NAVIGATE', url: targetUrl })
           return
         }
       }
-      // App not open — open a new window
+      // App not open — open a new window to the specific URL
       if (clients.openWindow) {
-        return clients.openWindow(targetUrl)
+        return clients.openWindow(fullUrl)
       }
     })
   )
