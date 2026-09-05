@@ -1,16 +1,10 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Settings, Save, Cpu, Zap, Radio, Leaf, Copy, Check, RefreshCw } from 'lucide-react'
-import axios from 'axios'
+import api from '../services/api'
 
-const API_URL = (() => {
-  const base = import.meta.env.VITE_API_URL || "https://studdy-buddy-backend-a5x.onrender.com";
-  if (base.endsWith('/api')) return base;
-  if (base.endsWith('/')) return base + 'api';
-  return base + '/api';
-})();
 
-// Channel configuration
+
 const CHANNELS = [
   {
     id: 'robotics',
@@ -50,18 +44,11 @@ const CHANNELS = [
   },
 ]
 
-// Admin API functions
+// Admin API — uses shared api instance which auto-attaches x-admin-secret from sessionStorage
 const adminAPI = {
-  getCodes: () => axios.get(`${API_URL}/broadcast/admin/codes`, {
-    headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' }
-  }),
-  updateCode: (channel, code) => axios.put(`${API_URL}/broadcast/admin/codes`, 
-    { channel, code }, 
-    { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }
-  ),
-  getAllEnrollments: () => axios.get(`${API_URL}/broadcast/admin/enrollments`, {
-    headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' }
-  })
+  getCodes: () => api.get('/broadcast/admin/codes'),
+  updateCode: (channel, code) => api.put('/broadcast/admin/codes', { channel, code }),
+  getAllEnrollments: () => api.get('/broadcast/admin/enrollments'),
 }
 
 export default function BroadcastAdmin() {

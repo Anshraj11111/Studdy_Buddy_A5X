@@ -63,12 +63,19 @@ const api = axios.create({
   timeout: isLocalDev ? 15000 : 60000,
 });
 
-// Attach JWT token
+// Attach JWT token + admin secret (if present in session)
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  // Admin secret — stored in sessionStorage at runtime (never in bundle).
+  // Only present after the admin has typed the correct password on the login screen.
+  const adminSecret = sessionStorage.getItem("admin_secret");
+  if (adminSecret) {
+    config.headers["x-admin-secret"] = adminSecret;
   }
 
   // Check cache for GET requests - serve stale data instantly while fetching fresh
@@ -325,36 +332,36 @@ export const roomAPI = {
 export default api;
 
 /* ---------------- ADMIN ---------------- */
-const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'H5';
-const adminHeaders = () => ({ 'x-admin-secret': ADMIN_SECRET });
-
+// NOTE: No client-side secret. The JWT token (attached automatically by the
+// request interceptor above) is forwarded to the backend, which validates it
+// server-side against ADMIN_SECRET stored only in the backend environment.
 export const adminAPI = {
-  getStats: () => api.get('/admin/stats', { headers: adminHeaders() }),
-  getUsers: (params = {}) => api.get('/admin/users', { params, headers: adminHeaders() }),
-  toggleUser: (id) => api.put(`/admin/users/${id}/toggle`, {}, { headers: adminHeaders() }),
-  deleteUser: (id) => api.delete(`/admin/users/${id}`, { headers: adminHeaders() }),
+  getStats: () => api.get('/admin/stats'),
+  getUsers: (params = {}) => api.get('/admin/users', { params }),
+  toggleUser: (id) => api.put(`/admin/users/${id}/toggle`),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
   
   // Course Management
-  getAllCourses: (params = {}) => api.get('/admin/courses', { params, headers: adminHeaders() }),
-  createCourse: (data) => api.post('/admin/courses', data, { headers: adminHeaders() }),
-  updateCourse: (id, data) => api.put(`/admin/courses/${id}`, data, { headers: adminHeaders() }),
-  deleteCourse: (id) => api.delete(`/admin/courses/${id}`, { headers: adminHeaders() }),
-  getCourseModules: (courseId) => api.get(`/admin/courses/${courseId}/modules`, { headers: adminHeaders() }),
+  getAllCourses: (params = {}) => api.get('/admin/courses', { params }),
+  createCourse: (data) => api.post('/admin/courses', data),
+  updateCourse: (id, data) => api.put(`/admin/courses/${id}`, data),
+  deleteCourse: (id) => api.delete(`/admin/courses/${id}`),
+  getCourseModules: (courseId) => api.get(`/admin/courses/${courseId}/modules`),
   
   // Module Management
-  createModule: (data) => api.post(`/admin/modules`, data, { headers: adminHeaders() }),
-  updateModule: (id, data) => api.put(`/admin/modules/${id}`, data, { headers: adminHeaders() }),
-  deleteModule: (id) => api.delete(`/admin/modules/${id}`, { headers: adminHeaders() }),
+  createModule: (data) => api.post(`/admin/modules`, data),
+  updateModule: (id, data) => api.put(`/admin/modules/${id}`, data),
+  deleteModule: (id) => api.delete(`/admin/modules/${id}`),
   
   // Lecture Management
-  createLecture: (data) => api.post(`/admin/lectures`, data, { headers: adminHeaders() }),
-  getLecture: (id) => api.get(`/admin/lectures/${id}`, { headers: adminHeaders() }),
-  updateLecture: (id, data) => api.put(`/admin/lectures/${id}`, data, { headers: adminHeaders() }),
-  deleteLecture: (id) => api.delete(`/admin/lectures/${id}`, { headers: adminHeaders() }),
+  createLecture: (data) => api.post(`/admin/lectures`, data),
+  getLecture: (id) => api.get(`/admin/lectures/${id}`),
+  updateLecture: (id, data) => api.put(`/admin/lectures/${id}`, data),
+  deleteLecture: (id) => api.delete(`/admin/lectures/${id}`),
 
   // Post Moderation
-  getAllPosts: (params = {}) => api.get('/admin/posts', { params, headers: adminHeaders() }),
-  deletePost: (id) => api.delete(`/admin/posts/${id}`, { headers: adminHeaders() }),
+  getAllPosts: (params = {}) => api.get('/admin/posts', { params }),
+  deletePost: (id) => api.delete(`/admin/posts/${id}`),
 };
 
 /* ---------------- BROADCAST CHANNELS ---------------- */
@@ -366,15 +373,15 @@ export const broadcastAPI = {
   getMessages:     () => api.get('/broadcast/messages'),
   deleteMessage:   (id) => api.delete(`/broadcast/messages/${id}`),
   getMembers:      (channel) => api.get(`/broadcast/members/${channel}`),
-  // Admin
-  getCodes:        () => api.get('/broadcast/admin/codes', { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
-  addCode:         (data) => api.post('/broadcast/admin/codes', data, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
-  updateCode:      (data) => api.put('/broadcast/admin/codes', data, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
-  deleteCode:      (id) => api.delete(`/broadcast/admin/codes/${id}`, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
-  getRequests:     () => api.get('/broadcast/admin/requests', { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
-  acceptRequest:   (id) => api.put(`/broadcast/admin/requests/${id}/accept`, {}, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
-  rejectRequest:   (id) => api.put(`/broadcast/admin/requests/${id}/reject`, {}, { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
-  getAllEnrollments: () => api.get('/broadcast/admin/enrollments', { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }),
+  // Admin — secret validated server-side via JWT + ADMIN_SECRET env var
+  getCodes:        () => api.get('/broadcast/admin/codes'),
+  addCode:         (data) => api.post('/broadcast/admin/codes', data),
+  updateCode:      (data) => api.put('/broadcast/admin/codes', data),
+  deleteCode:      (id) => api.delete(`/broadcast/admin/codes/${id}`),
+  getRequests:     () => api.get('/broadcast/admin/requests'),
+  acceptRequest:   (id) => api.put(`/broadcast/admin/requests/${id}/accept`),
+  rejectRequest:   (id) => api.put(`/broadcast/admin/requests/${id}/reject`),
+  getAllEnrollments: () => api.get('/broadcast/admin/enrollments'),
 };
 
 /* ---------------- GENERAL GROUP ---------------- */
@@ -414,11 +421,11 @@ export const referralAPI = {
 
 /* ---------------- ADMIN PAYMENTS ---------------- */
 export const adminPaymentAPI = {
-  getAllPayments: (params = {}) => api.get('/admin/payments', { params, headers: adminHeaders() }),
-  approvePayment: (id, data = {}) => api.put(`/admin/payments/${id}/approve`, data, { headers: adminHeaders() }),
-  rejectPayment: (id, data = {}) => api.put(`/admin/payments/${id}/reject`, data, { headers: adminHeaders() }),
-  getUpiSettings: () => api.get('/admin/upi-settings', { headers: adminHeaders() }),
-  updateUpiSettings: (data) => api.put('/admin/upi-settings', data, { headers: adminHeaders() }),
+  getAllPayments: (params = {}) => api.get('/admin/payments', { params }),
+  approvePayment: (id, data = {}) => api.put(`/admin/payments/${id}/approve`, data),
+  rejectPayment: (id, data = {}) => api.put(`/admin/payments/${id}/reject`, data),
+  getUpiSettings: () => api.get('/admin/upi-settings'),
+  updateUpiSettings: (data) => api.put('/admin/upi-settings', data),
 };
 
 /* ---------------- COURSES ---------------- */

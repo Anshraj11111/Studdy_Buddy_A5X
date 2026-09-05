@@ -1,14 +1,10 @@
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { adminAPI } from "../services/api"
+import { adminAPI, adminPaymentAPI } from "../services/api"
+import api from "../services/api"
 import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X, Download, DollarSign, CheckCircle, XCircle, Clock } from "lucide-react"
-import axios from 'axios'
-import { adminPaymentAPI } from '../services/api'
 import PaymentManagement from '../components/PaymentManagement'
 import CourseManagement from '../components/CourseManagement'
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || "H5"
 
 // ── Pre-Registered Students Component ──────────────────────────────────────
 function PreRegisteredStudents({ showToast }) {
@@ -27,9 +23,7 @@ function PreRegisteredStudents({ showToast }) {
   // Fetch available school codes
   const fetchSchoolCodes = async () => {
     try {
-      const res = await axios.get(`${API_URL}/admin/school-codes`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      const res = await api.get('/admin/school-codes')
       setSchoolCodes(res.data.data.schoolCodes || [])
     } catch (err) {
       console.error('Error fetching school codes:', err)
@@ -43,10 +37,7 @@ function PreRegisteredStudents({ showToast }) {
       if (searchQuery.trim()) params.search = searchQuery.trim()
       if (schoolFilter !== 'all') params.schoolName = schoolFilter
       
-      const res = await axios.get(`${API_URL}/admin/pre-registered`, {
-        params,
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      const res = await api.get('/admin/pre-registered', { params })
       setStudents(res.data.data.students || [])
     } catch (err) {
       console.error('Error fetching pre-registered students:', err)
@@ -78,11 +69,7 @@ function PreRegisteredStudents({ showToast }) {
 
     setCreating(true)
     try {
-      await axios.post(`${API_URL}/admin/pre-register`, newStudent, {
-        headers: { 
-          'x-admin-secret': ADMIN_SECRET
-        }
-      })
+      await api.post('/admin/pre-register', newStudent)
       setNewStudent({ name: '', email: '', phone: '', schoolName: '', schoolPassword: '' })
       fetchStudents()
       showToast('Student pre-registered successfully!', 'success')
@@ -97,9 +84,7 @@ function PreRegisteredStudents({ showToast }) {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete pre-registration for "${name}"?`)) return
     try {
-      await axios.delete(`${API_URL}/admin/pre-registered/${id}`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      await api.delete(`/admin/pre-registered/${id}`)
       setStudents(prev => prev.filter(s => s._id !== id))
       showToast('Pre-registration deleted', 'success')
     } catch (err) {
@@ -132,11 +117,7 @@ function PreRegisteredStudents({ showToast }) {
 
     setUpdating(true)
     try {
-      await axios.put(`${API_URL}/admin/pre-registered/${id}`, editForm, {
-        headers: { 
-          'x-admin-secret': ADMIN_SECRET
-        }
-      })
+      await api.put(`/admin/pre-registered/${id}`, editForm)
       setStudents(prev => prev.map(s => s._id === id ? { ...s, ...editForm } : s))
       setEditingId(null)
       setEditForm({})
@@ -404,10 +385,8 @@ function SchoolChannelManagement({ showToast }) {
   const fetchChannels = async () => {
     setLoading(true)
     try {
-      console.log('Fetching channels from:', `${API_URL}/school-channel/admin/all`)
-      const res = await axios.get(`${API_URL}/school-channel/admin/all`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      console.log('Fetching channels from: /school-channel/admin/all')
+      const res = await api.get('/school-channel/admin/all')
       console.log('Channels response:', res.data)
       setChannels(res.data.channels || [])
     } catch (err) {
@@ -428,9 +407,7 @@ function SchoolChannelManagement({ showToast }) {
 
     setLoadingMembers(prev => ({ ...prev, [channelId]: true }))
     try {
-      const res = await axios.get(`${API_URL}/school-channel/admin/${channelId}/members`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      const res = await api.get(`/school-channel/admin/${channelId}/members`)
       setChannelMembers(prev => ({ ...prev, [channelId]: res.data.members || [] }))
       setExpandedChannel(channelId)
     } catch (err) {
@@ -454,9 +431,7 @@ function SchoolChannelManagement({ showToast }) {
 
     setCreating(true)
     try {
-      await axios.post(`${API_URL}/school-channel/admin/create`, newChannel, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      await api.post('/school-channel/admin/create', newChannel)
       setNewChannel({ schoolName: '', city: '', description: '' })
       fetchChannels()
       showToast('School channel created!', 'success')
@@ -471,9 +446,7 @@ function SchoolChannelManagement({ showToast }) {
   const handleDelete = async (id, schoolName) => {
     if (!window.confirm(`Delete channel "${schoolName}"? All students will lose access.`)) return
     try {
-      await axios.delete(`${API_URL}/school-channel/admin/${id}`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      await api.delete(`/school-channel/admin/${id}`)
       setChannels(prev => prev.filter(c => c._id !== id))
       showToast('Channel deleted', 'success')
     } catch (err) {
@@ -494,13 +467,10 @@ function SchoolChannelManagement({ showToast }) {
 
     setBroadcasting(true)
     try {
-      await axios.post(`${API_URL}/school-channel/admin/broadcast`, {
+      await api.post('/school-channel/admin/broadcast', {
         message: broadcastMessage,
         channelIds: selectedChannels
-      }, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
       })
-      
       setBroadcastMessage('')
       setSelectedChannels([])
       setShowBroadcast(false)
@@ -1256,9 +1226,7 @@ function MessageMonitoringDashboard({ showToast }) {
 
   const fetchChannels = async () => {
     try {
-      const res = await axios.get(`${API_URL}/school-channel/admin/all`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      const res = await api.get('/school-channel/admin/all')
       setChannels(res.data.channels || [])
     } catch (err) {
       console.error('Error fetching channels:', err)
@@ -1277,9 +1245,7 @@ function MessageMonitoringDashboard({ showToast }) {
         ...(filters.dateTo && { dateTo: filters.dateTo }),
       })
 
-      const res = await axios.get(`${API_URL}/school-channel/admin/messages/all?${params}`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      const res = await api.get(`/school-channel/admin/messages/all?${params}`)
 
       const data = res.data.data
       setMessages(reset ? data.messages : [...messages, ...data.messages])
@@ -1306,9 +1272,7 @@ function MessageMonitoringDashboard({ showToast }) {
 
     setDeleting(messageId)
     try {
-      await axios.delete(`${API_URL}/school-channel/admin/messages/${messageId}`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      await api.delete(`/school-channel/admin/messages/${messageId}`)
       setMessages(prev => prev.filter(m => m._id !== messageId))
       showToast('Message deleted successfully', 'success')
     } catch (err) {
@@ -1739,13 +1703,23 @@ export default function AdminPanel() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
-    if (pw === ADMIN_SECRET) {
+    if (!pw.trim()) return
+    // Store password in sessionStorage so the api interceptor sends it as x-admin-secret.
+    // Then make a test request — if the backend accepts it, we're in.
+    sessionStorage.setItem("admin_secret", pw.trim())
+    try {
+      await adminAPI.getStats()
+      // Backend accepted the secret → grant access
       sessionStorage.setItem("admin_auth", "true")
       setAuthed(true)
-    } else {
-      setPwErr("Wrong password")
+    } catch (err) {
+      // Backend rejected → clear stored secret, show error
+      sessionStorage.removeItem("admin_secret")
+      sessionStorage.removeItem("admin_auth")
+      const status = err?.response?.status
+      setPwErr(status === 401 || status === 403 ? "Wrong password" : "Server error, try again")
     }
   }
 

@@ -16,13 +16,15 @@ export default function AIBot() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef(null)
+  const sendingRef    = useRef(false) // synchronous in-flight guard — prevents double-send before loading state propagates
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return
+    if (!input.trim() || loading || sendingRef.current) return
+    sendingRef.current = true
     const userMessage = input.trim()
     setInput('')
     const newMessages = [...messages, { role: 'user', content: userMessage }]
@@ -34,10 +36,13 @@ export default function AIBot() {
       const res = await aiAPI.chat(userMessage, history.slice(0, -1)) // exclude current message
       setMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
     } catch (err) {
-      const errMsg = err.response?.data?.message || 'Failed to get AI response. Please try again.'
+      const errMsg = err.response?.status === 429
+        ? 'You\'re sending messages too fast. Please wait a moment.'
+        : err.response?.data?.message || 'Failed to get AI response. Please try again.'
       setMessages(prev => [...prev, { role: 'error', content: errMsg }])
     } finally {
       setLoading(false)
+      sendingRef.current = false
     }
   }
 

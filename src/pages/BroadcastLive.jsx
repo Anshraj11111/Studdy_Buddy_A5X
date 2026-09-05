@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Youtube, Play, Square, Loader2, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import api from '../services/api';
 import { YouTubeLivePlayerSimple } from '../components/YouTubeLivePlayer';
 
 const API_URL = (() => {
@@ -29,19 +29,12 @@ export default function BroadcastLive() {
 
   const loadAllStreams = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const promises = CHANNELS.map(ch =>
-        axios.get(`${API_URL}/broadcast/stream/${ch.id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-      );
-      
+      const promises = CHANNELS.map(ch => api.get(`/broadcast/stream/${ch.id}`));
       const results = await Promise.all(promises);
       const streamsData = {};
       results.forEach((res, idx) => {
         streamsData[CHANNELS[idx].id] = res.data.data;
       });
-      
       setStreams(streamsData);
       setLoading(false);
     } catch (err) {
@@ -52,11 +45,7 @@ export default function BroadcastLive() {
 
   const updateStream = async (channel, videoId, title) => {
     try {
-      await axios.put(
-        `${API_URL}/broadcast/admin/stream/${channel}`,
-        { youtubeVideoId: videoId, streamTitle: title },
-        { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }
-      );
+      await api.put(`/broadcast/admin/stream/${channel}`, { youtubeVideoId: videoId, streamTitle: title });
       await loadAllStreams();
       alert('Stream URL updated!');
     } catch (err) {
@@ -66,15 +55,10 @@ export default function BroadcastLive() {
 
   const toggleLive = async (channel, currentStatus) => {
     try {
-      const endpoint = currentStatus 
+      const endpoint = currentStatus
         ? `/broadcast/admin/stream/${channel}/stop`
         : `/broadcast/admin/stream/${channel}/start`;
-        
-      await axios.post(
-        `${API_URL}${endpoint}`,
-        {},
-        { headers: { 'x-admin-secret': import.meta.env.VITE_ADMIN_SECRET || 'H5' } }
-      );
+      await api.post(endpoint, {});
       await loadAllStreams();
     } catch (err) {
       alert('Failed to toggle stream');

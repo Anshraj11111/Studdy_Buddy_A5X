@@ -42,11 +42,6 @@ export const getBaseUrl = () => {
   return apiUrl.replace(/\/api\/?$/, '');
 };
 
-// Get admin secret (never log this!)
-export const getAdminSecret = () => {
-  return getEnvVar('VITE_ADMIN_SECRET', 'H5');
-};
-
 // Check if in development mode
 export const isDevelopment = () => {
   return import.meta.env.DEV || getApiUrl().includes('localhost');

@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Users, Plus, Trash2, RefreshCw, Loader2, Mail, User, Phone, KeyRound } from 'lucide-react'
-import axios from 'axios'
+import api from '../services/api'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'H5'
 
 const PreRegisteredStudents = ({ showToast }) => {
   const [students, setStudents] = useState([])
@@ -16,10 +15,7 @@ const PreRegisteredStudents = ({ showToast }) => {
   const fetchStudents = async () => {
     setLoading(true)
     try {
-      const res = await axios.get(`${API_URL}/admin/pre-registered`, {
-        params: { status: statusFilter },
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      const res = await api.get('/admin/pre-registered', { params: { status: statusFilter } })
       setStudents(res.data.data.students || [])
     } catch (err) {
       console.error('Error fetching pre-registered students:', err)
@@ -42,13 +38,7 @@ const PreRegisteredStudents = ({ showToast }) => {
 
     setCreating(true)
     try {
-      const token = localStorage.getItem('token')
-      await axios.post(`${API_URL}/admin/pre-register`, newStudent, {
-        headers: { 
-          'x-admin-secret': ADMIN_SECRET,
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      await api.post('/admin/pre-register', newStudent)
       setNewStudent({ name: '', email: '', phone: '', schoolName: '', schoolPassword: '' })
       fetchStudents()
       showToast('Student pre-registered successfully!', 'success')
@@ -63,9 +53,7 @@ const PreRegisteredStudents = ({ showToast }) => {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete pre-registration for "${name}"?`)) return
     try {
-      await axios.delete(`${API_URL}/admin/pre-registered/${id}`, {
-        headers: { 'x-admin-secret': ADMIN_SECRET }
-      })
+      await api.delete(`/admin/pre-registered/${id}`)
       setStudents(prev => prev.filter(s => s._id !== id))
       showToast('Pre-registration deleted', 'success')
     } catch (err) {

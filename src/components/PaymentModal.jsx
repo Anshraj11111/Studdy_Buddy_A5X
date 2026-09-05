@@ -28,7 +28,8 @@ export default function PaymentModal({
   const [referralStatus, setReferralStatus] = useState(null) // null | 'checking' | 'valid' | 'invalid'
   const [referralData, setReferralData]     = useState(null)
   const [referralError, setReferralError]   = useState('')
-  const debounceRef = useRef(null)
+  const debounceRef   = useRef(null)
+  const submittingRef = useRef(false) // synchronous guard — prevents double-submit before React re-render
 
   const discountAmount = referralData?.discountAmount || 0
   const finalAmount    = referralData?.discountedPrice || baseAmount
@@ -92,6 +93,10 @@ export default function PaymentModal({
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handlePayment = async () => {
+    // Synchronous ref guard fires before React state update propagates —
+    // prevents a second call sneaking in on rapid double-click.
+    if (submittingRef.current) return
+    submittingRef.current = true
     setProcessing(true)
     try {
       const res = await paymentAPI.submitPayment({
@@ -103,14 +108,17 @@ export default function PaymentModal({
       })
       if (res.data?.success) {
         setPaymentStatus('success')
-        setProcessing(false)
+        // Keep processing=true so button stays locked until modal closes
         setTimeout(() => {
+          submittingRef.current = false
+          setProcessing(false)
           onClose()
           if (onSuccess) onSuccess()
           else alert('✅ Payment submitted! Admin will verify and grant access shortly.')
         }, 3000)
       } else throw new Error('failed')
     } catch {
+      submittingRef.current = false
       setProcessing(false)
       alert('❌ Failed to submit payment. Please try again.')
     }
