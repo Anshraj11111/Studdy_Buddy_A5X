@@ -651,7 +651,7 @@ function PostComposer({ user, onPost }) {
 }
 
 // ─── SINGLE POST CARD ─────────────────────────────────────────────────────────
-function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate }) {
+function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate, initialFollowing }) {
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -667,6 +667,13 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate 
   const isLiked = (post.likes || []).map(String).includes(String(user?._id))
   const isOwner = String(post.userId?._id) === String(user?._id)
   const grad = CAT_GRADIENT[post.category] || CAT_GRADIENT.All
+
+  // Sync follow state when parent followingSet loads (initialFollowing goes null → true/false)
+  useEffect(() => {
+    if (initialFollowing !== null && initialFollowing !== undefined) {
+      setFollowing(initialFollowing)
+    }
+  }, [initialFollowing])
 
   // Close share dropdown on outside click
   useEffect(() => {
@@ -987,7 +994,18 @@ function FeedTab({ user }) {
   const [activeSearch, setActiveSearch] = useState('')
   const [filterCat, setFilterCat] = useState('All')
   const [catOpen, setCatOpen] = useState(false)
+  const [followingSet, setFollowingSet] = useState(null) // Set of userId strings I follow
   const catRef = useRef()
+
+  // Fetch who I follow once — used to correctly init follow buttons on posts
+  useEffect(() => {
+    followAPI.getFollowing(user._id)
+      .then(res => {
+        const ids = new Set((res.data?.data?.following || []).map(f => String(f._id)))
+        setFollowingSet(ids)
+      })
+      .catch(() => setFollowingSet(new Set()))
+  }, [user._id])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -1175,7 +1193,7 @@ function FeedTab({ user }) {
           {posts.map((post, i) => (
             <motion.div key={post._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(i * 0.04, 0.3) }}>
-              <PostCard post={post} user={user} onLike={handleLike} onDelete={handleDelete} onComment={handleComment} onUpdate={handleUpdate} />
+              <PostCard post={post} user={user} onLike={handleLike} onDelete={handleDelete} onComment={handleComment} onUpdate={handleUpdate} initialFollowing={followingSet ? followingSet.has(String(post.userId?._id)) : null} />
             </motion.div>
           ))}
         </div>
@@ -1204,7 +1222,7 @@ function ConnectionsTab({ user, setViewProfileId }) {
       ])
       const users = usersRes.data.data?.users || []
       const followingIds = new Set((followingRes.data.data?.following || []).map(f => String(f._id)))
-      setDiscoverUsers(users.map(u => ({ ...u, isFollowing: followingIds.has(String(profile._id)) })))
+      setDiscoverUsers(users.map(u => ({ ...u, isFollowing: followingIds.has(String(u._id)) })))
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [user._id])
 
@@ -1260,33 +1278,33 @@ function ConnectionsTab({ user, setViewProfileId }) {
 
   const sendReq = (uid) => {
     // Optimistic update - instantly show Pending
-    setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, connectionStatus: 'pending', iRequested: true } : u))
+    setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, connectionStatus: 'pending', iRequested: true } : u))
     setActionLoading(p => ({ ...p, [uid + '_conn']: true }))
     connectionAPI.sendRequest(uid)
       .then(res => {
         // Store the connectionId returned from backend so we can cancel later
         const connId = res.data?.data?.connection?._id || res.data?.data?._id
         if (connId) {
-          setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, connectionId: connId } : u))
+          setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, connectionId: connId } : u))
         }
       })
       .catch(() => {
         // Revert on failure
-        setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, connectionStatus: null, iRequested: false, connectionId: null } : u))
+        setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, connectionStatus: null, iRequested: false, connectionId: null } : u))
       })
       .finally(() => setActionLoading(p => ({ ...p, [uid + '_conn']: false })))
   }
 
   const toggleFollow = (uid, isFollowing) => {
     // Optimistic update - instantly toggle follow state
-    setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, isFollowing: !isFollowing } : u))
+    setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, isFollowing: !isFollowing } : u))
     setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: !isFollowing } : c))
     setActionLoading(p => ({ ...p, [uid + '_follow']: true }))
     const apiCall = isFollowing ? followAPI.unfollow(uid) : followAPI.follow(uid)
     apiCall
       .catch(() => {
         // Revert on failure
-        setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, isFollowing: isFollowing } : u))
+        setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, isFollowing: isFollowing } : u))
         setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: isFollowing } : c))
       })
       .finally(() => setActionLoading(p => ({ ...p, [uid + '_follow']: false })))
@@ -1294,7 +1312,7 @@ function ConnectionsTab({ user, setViewProfileId }) {
   const accept = (id, requesterId) => act(id, async () => {
     await connectionAPI.accept(id)
     setPending(p => p.filter(c => c._id !== id))
-    setDiscoverUsers(p => p.map(u => String(profile._id) === String(requesterId)
+    setDiscoverUsers(p => p.map(u => String(u._id) === String(requesterId)
       ? { ...u, connectionStatus: 'accepted', isFollowing: true } : u))
   })
   const reject = (id) => act(id, async () => { await connectionAPI.reject(id); setPending(p => p.filter(c => c._id !== id)) })
@@ -1313,15 +1331,15 @@ function ConnectionsTab({ user, setViewProfileId }) {
 
   // ── Reusable User Card ──────────────────────────────────────────────────────
   const UserCard = ({ u, connId, isConn, showRemove, setViewProfileId }) => {
-    const uid = String(profile._id || profile.user?._id || '')
-    const name = profile.name || profile.user?.name
-    const role = profile.role || profile.user?.role
-    const skills = profile.skills || profile.user?.skills || []
-    const profileImage = profile.profileImage || profile.user?.profileImage
-    const isFollowing = !!profile.isFollowing
-    const connStatus = profile.connectionStatus
-    const iReq = profile.iRequested
-    const pendingConnId = profile.connectionId  // ID of pending connection to cancel
+    const uid = String(u._id || u.user?._id || '')
+    const name = u.name || u.user?.name
+    const role = u.role || u.user?.role
+    const skills = u.skills || u.user?.skills || []
+    const profileImage = u.profileImage || u.user?.profileImage
+    const isFollowing = !!u.isFollowing
+    const connStatus = u.connectionStatus
+    const iReq = u.iRequested
+    const pendingConnId = u.connectionId  // ID of pending connection to cancel
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         className="rounded-lg overflow-hidden"
@@ -1485,7 +1503,7 @@ function ConnectionsTab({ user, setViewProfileId }) {
             : discoverUsers.length === 0
               ? <div className="text-center py-12 text-sm text-theme-tertiary">No users found</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {discoverUsers.map(u => <UserCard key={profile._id} u={u} setViewProfileId={setViewProfileId} />)}
+                  {discoverUsers.map(u => <UserCard key={u._id} u={u} setViewProfileId={setViewProfileId} />)}
                 </div>}
         </div>
       )}
