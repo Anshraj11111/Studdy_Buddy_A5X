@@ -656,6 +656,8 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate 
   const [following, setFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
   const [showShare, setShowShare] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const PREVIEW_LIMIT = 300 // chars shown before "Read more"
   const [copied, setCopied] = useState(false)
   const [viewProfileId, setViewProfileId] = useState(null)
   const [showImageLightbox, setShowImageLightbox] = useState(false)
@@ -821,7 +823,22 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate 
         </div>
 
         {post.content && (
-          <p className="text-sm text-theme-primary whitespace-pre-wrap leading-relaxed mb-3">{post.content}</p>
+          <div className="mb-3">
+            <p className="text-sm text-theme-primary whitespace-pre-wrap leading-relaxed">
+              {expanded || post.content.length <= PREVIEW_LIMIT
+                ? post.content
+                : post.content.slice(0, PREVIEW_LIMIT) + '...'}
+            </p>
+            {post.content.length > PREVIEW_LIMIT && (
+              <button
+                onClick={() => setExpanded(e => !e)}
+                className="text-xs font-semibold mt-1 transition-colors"
+                style={{ color: '#6366f1' }}
+              >
+                {expanded ? 'Show less ▲' : 'Read more ▼'}
+              </button>
+            )}
+          </div>
         )}
 
         {post.mediaUrl && (
