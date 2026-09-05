@@ -381,8 +381,7 @@ function VideoPlayerModal({ resource, onClose }) {
                 key={embedSrc}
                 src={embedSrc}
                 title={resource?.title || 'Video'}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen; screen-orientation"
-                allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                 referrerPolicy="strict-origin"
                 className="absolute inset-0 w-full h-full"
                 style={{ border: 'none', display: 'block' }}

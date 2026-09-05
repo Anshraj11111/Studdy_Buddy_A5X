@@ -170,8 +170,9 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
     setLoading(true)
     followAPI.getProfile(userId)
       .then(res => {
-        setProfile(res.data.data)
-        setFollowing(res.data.data.isFollowing || false)
+        const { user, isFollowing, followersCount, followingCount } = res.data.data
+        setProfile({ ...user, isFollowing, followersCount, followingCount })
+        setFollowing(isFollowing || false)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -205,14 +206,15 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
     }
   }
   const isOwn = String(userId) === String(currentUserId)
-  const hasEdu = u?.education?.institution
-  const hasExp = u?.experience?.company
-  const hasSocial = u?.socialLinks && Object.values(u.socialLinks).some(Boolean)
+  const hasEdu = profile?.education?.institution
+  const hasExp = profile?.experience?.company
+  const hasSocial = profile?.socialLinks && Object.values(profile.socialLinks).some(Boolean)
   const [showPhoto, setShowPhoto] = useState(false)
 
   return createPortal(
     <AnimatePresence>
       <motion.div
+        key="user-profile-modal-backdrop"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
         style={{
@@ -256,7 +258,7 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
             <Loader2 size={30} className="animate-spin" style={{ color: '#818cf8' }} />
             <span style={{ color: "var(--text-secondary)", fontSize: '0.8rem' }}>Loading profile...</span>
           </div>
-        ) : !u ? (
+        ) : !profile ? (
           <div style={{ padding: 32, textAlign: 'center', color: "var(--text-secondary)" }}>Profile not found</div>
         ) : (
           /* Scrollable body */
@@ -266,11 +268,11 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
               <div style={{
                 height: 130,
                 position: 'relative',
-                background: u.bannerImage
-                  ? `url(${u.bannerImage}) center/cover no-repeat`
+                background: profile.bannerImage
+                  ? `url(${profile.bannerImage}) center/cover no-repeat`
                   : 'linear-gradient(135deg,rgba(99,102,241,0.45),rgba(139,92,246,0.45))',
               }}>
-                {!u.bannerImage && (
+                {!profile.bannerImage && (
                   <div style={{ position: 'absolute', inset: 0, opacity: 0.2, backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
                 )}
                 <button onClick={onClose}
@@ -280,7 +282,7 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
               </div>
               {/* Avatar anchored to bottom of banner, sticks out below */}
               <div
-                onClick={() => u.profileImage && setShowPhoto(true)}
+                onClick={() => profile.profileImage && setShowPhoto(true)}
                 style={{
                   position: 'absolute',
                   bottom: -46,
@@ -291,15 +293,15 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                   boxShadow: '0 0 28px rgba(99,102,241,0.55)',
                   border: `4px solid ${isDark ? 'rgba(8,6,28,0.98)' : 'rgba(255,255,255,0.98)'}`,
                   color: '#ffffff', fontWeight: 700, fontSize: 28,
-                  cursor: u.profileImage ? 'pointer' : 'default',
+                  cursor: profile.profileImage ? 'pointer' : 'default',
                 }}>
-                {u.profileImage
-                  ? <img src={u.profileImage} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : u.name?.[0]?.toUpperCase()}
+                {profile.profileImage
+                  ? <img src={profile.profileImage} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : profile.name?.[0]?.toUpperCase()}
               </div>
 
               {/* Full photo lightbox */}
-              {showPhoto && u.profileImage && createPortal(
+              {showPhoto && profile.profileImage && createPortal(
                 <div
                   onClick={() => setShowPhoto(false)}
                   style={{
@@ -310,8 +312,8 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                     cursor: 'zoom-out',
                   }}>
                   <img
-                    src={u.profileImage}
-                    alt={u.name}
+                    src={profile.profileImage}
+                    alt={profile.name}
                     onClick={e => e.stopPropagation()}
                     style={{
                       maxWidth: '90vw', maxHeight: '90vh',
@@ -342,15 +344,15 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
               {/* Name + info row */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: isDark ? '#f1f5f9' : '#0f172a', lineHeight: 1.2 }}>{u.name}</h2>
-                  {u.headline && (
-                    <p style={{ margin: '5px 0 0', fontSize: '0.88rem', color: isDark ? 'rgba(148,163,184,0.85)' : '#475569', lineHeight: 1.4 }}>{u.headline}</p>
+                  <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: isDark ? '#f1f5f9' : '#0f172a', lineHeight: 1.2 }}>{profile.name}</h2>
+                  {profile.headline && (
+                    <p style={{ margin: '5px 0 0', fontSize: '0.88rem', color: isDark ? 'rgba(148,163,184,0.85)' : '#475569', lineHeight: 1.4 }}>{profile.headline}</p>
                   )}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                    <RoleBadge role={u.role} />
-                    {u.address && (
+                    <RoleBadge role={profile.role} />
+                    {profile.address && (
                       <span style={{ fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.9)' : '#374151', fontWeight: 500 }}>
-                        📍 {u.address.split(',').slice(0, 2).join(',')}
+                        📍 {profile.address.split(',').slice(0, 2).join(',')}
                       </span>
                     )}
                   </div>
@@ -384,10 +386,10 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
               )}
 
               {/* ── About ─────────────────────────────────────── */}
-              {u.bio && (
+              {profile.bio && (
                 <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.2)'}` }}>
                   <p style={{ margin: '0 0 8px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(99,102,241,0.9)' : '#4f46e5', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About</p>
-                  <p style={{ margin: 0, fontSize: '0.87rem', lineHeight: 1.65, color: isDark ? 'rgba(226,232,240,0.85)' : '#334155' }}>{u.bio}</p>
+                  <p style={{ margin: 0, fontSize: '0.87rem', lineHeight: 1.65, color: isDark ? 'rgba(226,232,240,0.85)' : '#334155' }}>{profile.bio}</p>
                 </div>
               )}
 
@@ -398,10 +400,10 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                   <div style={{ display: 'flex', gap: 13 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: isDark ? 'rgba(52,211,153,0.1)' : 'rgba(5,150,105,0.08)', border: `1px solid ${isDark ? 'rgba(52,211,153,0.25)' : 'rgba(5,150,105,0.2)'}` }}>🎓</div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{u.education.institution}</p>
-                      {u.education.degree && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{u.education.degree}{u.education.field ? ` · ${u.education.field}` : ''}</p>}
-                      {(u.education.startYear || u.education.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>{u.education.startYear}{u.education.startYear && u.education.endYear ? ' – ' : ''}{u.education.endYear}</p>}
-                      {u.education.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: isDark ? 'rgba(148,163,184,0.65)' : '#475569' }}>{u.education.description}</p>}
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{profile.education.institution}</p>
+                      {profile.education.degree && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{profile.education.degree}{profile.education.field ? ` · ${profile.education.field}` : ''}</p>}
+                      {(profile.education.startYear || profile.education.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>{profile.education.startYear}{profile.education.startYear && profile.education.endYear ? ' – ' : ''}{profile.education.endYear}</p>}
+                      {profile.education.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: isDark ? 'rgba(148,163,184,0.65)' : '#475569' }}>{profile.education.description}</p>}
                     </div>
                   </div>
                 </div>
@@ -414,21 +416,21 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                   <div style={{ display: 'flex', gap: 13 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: isDark ? 'rgba(139,92,246,0.1)' : 'rgba(124,58,237,0.08)', border: `1px solid ${isDark ? 'rgba(139,92,246,0.25)' : 'rgba(124,58,237,0.2)'}` }}>🏢</div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{u.experience.role || u.experience.company}</p>
-                      {u.experience.role && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{u.experience.company}</p>}
-                      {(u.experience.startYear || u.experience.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>{u.experience.startYear}{u.experience.startYear && u.experience.endYear ? ' – ' : ''}{u.experience.endYear || 'Present'}</p>}
-                      {u.experience.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: isDark ? 'rgba(148,163,184,0.65)' : '#475569' }}>{u.experience.description}</p>}
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{profile.experience.role || profile.experience.company}</p>
+                      {profile.experience.role && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{profile.experience.company}</p>}
+                      {(profile.experience.startYear || profile.experience.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>{profile.experience.startYear}{profile.experience.startYear && profile.experience.endYear ? ' – ' : ''}{profile.experience.endYear || 'Present'}</p>}
+                      {profile.experience.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: isDark ? 'rgba(148,163,184,0.65)' : '#475569' }}>{profile.experience.description}</p>}
                     </div>
                   </div>
                 </div>
               )}
 
               {/* ── Skills ────────────────────────────────────── */}
-              {u.skills?.length > 0 && (
+              {profile.skills?.length > 0 && (
                 <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.15)'}` }}>
                   <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(99,102,241,0.7)' : 'rgba(99,102,241,0.9)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Skills</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                    {u.skills.map(s => (
+                    {profile.skills.map(s => (
                       <span key={s} style={{ fontSize: '0.78rem', padding: '4px 11px', borderRadius: 20, fontWeight: 600, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1' }}>{s}</span>
                     ))}
                   </div>
@@ -440,29 +442,29 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
                 <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
                   <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Links</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {u.socialLinks?.github && (
-                      <a href={u.socialLinks.github} target="_blank" rel="noopener noreferrer"
+                    {profile.socialLinks?.github && (
+                      <a href={profile.socialLinks.github} target="_blank" rel="noopener noreferrer"
                         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: isDark ? 'rgba(226,232,240,0.08)' : 'rgba(15,23,42,0.06)', border: isDark ? '1px solid rgba(226,232,240,0.15)' : '1px solid rgba(15,23,42,0.15)', color: isDark ? '#e2e8f0' : '#0f172a', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
                         GitHub
                       </a>
                     )}
-                    {u.socialLinks?.linkedin && (
-                      <a href={u.socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
+                    {profile.socialLinks?.linkedin && (
+                      <a href={profile.socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
                         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', color: '#60a5fa', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
                         LinkedIn
                       </a>
                     )}
-                    {u.socialLinks?.instagram && (
-                      <a href={u.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+                    {profile.socialLinks?.instagram && (
+                      <a href={profile.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
                         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(244,114,182,0.08)', border: '1px solid rgba(244,114,182,0.2)', color: '#f472b6', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                         Instagram
                       </a>
                     )}
-                    {u.socialLinks?.website && (
-                      <a href={u.socialLinks.website} target="_blank" rel="noopener noreferrer"
+                    {profile.socialLinks?.website && (
+                      <a href={profile.socialLinks.website} target="_blank" rel="noopener noreferrer"
                         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', textDecoration: 'none' }}>
                         🌐 Portfolio
                       </a>
@@ -966,6 +968,7 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate 
     <AnimatePresence>
       {viewProfileId && (
         <UserProfileModal
+          key={viewProfileId}
           userId={viewProfileId}
           currentUserId={user?._id}
           onClose={() => setViewProfileId(null)}
@@ -1201,7 +1204,7 @@ function ConnectionsTab({ user, setViewProfileId }) {
       ])
       const users = usersRes.data.data?.users || []
       const followingIds = new Set((followingRes.data.data?.following || []).map(f => String(f._id)))
-      setDiscoverUsers(users.map(u => ({ ...u, isFollowing: followingIds.has(String(u._id)) })))
+      setDiscoverUsers(users.map(u => ({ ...u, isFollowing: followingIds.has(String(profile._id)) })))
     } catch { /* ignore */ } finally { setLoading(false) }
   }, [user._id])
 
@@ -1257,33 +1260,33 @@ function ConnectionsTab({ user, setViewProfileId }) {
 
   const sendReq = (uid) => {
     // Optimistic update - instantly show Pending
-    setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionStatus: 'pending', iRequested: true } : u))
+    setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, connectionStatus: 'pending', iRequested: true } : u))
     setActionLoading(p => ({ ...p, [uid + '_conn']: true }))
     connectionAPI.sendRequest(uid)
       .then(res => {
         // Store the connectionId returned from backend so we can cancel later
         const connId = res.data?.data?.connection?._id || res.data?.data?._id
         if (connId) {
-          setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionId: connId } : u))
+          setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, connectionId: connId } : u))
         }
       })
       .catch(() => {
         // Revert on failure
-        setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, connectionStatus: null, iRequested: false, connectionId: null } : u))
+        setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, connectionStatus: null, iRequested: false, connectionId: null } : u))
       })
       .finally(() => setActionLoading(p => ({ ...p, [uid + '_conn']: false })))
   }
 
   const toggleFollow = (uid, isFollowing) => {
     // Optimistic update - instantly toggle follow state
-    setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, isFollowing: !isFollowing } : u))
+    setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, isFollowing: !isFollowing } : u))
     setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: !isFollowing } : c))
     setActionLoading(p => ({ ...p, [uid + '_follow']: true }))
     const apiCall = isFollowing ? followAPI.unfollow(uid) : followAPI.follow(uid)
     apiCall
       .catch(() => {
         // Revert on failure
-        setDiscoverUsers(p => p.map(u => u._id === uid ? { ...u, isFollowing: isFollowing } : u))
+        setDiscoverUsers(p => p.map(u => profile._id === uid ? { ...u, isFollowing: isFollowing } : u))
         setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: isFollowing } : c))
       })
       .finally(() => setActionLoading(p => ({ ...p, [uid + '_follow']: false })))
@@ -1291,7 +1294,7 @@ function ConnectionsTab({ user, setViewProfileId }) {
   const accept = (id, requesterId) => act(id, async () => {
     await connectionAPI.accept(id)
     setPending(p => p.filter(c => c._id !== id))
-    setDiscoverUsers(p => p.map(u => String(u._id) === String(requesterId)
+    setDiscoverUsers(p => p.map(u => String(profile._id) === String(requesterId)
       ? { ...u, connectionStatus: 'accepted', isFollowing: true } : u))
   })
   const reject = (id) => act(id, async () => { await connectionAPI.reject(id); setPending(p => p.filter(c => c._id !== id)) })
@@ -1310,15 +1313,15 @@ function ConnectionsTab({ user, setViewProfileId }) {
 
   // ── Reusable User Card ──────────────────────────────────────────────────────
   const UserCard = ({ u, connId, isConn, showRemove, setViewProfileId }) => {
-    const uid = String(u._id || u.user?._id || '')
-    const name = u.name || u.user?.name
-    const role = u.role || u.user?.role
-    const skills = u.skills || u.user?.skills || []
-    const profileImage = u.profileImage || u.user?.profileImage
-    const isFollowing = !!u.isFollowing
-    const connStatus = u.connectionStatus
-    const iReq = u.iRequested
-    const pendingConnId = u.connectionId  // ID of pending connection to cancel
+    const uid = String(profile._id || profile.user?._id || '')
+    const name = profile.name || profile.user?.name
+    const role = profile.role || profile.user?.role
+    const skills = profile.skills || profile.user?.skills || []
+    const profileImage = profile.profileImage || profile.user?.profileImage
+    const isFollowing = !!profile.isFollowing
+    const connStatus = profile.connectionStatus
+    const iReq = profile.iRequested
+    const pendingConnId = profile.connectionId  // ID of pending connection to cancel
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         className="rounded-lg overflow-hidden"
@@ -1482,7 +1485,7 @@ function ConnectionsTab({ user, setViewProfileId }) {
             : discoverUsers.length === 0
               ? <div className="text-center py-12 text-sm text-theme-tertiary">No users found</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {discoverUsers.map(u => <UserCard key={u._id} u={u} setViewProfileId={setViewProfileId} />)}
+                  {discoverUsers.map(u => <UserCard key={profile._id} u={u} setViewProfileId={setViewProfileId} />)}
                 </div>}
         </div>
       )}
