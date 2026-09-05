@@ -64,8 +64,7 @@ export default function Navbar({ onMenuClick }) {
         break
       case 'connection_request':
       case 'connection':
-        // Go to communities connections tab
-        navigate('/communities')
+        navigate('/communities?tab=connections')
         break
       case 'follow':
         // Go to communities to see follower's profile

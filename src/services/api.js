@@ -44,7 +44,12 @@ const cache = new Map();
 const CACHE_TTL = 10 * 60 * 1000; // 10 min fresh
 const CACHE_STALE_TTL = 30 * 60 * 1000; // 30 min stale (serve stale while fetching fresh)
 
+// URLs that should never be served from client-side cache (real-time data)
+const NO_CACHE_PATTERNS = ['/feed', '/doubts'];
+
 const getCached = (key) => {
+  // Never serve feed/doubts from cache — comments and likes must be real-time
+  if (NO_CACHE_PATTERNS.some(p => key.startsWith(p))) return null;
   const entry = cache.get(key);
   if (!entry) return null;
   const age = Date.now() - entry.ts;
@@ -53,7 +58,10 @@ const getCached = (key) => {
   cache.delete(key);
   return null;
 };
-const setCache = (key, data) => cache.set(key, { data, ts: Date.now() });
+const setCache = (key, data) => {
+  if (NO_CACHE_PATTERNS.some(p => key.startsWith(p))) return; // never cache feed/doubts
+  cache.set(key, { data, ts: Date.now() });
+};
 export const clearCache = () => cache.clear();
 
 const api = axios.create({

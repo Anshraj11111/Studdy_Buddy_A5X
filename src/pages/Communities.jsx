@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { feedAPI, connectionAPI, followAPI, roomAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
@@ -1823,7 +1823,8 @@ function TrendingSidebar() {
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 export default function Communities() {
   const { user } = useAuthStore()
-  const [tab, setTab] = useState('feed')
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState(() => searchParams.get('tab') || 'feed')
   const [viewProfileId, setViewProfileId] = useState(null)
 
   return (
