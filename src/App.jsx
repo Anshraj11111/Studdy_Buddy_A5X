@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
@@ -9,35 +9,45 @@ import Navbar from './components/Navbar'
 import IncomingCallModal from './components/IncomingCallModal'
 import InstallPWA from './components/InstallPWA'
 
-// Eagerly load ALL pages — no lazy loading to avoid duplicate React issues
+// ── Lazy load all pages — only download when user navigates there ──────────
+// Auth pages (small — keep eager for instant login experience)
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
-import Dashboard from './pages/Dashboard'
-import MentorDashboard from './pages/MentorDashboard'
-import Doubts from './pages/Doubts'
-import PostDoubt from './pages/PostDoubt'
-import EditDoubt from './pages/EditDoubt'
-import Resources from './pages/ResourcesNew'
-import Communities from './pages/Communities'
-import Profile from './pages/Profile'
-import Chats from './pages/Chats'
-import Chat from './pages/Chat'
-import VideoCall from './pages/VideoCall'
-import Mentors from './pages/Mentors'
-import AIBot from './pages/AIBot'
-import Settings from './pages/Settings'
-import AdminPanel from './pages/AdminPanel'
-import Rewards from './pages/Rewards'
-import GeneralGroup from './pages/GeneralGroup'
-import Broadcast from './pages/Broadcast'
-import BroadcastLive from './pages/BroadcastLive'
-import SchoolChannel from './pages/SchoolChannel'
-import SchoolChannelAdmin from './pages/SchoolChannelAdmin'
-import PrivacyPolicy from './pages/PrivacyPolicy'
-import TermsConditions from './pages/TermsConditions'
 
-// No PageLoader needed - all pages eagerly loaded
+// All other pages — lazy loaded
+const Dashboard         = lazy(() => import('./pages/Dashboard'))
+const MentorDashboard   = lazy(() => import('./pages/MentorDashboard'))
+const Doubts            = lazy(() => import('./pages/Doubts'))
+const PostDoubt         = lazy(() => import('./pages/PostDoubt'))
+const EditDoubt         = lazy(() => import('./pages/EditDoubt'))
+const Resources         = lazy(() => import('./pages/ResourcesNew'))
+const Communities       = lazy(() => import('./pages/Communities'))
+const Profile           = lazy(() => import('./pages/Profile'))
+const Chats             = lazy(() => import('./pages/Chats'))
+const Chat              = lazy(() => import('./pages/Chat'))
+const VideoCall         = lazy(() => import('./pages/VideoCall'))
+const Mentors           = lazy(() => import('./pages/Mentors'))
+const AIBot             = lazy(() => import('./pages/AIBot'))
+const Settings          = lazy(() => import('./pages/Settings'))
+const AdminPanel        = lazy(() => import('./pages/AdminPanel'))
+const Rewards           = lazy(() => import('./pages/Rewards'))
+const GeneralGroup      = lazy(() => import('./pages/GeneralGroup'))
+const Broadcast         = lazy(() => import('./pages/Broadcast'))
+const BroadcastLive     = lazy(() => import('./pages/BroadcastLive'))
+const SchoolChannel     = lazy(() => import('./pages/SchoolChannel'))
+const SchoolChannelAdmin = lazy(() => import('./pages/SchoolChannelAdmin'))
+const PrivacyPolicy     = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsConditions   = lazy(() => import('./pages/TermsConditions'))
+
+// Page loader shown while lazy chunk downloads
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
+      <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -57,16 +67,6 @@ function AppShell() {
   useEffect(() => {
     initTheme()
     initAuth()
-    // Pre-warm the backend server on app boot
-    const backendUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://studdy-buddy-backend-a5x.onrender.com'
-    fetch(`${backendUrl}/ping`).catch(() => {})
-
-    // Keep-alive ping every 10 minutes to prevent Render cold starts
-    const keepAlive = setInterval(() => {
-      fetch(`${backendUrl}/ping`).catch(() => {})
-    }, 10 * 60 * 1000)
-
-    return () => clearInterval(keepAlive)
   }, [initAuth, initTheme])
 
   useEffect(() => {
@@ -104,6 +104,7 @@ function AppShell() {
       {token && !isAdminRoute && <Navbar />}
       {token && !isAdminRoute && <IncomingCallModal />}
       {token && !isAdminRoute && <InstallPWA />}
+      <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public */}
           <Route path="/login" element={token ? <Navigate to="/dashboard" replace /> : <Login />} />
@@ -154,6 +155,7 @@ function AppShell() {
             }
           />
         </Routes>
+      </Suspense>
     </div>
   )
 }

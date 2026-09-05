@@ -79,42 +79,53 @@ export const useAuthStore = create((set) => ({
       const parsedUser = cachedUser ? JSON.parse(cachedUser) : null
       set({ token, user: parsedUser, isInitialized: true, isTokenValidated: false })
 
-      // Silently validate token + refresh user data in background
-      // Only logout on confirmed TOKEN_EXPIRED or INVALID_TOKEN - never on network failures
+      // Validate token + refresh in PARALLEL — not sequential
+      // Previously: getProfile() then refreshToken() = 2 round trips sequentially
+      // Now: both fire at same time = only 1 round trip worth of wait
       try {
-        const { data } = await authAPI.getProfile()
-        const freshUser = data.data.user
-        localStorage.setItem('user', JSON.stringify(freshUser))
-        set({ user: freshUser, isTokenValidated: true })
+        const [profileRes, refreshRes] = await Promise.allSettled([
+          authAPI.getProfile(),
+          authAPI.refreshToken(),
+        ])
 
-        // Proactively refresh token if it was issued > 7 days ago (keep session fresh)
-        try {
-          const res = await authAPI.refreshToken()
-          if (res.data?.data?.token) {
-            localStorage.setItem('token', res.data.data.token)
-            set({ token: res.data.data.token })
+        // Handle profile result
+        if (profileRes.status === 'fulfilled') {
+          const freshUser = profileRes.value.data.data.user
+          localStorage.setItem('user', JSON.stringify(freshUser))
+          set({ user: freshUser, isTokenValidated: true })
+        } else {
+          const error = profileRes.reason
+          const errorCode = error.response?.data?.error?.code
+          const status = error.response?.status
+
+          // ONLY logout on confirmed invalid/expired token
+          if (status === 401 && (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN' || errorCode === 'USER_NOT_FOUND')) {
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
+            set({ token: null, user: null, isTokenValidated: false })
+            if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+              window.location.href = '/login'
+            }
+            return
+          } else {
+            // Network error / cold start — keep user logged in with cached data
+            console.warn('⚠️ Could not validate token (network issue) — using cached session')
+            set({ isTokenValidated: true })
           }
-        } catch {
-          // Refresh failed silently - token still valid, continue
+        }
+
+        // Handle refresh token result (best-effort, don't fail on this)
+        if (refreshRes.status === 'fulfilled') {
+          const newToken = refreshRes.value.data?.data?.token
+          if (newToken) {
+            localStorage.setItem('token', newToken)
+            set({ token: newToken })
+          }
         }
       } catch (error) {
-        const errorCode = error.response?.data?.error?.code
-        const status = error.response?.status
-
-        // ONLY logout on confirmed invalid/expired token (401 with specific codes)
-        // Do NOT logout on network errors, timeouts, or server cold-starts (5xx, no response)
-        if (status === 401 && (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN' || errorCode === 'USER_NOT_FOUND')) {
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
-          set({ token: null, user: null, isTokenValidated: false })
-          if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
-            window.location.href = '/login'
-          }
-        } else {
-          // Network error / server down / cold start — keep user logged in with cached data
-          console.warn('⚠️ Could not validate token (network issue) — using cached session')
-          set({ isTokenValidated: true }) // Allow app to work with cached data
-        }
+        // Unexpected error — keep session alive
+        console.warn('⚠️ Auth init error — using cached session', error.message)
+        set({ isTokenValidated: true })
       }
     } else {
       set({ isInitialized: true, isTokenValidated: false })

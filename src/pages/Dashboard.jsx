@@ -53,14 +53,11 @@ export default function Dashboard() {
     const fetchData = async () => {
       try {
         const [doubtsRes, communitiesRes] = await Promise.all([
-          doubtAPI.list(1, 100),
+          // Sirf apne doubts fetch karo — userId filter + limit 5 at API level
+          doubtAPI.list(1, 5, undefined, undefined, user._id),
           communityAPI.list(1, 5),
         ])
-        const allDoubts = doubtsRes.data.data?.doubts || []
-        const userDoubts = allDoubts.filter(d =>
-          user && (d.userId === user._id || d.userId?._id === user._id || String(d.userId) === String(user._id))
-        ).slice(0, 5)
-        setDoubts(userDoubts)
+        setDoubts(doubtsRes.data.data?.doubts || [])
         setCommunities(communitiesRes.data.data?.communities || [])
       } catch (err) {
         console.error('Failed to fetch data:', err)
@@ -69,10 +66,8 @@ export default function Dashboard() {
       }
     }
     if (user) {
-      const timer = setTimeout(() => {
-        fetchData()
-      }, 200)
-      return () => clearTimeout(timer)
+      // 200ms delay hataya — user already available hai yahan
+      fetchData()
     }
   }, [user])
 

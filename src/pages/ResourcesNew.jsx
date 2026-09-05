@@ -989,6 +989,10 @@ function ResourcesGrid() {
     search: '',
   });
 
+  // Debounce search — wait 400ms after user stops typing before firing API call
+  // topic/type changes are instant (button clicks, not typing)
+  const debouncedSearch = useDebounce(filters.search, 400);
+
   // Keyboard shortcuts
   useKeyboardShortcuts({
     'cmd+k': () => {
@@ -1007,18 +1011,20 @@ function ResourcesGrid() {
     }
   });
 
+  // Fire fetch when topic/type change instantly, or when debounced search changes
   useEffect(() => {
-    fetchResources();
-  }, [filters]);
+    fetchResources(debouncedSearch);
+  }, [filters.topic, filters.type, debouncedSearch]);
 
-  const fetchResources = async () => {
+  const fetchResources = async (searchOverride) => {
     try {
       setLoading(true);
       setError(null);
       const params = {};
       if (filters.topic) params.topic = filters.topic;
       if (filters.type) params.type = filters.type;
-      if (filters.search) params.search = filters.search;
+      const search = searchOverride !== undefined ? searchOverride : filters.search;
+      if (search) params.search = search;
 
       const res = await resourceAPI.list(params);
       setResources(res.data?.data?.resources || []);

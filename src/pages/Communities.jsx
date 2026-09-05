@@ -178,22 +178,32 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
   }, [userId])
 
   const handleFollow = async () => {
-    setFollowLoading(true)
+    // Optimistic update — instantly toggle UI, API runs in background
+    const wasFollowing = following
+    setFollowing(!wasFollowing)
+    setProfile(p => ({
+      ...p,
+      followersCount: wasFollowing
+        ? Math.max(0, (p.followersCount || 1) - 1)
+        : (p.followersCount || 0) + 1
+    }))
     try {
-      if (following) {
+      if (wasFollowing) {
         await followAPI.unfollow(userId)
-        setFollowing(false)
-        setProfile(p => ({ ...p, followersCount: Math.max(0, (p.followersCount || 1) - 1) }))
       } else {
         await followAPI.follow(userId)
-        setFollowing(true)
-        setProfile(p => ({ ...p, followersCount: (p.followersCount || 0) + 1 }))
       }
-    } catch {}
-    finally { setFollowLoading(false) }
+    } catch {
+      // Revert on failure
+      setFollowing(wasFollowing)
+      setProfile(p => ({
+        ...p,
+        followersCount: wasFollowing
+          ? (p.followersCount || 0) + 1
+          : Math.max(0, (p.followersCount || 1) - 1)
+      }))
+    }
   }
-
-  const u = profile?.user
   const isOwn = String(userId) === String(currentUserId)
   const hasEdu = u?.education?.institution
   const hasExp = u?.experience?.company
@@ -656,17 +666,19 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate 
   }, [])
 
   const handleFollow = async () => {
-    setFollowLoading(true)
+    // Optimistic update — instant toggle, API in background
+    const wasFollowing = following
+    setFollowing(!wasFollowing)
     try {
-      if (following) {
+      if (wasFollowing) {
         await followAPI.unfollow(post.userId?._id)
-        setFollowing(false)
       } else {
         await followAPI.follow(post.userId?._id)
-        setFollowing(true)
       }
-    } catch {}
-    finally { setFollowLoading(false) }
+    } catch {
+      // Revert on failure
+      setFollowing(wasFollowing)
+    }
   }
 
   const postUrl = `${window.location.origin}/community?post=${post._id}`

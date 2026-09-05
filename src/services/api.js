@@ -14,29 +14,29 @@ const API_BASE_URL = isLocalDev
 secureLog('🌐 API Mode:', isLocalDev ? 'Development (localhost)' : 'Production (Load Balanced)');
 secureLog('🌐 API base URL:', API_BASE_URL);
 
-// Keep-alive ping for all 3 Render servers to prevent cold starts
+// Single keep-alive ping on startup + every 4 min to prevent Render cold starts
+// Previously: 9 pings in first 45 seconds across 3 servers — now just 1 smart ping
 if (!isLocalDev) {
   const servers = [
     'https://studdy-buddy-backend-a5x.onrender.com',
     'https://studdy-buddy-backend-a5x-ytip.onrender.com',
     'https://studdy-buddy-backend-a5x-2dn7.onrender.com',
-  ];
+  ]
 
-  const pingAllServers = () => {
-    servers.forEach(server => {
-      fetch(`${server}/ping`).catch(() => {});
-    });
-  };
+  // Ping all 3 servers but stagger them — 1 per 2 seconds to avoid connection flood
+  const pingAllStaggered = () => {
+    servers.forEach((server, i) => {
+      setTimeout(() => fetch(`${server}/ping`).catch(() => {}), i * 2000)
+    })
+  }
 
-  // Initial ping burst
-  pingAllServers();
-  setTimeout(pingAllServers, 15 * 1000);
-  setTimeout(pingAllServers, 45 * 1000);
-  
-  // Regular pings every 4 minutes
-  setInterval(pingAllServers, 4 * 60 * 1000);
-  
-  console.log('🔥 Keep-alive enabled for all 3 servers');
+  // Single startup ping burst (staggered)
+  pingAllStaggered()
+
+  // Regular pings every 4 minutes to keep all servers warm
+  setInterval(pingAllStaggered, 4 * 60 * 1000)
+
+  console.log('🔥 Keep-alive enabled for all 3 servers (staggered)')
 }
 
 // Simple in-memory cache for GET requests (stale-while-revalidate)
@@ -162,8 +162,13 @@ export const authAPI = {
 export const doubtAPI = {
   create: (data) => api.post("/doubts", data),
 
-  list: (page = 1, limit = 10) =>
-    api.get(`/doubts?page=${page}&limit=${limit}`),
+  list: (page = 1, limit = 10, topic, status, userId) => {
+    const params = new URLSearchParams({ page, limit })
+    if (topic) params.append('topic', topic)
+    if (status) params.append('status', status)
+    if (userId) params.append('userId', userId)
+    return api.get(`/doubts?${params.toString()}`)
+  },
 
   getById: (id) => api.get(`/doubts/${id}`),
 
