@@ -597,10 +597,16 @@ function PostComposer({ user, onPost }) {
               </div>
 
               <div className="px-5 py-4 flex-1 overflow-y-auto">
-                <textarea ref={textRef} value={content} onChange={e => setContent(e.target.value)}
+                <textarea ref={textRef} value={content} onChange={e => setContent(e.target.value.slice(0, 7000))}
                   placeholder="What do you want to talk about?"
                   rows={5}
+                  maxLength={7000}
                   className="w-full bg-transparent text-sm text-theme-primary placeholder-gray-500 resize-none focus:outline-none leading-relaxed" />
+                {content.length > 6000 && (
+                  <p className="text-xs mt-1 text-right" style={{ color: content.length >= 7000 ? '#ef4444' : '#f59e0b' }}>
+                    {content.length}/7000
+                  </p>
+                )}
                 {media && (
                   <div className="relative mt-2 rounded-lg overflow-hidden" style={{ border: "1px solid var(--border-primary)" }}>
                     {media.type === 'image'
