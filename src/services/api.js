@@ -170,6 +170,7 @@ export const authAPI = {
   forgotPassword: (email) => api.post("/auth/forgot-password", { email }),
   resetPassword: (data) => api.post("/auth/reset-password", data),
   refreshToken: () => api.post("/auth/refresh-token"),
+  getSchools: () => api.get("/auth/schools"),
 };
 
 /* ---------------- DOUBTS ---------------- */

@@ -5,6 +5,7 @@ import { UserPlus, Mail, Lock, User, UserCircle, Loader2, AlertCircle, Eye, EyeO
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import ThemeToggle from '../components/ThemeToggle'
+import { authAPI } from '../services/api'
 const a5xLogo = '/studdybuddy-logo.png'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
@@ -17,12 +18,33 @@ export default function Signup() {
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showSchoolPass, setShowSchoolPass] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [schools, setSchools] = useState([])
+  const [schoolDropOpen, setSchoolDropOpen] = useState(false)
+  const schoolDropRef = useRef(null)
   const { register, googleLogin, loading } = useAuthStore()
   const { theme } = useThemeStore()
   const isDark = theme === 'dark'
   const navigate = useNavigate()
   const googleBtnRef = useRef(null)
+
+  // Fetch available school names for the dropdown
+  useEffect(() => {
+    authAPI.getSchools()
+      .then(res => setSchools(res.data?.data?.schools || []))
+      .catch(() => {})
+  }, [])
+
+  // Close school dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (schoolDropRef.current && !schoolDropRef.current.contains(e.target))
+        setSchoolDropOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   useEffect(() => {
     if (window.google && googleBtnRef.current) {
@@ -215,16 +237,99 @@ export default function Signup() {
                   </div>
                   <div>
                     <label className={labelClass} style={labelStyle}>School Code <span className="text-xs opacity-50">(Optional)</span></label>
-                    <input type="text" name="schoolName" placeholder="Optional - Enter for free access" value={formData.schoolName}
-                      onChange={e => setFormData(p => ({ ...p, schoolName: e.target.value }))}
-                      className={inputClass.replace('pl-11', 'pl-4')} />
+                    {schools.length > 0 ? (
+                      <div className="relative" ref={schoolDropRef}>
+                        {/* Trigger button */}
+                        <button
+                          type="button"
+                          onClick={() => setSchoolDropOpen(v => !v)}
+                          className={inputClass.replace('pl-11', 'pl-4') + ' flex items-center justify-between text-left w-full'}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <span style={{ color: formData.schoolName ? undefined : '#9ca3af' }}>
+                            {formData.schoolName || '-- Select Your School --'}
+                          </span>
+                          <svg width="12" height="8" viewBox="0 0 12 8" fill="none" style={{ flexShrink: 0, marginLeft: 8, transform: schoolDropOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+                            <path d="M1 1.5L6 6.5L11 1.5" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+
+                        {/* Custom dropdown list */}
+                        <AnimatePresence>
+                          {schoolDropOpen && (
+                            <motion.ul
+                              initial={{ opacity: 0, y: -8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -8 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden"
+                              style={{
+                                background: isDark ? '#1e1b2e' : '#ffffff',
+                                border: '1px solid rgba(99,102,241,0.4)',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                                maxHeight: 220,
+                                overflowY: 'auto',
+                              }}
+                            >
+                              {schools.map(school => (
+                                <li key={school}>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setFormData(p => ({ ...p, schoolName: school })); setSchoolDropOpen(false) }}
+                                    className="w-full text-left px-4 py-2.5 text-sm font-medium transition-colors"
+                                    style={{
+                                      color: formData.schoolName === school
+                                        ? '#818cf8'
+                                        : isDark ? '#e2e8f0' : '#0f172a',
+                                      background: formData.schoolName === school
+                                        ? isDark ? 'rgba(99,102,241,0.25)' : '#e0e7ff'
+                                        : 'transparent',
+                                    }}
+                                    onMouseEnter={e => {
+                                      if (formData.schoolName !== school)
+                                        e.currentTarget.style.background = isDark ? 'rgba(99,102,241,0.15)' : '#f3f4f6'
+                                    }}
+                                    onMouseLeave={e => {
+                                      if (formData.schoolName !== school)
+                                        e.currentTarget.style.background = 'transparent'
+                                    }}
+                                  >
+                                    🏫 {school}
+                                  </button>
+                                </li>
+                              ))}
+                            </motion.ul>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <input type="text" name="schoolName" placeholder="Optional - Enter for free access" value={formData.schoolName}
+                        onChange={e => setFormData(p => ({ ...p, schoolName: e.target.value }))}
+                        className={inputClass.replace('pl-11', 'pl-4')} />
+                    )}
                     {errEl(errors.schoolName)}
                   </div>
                   <div>
                     <label className={labelClass} style={labelStyle}>School Password <span className="text-xs opacity-50">(Optional)</span></label>
-                    <input type="password" name="schoolPassword" placeholder="Optional - Enter for free access" value={formData.schoolPassword}
-                      onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
-                      className={inputClass.replace('pl-11', 'pl-4')} />
+                    <div className="relative">
+                      <input
+                        type={showSchoolPass ? 'text' : 'password'}
+                        name="schoolPassword"
+                        placeholder="Optional - Enter for free access"
+                        value={formData.schoolPassword}
+                        onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
+                        className={inputClass.replace('pl-11', 'pl-4')}
+                        style={{ paddingRight: '44px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowSchoolPass(v => !v)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 transition-opacity hover:opacity-100 opacity-60"
+                        tabIndex={-1}
+                      >
+                        {showSchoolPass ? <EyeOff size={16} className="text-gray-400" /> : <Eye size={16} className="text-gray-400" />}
+                      </button>
+                    </div>
                     {errEl(errors.schoolPassword)}
                   </div>
                   <div>
