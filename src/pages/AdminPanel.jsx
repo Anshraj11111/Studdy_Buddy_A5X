@@ -89,7 +89,8 @@ function PreRegisteredStudents({ showToast }) {
       showToast('Pre-registration deleted', 'success')
     } catch (err) {
       console.error('Error deleting pre-registration:', err)
-      showToast('Failed to delete pre-registration', 'error')
+      const errorMsg = err?.response?.data?.error?.message || err?.message || 'Failed to delete pre-registration'
+      showToast(errorMsg, 'error')
     }
   }
 
@@ -1802,7 +1803,10 @@ export default function AdminPanel() {
         : u
       ))
       setEditingUser(null)
-      showToast("User updated successfully")
+      
+      // Show message about re-login requirement
+      const message = res.data.message || "User updated successfully"
+      showToast(message)
     } catch (err) {
       showToast(err?.response?.data?.error?.message || "Update failed", "error")
     } finally { setEditSaving(false) }

@@ -991,6 +991,13 @@ function ResourcesGrid() {
   // Refresh profile on mount to sync latest hasFreeAccess status
   useEffect(() => {
     refreshProfile();
+    
+    // Also refresh every 2 minutes to catch admin changes to school credentials
+    const interval = setInterval(() => {
+      refreshProfile();
+    }, 2 * 60 * 1000); // 2 minutes
+    
+    return () => clearInterval(interval);
   }, [refreshProfile]);
 
   // Debounce search — wait 400ms after user stops typing before firing API call
@@ -1372,10 +1379,10 @@ function CourseCard({ course, onOpen }) {
   const { user } = useAuthStore();
   const isEnrolled = course.enrollment !== null;
   
-  // School students get free access (similar to Resources logic)
-  // User has free access if they have schoolName OR hasFreeAccess flag
-  const hasSchoolAccess = !!(user?.schoolName || user?.hasFreeAccess);
-  const isLocked = course.isPremium && !hasSchoolAccess && !user?.hasPremiumAccess && !user?.hasFreeAccess && !isEnrolled;
+  // hasFreeAccess is calculated by backend: !!(schoolName && schoolPassword) || isPremium
+  // Don't check schoolName alone — it must have BOTH schoolName AND schoolPassword
+  const hasSchoolAccess = user?.hasFreeAccess;
+  const isLocked = course.isPremium && !hasSchoolAccess && !user?.hasPremiumAccess && !isEnrolled;
 
   return (
     <motion.article
@@ -1707,8 +1714,8 @@ function CourseDetail({ course, onBack }) {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Check if user has school access (free access)
-  // User has free access if they have schoolName OR hasFreeAccess flag
-  const hasSchoolAccess = !!(user?.schoolName || user?.hasFreeAccess);
+  // hasFreeAccess is calculated by backend: !!(schoolName && schoolPassword) || isPremium
+  const hasSchoolAccess = user?.hasFreeAccess;
   const data = courseData || course;
   const isEnrolled = data?.enrollment !== null;
   const hasAccess = isEnrolled || user?.hasPremiumAccess || user?.hasFreeAccess || !data?.isPremium;

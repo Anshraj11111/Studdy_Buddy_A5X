@@ -1059,6 +1059,18 @@ export default function Resources() {
   // Check if user has free access (backend sets this flag based on school credentials)
   const hasFreeAccess = user?.hasFreeAccess || user?.role === 'mentor'
 
+  // Refresh profile to sync latest school credentials
+  useEffect(() => {
+    refreshProfile();
+    
+    // Refresh every 2 minutes to catch admin changes
+    const interval = setInterval(() => {
+      refreshProfile();
+    }, 2 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [refreshProfile]);
+
   // Fetch payment price from backend
   useEffect(() => {
     const fetchPaymentPrice = async () => {
