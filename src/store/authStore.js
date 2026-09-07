@@ -69,6 +69,24 @@ export const useAuthStore = create((set) => ({
     set({ user: null, token: null, isTokenValidated: false })
   },
 
+  // Refresh user profile from backend — call this to sync latest hasFreeAccess status
+  refreshProfile: async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+      const response = await authAPI.getProfile()
+      const user = response.data?.data?.user
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user))
+        set({ user })
+        // Force re-render by updating a timestamp
+        console.log('✅ Profile refreshed — hasFreeAccess:', user.hasFreeAccess, 'schoolName:', user.schoolName, 'schoolPassword:', user.schoolPassword)
+      }
+    } catch (error) {
+      console.warn('Failed to refresh profile:', error)
+    }
+  },
+
   // Initialize auth state from localStorage
   initAuth: async () => {
     const token = localStorage.getItem('token')

@@ -11,11 +11,16 @@ const PreRegisteredStudents = ({ showToast }) => {
   const [creating, setCreating] = useState(false)
   const [newStudent, setNewStudent] = useState({ name: '', email: '', phone: '', schoolName: '', schoolPassword: '' })
   const [statusFilter, setStatusFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const fetchStudents = async () => {
     setLoading(true)
     try {
-      const res = await api.get('/admin/pre-registered', { params: { status: statusFilter } })
+      const params = { status: statusFilter }
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim()
+      }
+      const res = await api.get('/admin/pre-registered', { params })
       setStudents(res.data.data.students || [])
     } catch (err) {
       console.error('Error fetching pre-registered students:', err)
@@ -38,10 +43,18 @@ const PreRegisteredStudents = ({ showToast }) => {
 
     setCreating(true)
     try {
-      await api.post('/admin/pre-register', newStudent)
+      const response = await api.post('/admin/pre-register', newStudent)
       setNewStudent({ name: '', email: '', phone: '', schoolName: '', schoolPassword: '' })
       fetchStudents()
-      showToast('Student pre-registered successfully!', 'success')
+      
+      // Check if it was an existing user update or new pre-registration
+      const wasUpdated = response.data.data?.updatedExistingUser
+      showToast(
+        wasUpdated 
+          ? '✓ School credentials added to existing user account!' 
+          : 'Student pre-registered successfully!', 
+        'success'
+      )
     } catch (err) {
       console.error('Error pre-registering student:', err)
       showToast(err?.response?.data?.error?.message || 'Failed to pre-register student', 'error')
@@ -323,7 +336,7 @@ const PreRegisteredStudents = ({ showToast }) => {
                 outline: 'none'
               }}
             >
-              <option value="all">All</option>
+              <option value="all">All Status</option>
               <option value="unused">Unused</option>
               <option value="used">Used</option>
             </select>
@@ -344,6 +357,61 @@ const PreRegisteredStudents = ({ showToast }) => {
             </button>
           </div>
         </div>
+        
+        {/* Search Bar */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(99,102,241,0.1)', display: 'flex', gap: 8 }}>
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: 8,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border-primary)',
+              color: 'var(--text-primary)',
+              fontSize: 13,
+              outline: 'none'
+            }}
+          />
+          <button
+            onClick={fetchStudents}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: '1px solid rgba(99,102,241,0.3)',
+              background: 'rgba(99,102,241,0.15)',
+              color: '#818cf8',
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 600
+            }}
+          >
+            Search
+          </button>
+          <button
+            onClick={() => { 
+              setSearchQuery('')
+              // Trigger fetch after clearing search
+              setTimeout(() => fetchStudents(), 0)
+            }}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 8,
+              border: '1px solid var(--border-primary)',
+              background: 'rgba(255,255,255,0.05)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 600
+            }}
+          >
+            Clear
+          </button>
+        </div>
+        
         <div style={{ padding: '16px', maxHeight: 600, overflowY: 'auto', overflowX: 'auto' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: 40 }}>

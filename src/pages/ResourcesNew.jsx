@@ -974,7 +974,7 @@ function ResourceCard({ resource, onPlay }) {
 ========================================================= */
 
 function ResourcesGrid() {
-  const { user } = useAuthStore();
+  const { user, refreshProfile } = useAuthStore();
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -987,6 +987,11 @@ function ResourcesGrid() {
     type: '',
     search: '',
   });
+
+  // Refresh profile on mount to sync latest hasFreeAccess status
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
 
   // Debounce search — wait 400ms after user stops typing before firing API call
   // topic/type changes are instant (button clicks, not typing)
@@ -1478,7 +1483,7 @@ function CourseCard({ course, onOpen }) {
 }
 
 function CoursesGrid() {
-  const { user } = useAuthStore();
+  const { user, refreshProfile } = useAuthStore();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -1488,6 +1493,11 @@ function CoursesGrid() {
     difficulty: '',
     search: '',
   });
+
+  // Refresh profile on mount
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
 
   useEffect(() => {
     fetchCourses();

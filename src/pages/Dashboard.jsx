@@ -37,7 +37,7 @@ function Sparkline({ color = '#8b5cf6', data = [3,5,2,8,4,9,6,11,8,13] }) {
 }
 
 export default function Dashboard() {
-  const { user } = useAuthStore()
+  const { user, refreshProfile } = useAuthStore()
   const { theme } = useThemeStore()
   const isDark = theme === 'dark'
   const navigate = useNavigate()
@@ -48,6 +48,11 @@ export default function Dashboard() {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [matchedRoom, setMatchedRoom] = useState(null)
+
+  // Refresh profile on mount to sync latest hasFreeAccess status
+  useEffect(() => {
+    refreshProfile()
+  }, [refreshProfile])
 
   useEffect(() => {
     const fetchData = async () => {

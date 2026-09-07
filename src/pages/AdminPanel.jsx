@@ -1697,6 +1697,9 @@ export default function AdminPanel() {
   const [actionLoading, setActionLoading] = useState(null)
   const [toast, setToast] = useState(null)
   const [mainTab, setMainTab] = useState("users")
+  const [editingUser, setEditingUser] = useState(null)   // user object being edited
+  const [editForm, setEditForm]     = useState({})       // form state for edit modal
+  const [editSaving, setEditSaving] = useState(false)
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type })
@@ -1770,6 +1773,41 @@ export default function AdminPanel() {
     finally { setActionLoading(null) }
   }
 
+  const handleEditOpen = (u) => {
+    setEditingUser(u)
+    setEditForm({
+      name:           u.name           || '',
+      schoolName:     u.schoolName     || '',
+      schoolPassword: u.schoolPassword || '', // pre-fill if already set
+      city:           u.city           || '',
+    })
+  }
+
+  const handleEditSave = async () => {
+    if (!editForm.name.trim()) { showToast("Name cannot be empty", "error"); return }
+    setEditSaving(true)
+    try {
+      const payload = {
+        name:           editForm.name.trim(),
+        schoolName:     editForm.schoolName.trim(),
+        schoolPassword: editForm.schoolPassword.trim(), // blank = remove password
+        city:           editForm.city.trim(),
+      }
+
+      const res = await adminAPI.updateUser(editingUser._id, payload)
+      const updated = res.data.data.user
+      // Merge updated fields including schoolPassword so next Edit shows correct value
+      setUsers(prev => prev.map(u => u._id === updated._id
+        ? { ...u, ...updated }
+        : u
+      ))
+      setEditingUser(null)
+      showToast("User updated successfully")
+    } catch (err) {
+      showToast(err?.response?.data?.error?.message || "Update failed", "error")
+    } finally { setEditSaving(false) }
+  }
+
   // -- LOGIN SCREEN ----------------------------------------------
   if (!authed) {
     return (
@@ -1832,6 +1870,125 @@ export default function AdminPanel() {
             style={{ background: toast.type === "error" ? "rgba(239,68,68,0.95)" : "rgba(52,211,153,0.95)", backdropFilter: "blur(12px)", color: 'white', minWidth: 250 }}>
             {toast.type === "error" ? "❌" : "✅"} {toast.msg}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Edit User Modal ──────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {editingUser && (
+          <>
+            {/* Backdrop */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setEditingUser(null)}
+              className="fixed inset-0 z-[9998]"
+              style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-full max-w-md rounded-2xl overflow-hidden"
+                style={{ background: 'var(--bg-card)', border: '1px solid rgba(99,102,241,0.3)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+                {/* Header */}
+                <div className="h-0.5" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+                <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                  <div>
+                    <h3 className="font-bold text-theme-primary text-base flex items-center gap-2">
+                      <Edit2 size={15} style={{ color: '#818cf8' }} /> Edit User
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                      {editingUser.email}
+                    </p>
+                  </div>
+                  <button onClick={() => setEditingUser(null)}
+                    className="p-2 rounded-lg transition hover:bg-white/10"
+                    style={{ color: 'var(--text-tertiary)' }}>
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Form */}
+                <div className="px-6 py-5 space-y-4">
+                  {/* Name */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Name</label>
+                    <input
+                      type="text" value={editForm.name}
+                      onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* School Name */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                      School Code <span style={{ color: '#818cf8' }}>(for free access)</span>
+                    </label>
+                    <input
+                      type="text" value={editForm.schoolName}
+                      onChange={e => setEditForm(p => ({ ...p, schoolName: e.target.value }))}
+                      placeholder="e.g. Bardsley"
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* School Password */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                      School Password <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(edit to change)</span>
+                    </label>
+                    <input
+                      type="text" value={editForm.schoolPassword}
+                      onChange={e => setEditForm(p => ({ ...p, schoolPassword: e.target.value }))}
+                      placeholder="Leave blank to remove password"
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition font-mono"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* City */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>City</label>
+                    <input
+                      type="text" value={editForm.city}
+                      onChange={e => setEditForm(p => ({ ...p, city: e.target.value }))}
+                      placeholder="e.g. Katni"
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* Info note */}
+                  <div className="flex items-start gap-2 p-3 rounded-xl text-xs"
+                    style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#c7d2fe' }}>
+                    💡 Setting school code + password gives the student <strong>free access</strong> to all courses instantly.
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex gap-3 px-6 pb-6">
+                  <button onClick={() => setEditingUser(null)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)' }}>
+                    Cancel
+                  </button>
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    onClick={handleEditSave} disabled={editSaving}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                    {editSaving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Save size={14} /> Save Changes</>}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
@@ -2035,6 +2192,12 @@ export default function AdminPanel() {
                             {actionLoading === u._id + "_toggle" ? <Loader2 size={11} className="animate-spin" /> :
                               u.isActive !== false ? <ToggleLeft size={13} /> : <ToggleRight size={13} />}
                             {u.isActive !== false ? "Deactivate" : "Activate"}
+                          </motion.button>
+                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                            onClick={() => handleEditOpen(u)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition"
+                            style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", color: "#818cf8" }}>
+                            <Edit2 size={11} /> Edit
                           </motion.button>
                           <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                             onClick={() => handleDelete(u._id, u.name)}

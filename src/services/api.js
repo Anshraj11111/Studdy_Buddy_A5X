@@ -45,7 +45,7 @@ const CACHE_TTL = 10 * 60 * 1000; // 10 min fresh
 const CACHE_STALE_TTL = 30 * 60 * 1000; // 30 min stale (serve stale while fetching fresh)
 
 // URLs that should never be served from client-side cache (real-time data)
-const NO_CACHE_PATTERNS = ['/feed', '/doubts'];
+const NO_CACHE_PATTERNS = ['/feed', '/doubts', '/admin/users', '/admin/stats'];
 
 const getCached = (key) => {
   // Never serve feed/doubts from cache — comments and likes must be real-time
@@ -348,6 +348,7 @@ export const adminAPI = {
   getStats: () => api.get('/admin/stats'),
   getUsers: (params = {}) => api.get('/admin/users', { params }),
   toggleUser: (id) => api.put(`/admin/users/${id}/toggle`),
+  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   
   // Course Management
