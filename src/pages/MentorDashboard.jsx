@@ -278,37 +278,37 @@ export default function MentorDashboard() {
                         className="rounded-2xl overflow-hidden"
                         style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
                         <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
-                        <div className="p-4 sm:p-5">
-                          <div className="flex items-start gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-theme-primary font-bold flex-shrink-0"
+                        <div className="p-3 sm:p-5">
+                          <div className="flex items-start gap-2 sm:gap-3 mb-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-theme-primary font-bold text-xs sm:text-sm flex-shrink-0"
                               style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 0 12px rgba(99,102,241,0.4)" }}>
                               {doubt.userId?.profileImage
                                 ? <img src={doubt.userId.profileImage} alt={doubt.userId.name} className="w-full h-full object-cover rounded-full" />
                                 : doubt.userId?.name?.charAt(0).toUpperCase() || "U"}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                                <div>
-                                  <h3 className="font-bold text-theme-primary text-sm sm:text-base">{doubt.title}</h3>
-                                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                    <User size={11} style={{ color: "var(--text-tertiary)" }} />
-                                    <span className="text-xs" style={{ color: "var(--text-secondary)" }}>{doubt.userId?.name || "Unknown"}</span>
+                            <div className="flex-1 min-w-0 overflow-hidden">
+                              <div className="flex flex-col gap-2">
+                                <div className="w-full">
+                                  <h3 className="font-bold text-theme-primary text-sm sm:text-base break-words line-clamp-2">{doubt.title}</h3>
+                                  <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 flex-wrap text-xs">
+                                    <User size={10} style={{ color: "var(--text-tertiary)" }} />
+                                    <span className="truncate max-w-[120px] sm:max-w-none" style={{ color: "var(--text-secondary)" }}>{doubt.userId?.name || "Unknown"}</span>
                                     <span style={{ color: "var(--text-tertiary)" }}>•</span>
-                                    <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>{new Date(doubt.createdAt).toLocaleDateString()}</span>
+                                    <span className="text-xs whitespace-nowrap" style={{ color: "var(--text-tertiary)" }}>{new Date(doubt.createdAt).toLocaleDateString()}</span>
                                   </div>
                                 </div>
-                                <div className="flex gap-1.5 flex-wrap flex-shrink-0">
-                                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                                <div className="flex gap-1.5 flex-wrap">
+                                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
                                     style={{ background: doubt.status === "resolved" ? "rgba(52,211,153,0.15)" : doubt.status === "matched" ? "rgba(251,191,36,0.15)" : "rgba(99,102,241,0.15)", border: `1px solid ${doubt.status === "resolved" ? "rgba(52,211,153,0.35)" : doubt.status === "matched" ? "rgba(251,191,36,0.35)" : "rgba(99,102,241,0.35)"}`, color: doubt.status === "resolved" ? "#34d399" : doubt.status === "matched" ? "#fbbf24" : "#a5b4fc" }}>
                                     {doubt.status}
                                   </span>
-                                  <span className="text-xs px-2 py-0.5 rounded-full"
+                                  <span className="text-xs px-2 py-0.5 rounded-full truncate max-w-[100px] sm:max-w-none"
                                     style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", color: "#c4b5fd" }}>
                                     {doubt.topic}
                                   </span>
                                 </div>
                               </div>
-                              <p className="text-xs sm:text-sm mt-2 line-clamp-2" style={{ color: "var(--text-secondary)" }}>{doubt.description}</p>
+                              <p className="text-xs sm:text-sm mt-2 line-clamp-2 break-words" style={{ color: "var(--text-secondary)" }}>{doubt.description}</p>
                             </div>
                           </div>
 

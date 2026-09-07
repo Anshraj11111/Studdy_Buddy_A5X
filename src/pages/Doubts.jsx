@@ -223,45 +223,55 @@ export default function Doubts() {
               <motion.div key={doubt._id}
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.05, 0.3), type: "spring", stiffness: 200 }}
-                className="group rounded-xl p-4 transition-all hover:shadow-md"
+                className="group rounded-xl p-3 sm:p-4 transition-all hover:shadow-md"
                 style={{ 
                   background: "var(--bg-secondary)", 
                   border: "1px solid var(--border-primary)"
                 }}>
-                <div className="flex items-start justify-between gap-3 sm:gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm sm:text-base mb-1.5 line-clamp-2 transition-colors"
+                <div className="flex items-start justify-between gap-2 sm:gap-4">
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <h3 className="font-semibold text-sm sm:text-base mb-1.5 line-clamp-2 transition-colors break-words"
                       style={{ color: "#6366f1" }}>
                       {doubt.title}
                     </h3>
-                    <p className="text-xs sm:text-sm line-clamp-2 mb-3 text-theme-secondary">
+                    <p className="text-xs sm:text-sm line-clamp-2 mb-3 text-theme-secondary break-words">
                       {doubt.description}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge status={doubt.status} />
+                      <span className="px-2 py-0.5 rounded-md text-xs font-medium truncate max-w-[120px] sm:max-w-none"
+                        style={{ background: `${TOPIC_COLORS[doubt.topic] || "#6366f1"}20`, color: TOPIC_COLORS[doubt.topic] || "#6366f1" }}>
+                        {doubt.topic}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-theme-tertiary flex-shrink-0">
+                        <MessageCircle size={12} />{doubt.replies?.length || 0}
+                      </span>
                       {doubt.status === "matched" && (
                         <button onClick={e => handleViewMatch(doubt, e)}
-                          className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-all hover:opacity-80"
+                          className="flex items-center gap-1 px-2 sm:px-2.5 py-1 text-xs font-medium rounded-md transition-all hover:opacity-80 flex-shrink-0"
                           style={{ background: "#dbeafe", color: "#3b82f6" }}>
-                          <Users size={12} />matched • tap to view
+                          <Users size={12} />
+                          <span className="hidden sm:inline">matched • tap to view</span>
+                          <span className="sm:hidden">view</span>
                         </button>
                       )}
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 flex-shrink-0">
+                  <div className="flex flex-col gap-1 sm:gap-1.5 flex-shrink-0">
                     <Link to={`/doubts/${doubt._id}/edit`}>
                       <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                        className="p-2 rounded-lg transition-colors"
+                        className="p-1.5 sm:p-2 rounded-lg transition-colors"
                         style={{ background: "transparent", color: "#6366f1" }}>
-                        <Edit size={16} />
+                        <Edit size={14} className="sm:w-4 sm:h-4" />
                       </motion.button>
                     </Link>
                     <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                       onClick={e => handleDelete(doubt._id, e)}
-                      className="p-2 rounded-lg transition-colors"
+                      className="p-1.5 sm:p-2 rounded-lg transition-colors"
                       style={{ background: "transparent", color: "#ef4444" }}>
-                      <Trash2 size={16} />
+                      <Trash2 size={14} className="sm:w-4 sm:h-4" />
                     </motion.button>
                   </div>
                 </div>

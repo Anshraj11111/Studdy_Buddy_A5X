@@ -992,12 +992,16 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
 function FeedTab({ user, setFollowChangeCallback }) {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [activeSearch, setActiveSearch] = useState('')
   const [filterCat, setFilterCat] = useState('All')
   const [catOpen, setCatOpen] = useState(false)
   const [followingSet, setFollowingSet] = useState(null) // Set of userId strings I follow
   const catRef = useRef()
+  const observerTarget = useRef(null)
 
   // Fetch who I follow once — used to correctly init follow buttons on posts
   useEffect(() => {
@@ -1029,18 +1033,56 @@ function FeedTab({ user, setFollowChangeCallback }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const fetchPosts = useCallback(async (cat, q) => {
-    setLoading(true)
+  const fetchPosts = useCallback(async (cat, q, pageNum = 1, append = false) => {
+    if (append) setLoadingMore(true)
+    else setLoading(true)
+    
     try {
-      const res = await feedAPI.getPosts(cat, 1, q)
-      setPosts(res.data.data?.posts || [])
-    } catch { /* ignore */ }
-    finally { setLoading(false) }
+      const res = await feedAPI.getPosts(cat, pageNum, q)
+      const newPosts = res.data.data?.posts || []
+      
+      if (append) {
+        setPosts(prev => [...prev, ...newPosts])
+      } else {
+        setPosts(newPosts)
+      }
+      
+      // If we got less than 20 posts, no more pages
+      setHasMore(newPosts.length === 20)
+    } catch { 
+      setHasMore(false)
+    } finally { 
+      if (append) setLoadingMore(false)
+      else setLoading(false)
+    }
   }, [])
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          const nextPage = page + 1
+          setPage(nextPage)
+          fetchPosts(filterCat, activeSearch, nextPage, true)
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    const currentTarget = observerTarget.current
+    if (currentTarget) observer.observe(currentTarget)
+
+    return () => {
+      if (currentTarget) observer.unobserve(currentTarget)
+    }
+  }, [hasMore, loading, loadingMore, page, filterCat, activeSearch, fetchPosts])
 
   useEffect(() => { 
     const timer = setTimeout(() => {
-      fetchPosts('All', '')
+      setPage(1)
+      setHasMore(true)
+      fetchPosts('All', '', 1, false)
     }, 200)
     return () => clearTimeout(timer)
   }, [fetchPosts])
@@ -1048,20 +1090,26 @@ function FeedTab({ user, setFollowChangeCallback }) {
   const handleSearch = () => {
     setActiveSearch(search)
     setFilterCat('All')
-    fetchPosts('All', search)
+    setPage(1)
+    setHasMore(true)
+    fetchPosts('All', search, 1, false)
   }
 
   const handleCatFilter = (cat) => {
     setFilterCat(cat)
     setActiveSearch('')
     setSearch('')
-    fetchPosts(cat, '')
+    setPage(1)
+    setHasMore(true)
+    fetchPosts(cat, '', 1, false)
     setCatOpen(false)
   }
 
   const clearFilter = () => {
     setActiveSearch(''); setSearch(''); setFilterCat('All')
-    fetchPosts('All', '')
+    setPage(1)
+    setHasMore(true)
+    fetchPosts('All', '', 1, false)
   }
 
   const handlePost = async (data) => {
@@ -1223,6 +1271,21 @@ function FeedTab({ user, setFollowChangeCallback }) {
               <PostCard post={post} user={user} onLike={handleLike} onDelete={handleDelete} onComment={handleComment} onUpdate={handleUpdate} initialFollowing={followingSet ? followingSet.has(String(post.userId?._id)) : null} />
             </motion.div>
           ))}
+          
+          {/* Infinite scroll trigger */}
+          <div ref={observerTarget} className="py-4 flex justify-center">
+            {loadingMore && (
+              <div className="flex items-center gap-2 text-sm text-theme-secondary">
+                <Loader2 size={16} className="animate-spin" style={{ color: '#6366f1' }} />
+                <span>Loading more posts...</span>
+              </div>
+            )}
+            {!hasMore && posts.length > 0 && (
+              <div className="text-sm text-theme-tertiary">
+                🎉 You've reached the end!
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
