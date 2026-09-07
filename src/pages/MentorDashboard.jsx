@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { doubtAPI, roomAPI } from "../services/api"
 import { useAuthStore } from "../store/authStore"
 import { useThemeStore } from "../store/themeStore"
-import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard } from "lucide-react"
+import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard, Image as ImageIcon } from "lucide-react"
 import Navbar from "../components/Navbar"
+import { uploadToCloudinary } from "../utils/cloudinary"
 
 export default function MentorDashboard() {
   const { user } = useAuthStore()
@@ -18,6 +19,8 @@ export default function MentorDashboard() {
   const [replyingTo, setReplyingTo] = useState(null)
   const [editingReply, setEditingReply] = useState(null)
   const [replyText, setReplyText] = useState("")
+  const [replyImages, setReplyImages] = useState([])
+  const [uploadingImages, setUploadingImages] = useState(false)
   const [stats, setStats] = useState({ totalDoubts: 0, pendingReplies: 0, activeChats: 0 })
 
   useEffect(() => {
@@ -48,13 +51,97 @@ export default function MentorDashboard() {
     } catch (err) { console.error(err) }
   }
 
-  const handleReply = async (doubtId) => {
-    if (!replyText.trim()) return
+  const handleImageSelect = async (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length === 0) return
+
+    // Create preview blob URLs immediately
+    const previewUrls = files.map(file => URL.createObjectURL(file))
+    const tempPreviews = previewUrls.map((url, idx) => ({ url, file: files[idx], uploaded: false }))
+    
+    // Show previews immediately
+    setReplyImages(prev => [...prev, ...tempPreviews])
+    setUploadingImages(true)
+    
     try {
-      if (editingReply) { await doubtAPI.editReply(doubtId, editingReply, { content: replyText }); setEditingReply(null) }
-      else await doubtAPI.addReply(doubtId, { content: replyText })
-      setReplyText(""); setReplyingTo(null); fetchAllDoubts()
-    } catch (err) { alert(err.response?.data?.error?.message || "Failed to save reply") }
+      // Upload to Cloudinary in background
+      const uploadPromises = files.map(file => uploadToCloudinary(file, 'doubts/replies'))
+      const uploadedUrls = await Promise.all(uploadPromises)
+      
+      // Replace blob URLs with Cloudinary URLs
+      setReplyImages(prev => {
+        const newImages = [...prev]
+        const startIndex = newImages.length - files.length
+        uploadedUrls.forEach((result, idx) => {
+          if (newImages[startIndex + idx]) {
+            // Revoke blob URL to free memory
+            URL.revokeObjectURL(newImages[startIndex + idx].url)
+            // Extract only URL string from {url, publicId} object
+            newImages[startIndex + idx] = { url: result.url, uploaded: true }
+          }
+        })
+        return newImages
+      })
+      
+      console.log('✅ Images uploaded:', uploadedUrls)
+    } catch (error) {
+      console.error('Image upload failed:', error)
+      alert('Failed to upload images. Please try again.')
+      // Remove failed previews
+      setReplyImages(prev => prev.slice(0, prev.length - files.length))
+    } finally {
+      setUploadingImages(false)
+    }
+  }
+
+  const removeReplyImage = (index) => {
+    setReplyImages(prev => {
+      const image = prev[index]
+      // Revoke blob URL if it exists
+      if (image.url.startsWith('blob:')) {
+        URL.revokeObjectURL(image.url)
+      }
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  const handleReply = async (doubtId) => {
+    if (!replyText.trim() && replyImages.length === 0) return
+    
+    // Extract only uploaded Cloudinary URLs
+    const cloudinaryUrls = replyImages
+      .filter(img => img.uploaded)
+      .map(img => img.url)
+    
+    if (replyImages.length > 0 && cloudinaryUrls.length === 0) {
+      alert('Please wait for images to finish uploading')
+      return
+    }
+    
+    try {
+      if (editingReply) { 
+        await doubtAPI.editReply(doubtId, editingReply, { content: replyText, images: cloudinaryUrls })
+        setEditingReply(null) 
+      }
+      else {
+        await doubtAPI.addReply(doubtId, { content: replyText, images: cloudinaryUrls })
+      }
+      
+      // Cleanup blob URLs
+      replyImages.forEach(img => {
+        if (img.url.startsWith('blob:')) {
+          URL.revokeObjectURL(img.url)
+        }
+      })
+      
+      setReplyText("")
+      setReplyImages([])
+      setReplyingTo(null)
+      fetchAllDoubts()
+    } catch (err) { 
+      console.error('Reply error:', err)
+      alert(err.response?.data?.error?.message || "Failed to save reply") 
+    }
   }
 
   const handleEditReply = (doubtId, reply) => { setReplyingTo(doubtId); setEditingReply(reply._id); setReplyText(reply.content) }
@@ -65,7 +152,12 @@ export default function MentorDashboard() {
     catch (err) { alert(err.response?.data?.error?.message || "Failed to delete reply") }
   }
 
-  const cancelReply = () => { setReplyingTo(null); setEditingReply(null); setReplyText("") }
+  const cancelReply = () => { 
+    setReplyingTo(null)
+    setEditingReply(null)
+    setReplyText("")
+    setReplyImages([])
+  }
 
   const getOtherUser = (room) => {
     if (!user || !room) return null
@@ -255,6 +347,17 @@ export default function MentorDashboard() {
                                     )}
                                   </div>
                                   <p className="text-xs sm:text-sm" style={{ color: "var(--text-primary)" }}>{reply.content}</p>
+                                  
+                                  {/* Reply Images */}
+                                  {reply.images && reply.images.length > 0 && (
+                                    <div style={{ display: 'grid', gridTemplateColumns: reply.images.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(100px, 1fr))', gap: 8, marginTop: 8 }}>
+                                      {reply.images.map((img, imgIdx) => (
+                                        <img key={imgIdx} src={img} alt={`Reply image ${imgIdx + 1}`} 
+                                          style={{ width: '100%', height: reply.images.length === 1 ? 'auto' : 100, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-primary)', cursor: 'pointer' }}
+                                          onClick={() => window.open(img, '_blank')} />
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -268,13 +371,43 @@ export default function MentorDashboard() {
                                 rows={3}
                                 className="w-full text-sm text-theme-primary placeholder-gray-500 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none mb-2"
                                 style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)" }} />
-                              <div className="flex gap-2">
+                              
+                              {/* Image Previews */}
+                              {replyImages.length > 0 && (
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                                  {replyImages.map((image, idx) => (
+                                    <div key={idx} style={{ position: 'relative', width: 80, height: 80 }}>
+                                      <img src={image.url} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-primary)', opacity: image.uploaded ? 1 : 0.6 }} />
+                                      {!image.uploaded && (
+                                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', borderRadius: 8 }}>
+                                          <Loader2 size={20} style={{ color: 'white', animation: 'spin 1s linear infinite' }} />
+                                        </div>
+                                      )}
+                                      <button onClick={() => removeReplyImage(idx)}
+                                        style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#ef4444', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                                        <X size={12} />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="flex gap-2 flex-wrap">
+                                {/* Image Upload Button */}
+                                <label style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: '#c4b5fd', fontSize: 12, fontWeight: 600, cursor: uploadingImages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: uploadingImages ? 0.5 : 1 }}>
+                                  <ImageIcon size={14} />
+                                  {uploadingImages ? 'Uploading...' : 'Add Images'}
+                                  <input type="file" accept="image/*" multiple onChange={handleImageSelect} disabled={uploadingImages} style={{ display: 'none' }} />
+                                </label>
+
                                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                                   onClick={() => handleReply(doubt._id)}
+                                  disabled={uploadingImages}
                                   className="flex items-center gap-1.5 px-4 py-2 text-theme-primary text-xs font-semibold rounded-xl"
-                                  style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 2px 10px rgba(99,102,241,0.35)" }}>
+                                  style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 2px 10px rgba(99,102,241,0.35)", opacity: uploadingImages ? 0.5 : 1, cursor: uploadingImages ? 'not-allowed' : 'pointer' }}>
                                   <Send size={12} /> {editingReply ? "Update" : "Send Reply"}
                                 </motion.button>
+
                                 <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                                   onClick={cancelReply}
                                   className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl"
