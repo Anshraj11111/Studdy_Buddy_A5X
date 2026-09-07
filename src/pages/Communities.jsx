@@ -158,7 +158,7 @@ function RoleBadge({ role }) {
 }
 
 // ─── USER PROFILE MODAL (LinkedIn-style) ─────────────────────────────────────
-function UserProfileModal({ userId, currentUserId, onClose }) {
+function UserProfileModal({ userId, currentUserId, onClose, onFollowChange }) {
   const isDark = useThemeStore(s => s.isDark)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -194,6 +194,8 @@ function UserProfileModal({ userId, currentUserId, onClose }) {
       } else {
         await followAPI.follow(userId)
       }
+      // Notify parent component of follow state change
+      if (onFollowChange) onFollowChange(userId, !wasFollowing)
     } catch {
       // Revert on failure
       setFollowing(wasFollowing)
@@ -655,7 +657,7 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [following, setFollowing] = useState(false)
+  const [following, setFollowing] = useState(initialFollowing || false)
   const [followLoading, setFollowLoading] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -987,7 +989,7 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
 }
 
 // ─── FEED TAB ─────────────────────────────────────────────────────────────────
-function FeedTab({ user }) {
+function FeedTab({ user, setFollowChangeCallback }) {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -1001,11 +1003,24 @@ function FeedTab({ user }) {
   useEffect(() => {
     followAPI.getFollowing(user._id)
       .then(res => {
-        const ids = new Set((res.data?.data?.following || []).map(f => String(f._id)))
+        const following = res.data?.data?.following || []
+        // Filter out null/undefined users (deleted accounts)
+        const ids = new Set(following.filter(f => f && f._id).map(f => String(f._id)))
+        console.log('✅ FeedTab: Loaded followingSet:', Array.from(ids))
         setFollowingSet(ids)
       })
-      .catch(() => setFollowingSet(new Set()))
+      .catch(err => {
+        console.error('❌ FeedTab: Failed to load following:', err)
+        setFollowingSet(new Set())
+      })
   }, [user._id])
+
+  // Register follow change callback for profile modal
+  useEffect(() => {
+    if (setFollowChangeCallback) {
+      setFollowChangeCallback(() => handleFollowChange)
+    }
+  }, [setFollowChangeCallback])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -1079,6 +1094,18 @@ function FeedTab({ user }) {
 
   const handleDelete = async (id) => {
     try { await feedAPI.deletePost(id); setPosts(prev => prev.filter(p => p._id !== id)) } catch { /* ignore */ }
+  }
+
+  const handleFollowChange = (userId, isFollowing) => {
+    // Update followingSet when user follows/unfollows from profile modal
+    console.log('🔄 FeedTab: handleFollowChange called', { userId, isFollowing })
+    setFollowingSet(prev => {
+      const newSet = new Set(prev)
+      if (isFollowing) newSet.add(String(userId))
+      else newSet.delete(String(userId))
+      console.log('✅ FeedTab: Updated followingSet:', Array.from(newSet))
+      return newSet
+    })
   }
 
   const handleComment = async (postId, text) => {
@@ -1847,6 +1874,7 @@ export default function Communities() {
   const [searchParams] = useSearchParams()
   const [tab, setTab] = useState(() => searchParams.get('tab') || 'feed')
   const [viewProfileId, setViewProfileId] = useState(null)
+  const [onFollowChangeCallback, setOnFollowChangeCallback] = useState(null)
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
@@ -1858,6 +1886,7 @@ export default function Communities() {
           userId={viewProfileId}
           currentUserId={user?._id}
           onClose={() => setViewProfileId(null)}
+          onFollowChange={onFollowChangeCallback}
         />
       )}
 
@@ -1902,7 +1931,12 @@ export default function Communities() {
                   <div className="hidden lg:block">
                     <div className="sticky top-20"><ProfileSidebar user={user} /></div>
                   </div>
-                  <div className="min-w-0"><FeedTab user={user} /></div>
+                  <div className="min-w-0">
+                    <FeedTab 
+                      user={user} 
+                      setFollowChangeCallback={setOnFollowChangeCallback} 
+                    />
+                  </div>
                   <div className="hidden lg:block">
                     <div className="sticky top-20"><TrendingSidebar /></div>
                   </div>
