@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { doubtAPI, roomAPI } from "../services/api"
 import { useAuthStore } from "../store/authStore"
 import { useThemeStore } from "../store/themeStore"
-import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard, Image as ImageIcon } from "lucide-react"
+import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard, Image as ImageIcon, ChevronDown } from "lucide-react"
 import Navbar from "../components/Navbar"
 import { uploadToCloudinary } from "../utils/cloudinary"
 
@@ -22,6 +22,7 @@ export default function MentorDashboard() {
   const [replyImages, setReplyImages] = useState([])
   const [uploadingImages, setUploadingImages] = useState(false)
   const [stats, setStats] = useState({ totalDoubts: 0, pendingReplies: 0, activeChats: 0 })
+  const [expandedDoubts, setExpandedDoubts] = useState({})
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -286,10 +287,10 @@ export default function MentorDashboard() {
                                 ? <img src={doubt.userId.profileImage} alt={doubt.userId.name} className="w-full h-full object-cover rounded-full" />
                                 : doubt.userId?.name?.charAt(0).toUpperCase() || "U"}
                             </div>
-                            <div className="flex-1 min-w-0 overflow-hidden">
+                            <div className="flex-1 min-w-0">
                               <div className="flex flex-col gap-2">
                                 <div className="w-full">
-                                  <h3 className="font-bold text-theme-primary text-sm sm:text-base break-words line-clamp-2">{doubt.title}</h3>
+                                  <h3 className="font-bold text-theme-primary text-sm sm:text-base break-words whitespace-pre-wrap overflow-wrap-anywhere">{doubt.title}</h3>
                                   <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 flex-wrap text-xs">
                                     <User size={10} style={{ color: "var(--text-tertiary)" }} />
                                     <span className="truncate max-w-[120px] sm:max-w-none" style={{ color: "var(--text-secondary)" }}>{doubt.userId?.name || "Unknown"}</span>
@@ -302,64 +303,81 @@ export default function MentorDashboard() {
                                     style={{ background: doubt.status === "resolved" ? "rgba(52,211,153,0.15)" : doubt.status === "matched" ? "rgba(251,191,36,0.15)" : "rgba(99,102,241,0.15)", border: `1px solid ${doubt.status === "resolved" ? "rgba(52,211,153,0.35)" : doubt.status === "matched" ? "rgba(251,191,36,0.35)" : "rgba(99,102,241,0.35)"}`, color: doubt.status === "resolved" ? "#34d399" : doubt.status === "matched" ? "#fbbf24" : "#a5b4fc" }}>
                                     {doubt.status}
                                   </span>
-                                  <span className="text-xs px-2 py-0.5 rounded-full truncate max-w-[100px] sm:max-w-none"
+                                  <span className="text-xs px-2 py-0.5 rounded-full break-words max-w-[150px]"
                                     style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", color: "#c4b5fd" }}>
                                     {doubt.topic}
                                   </span>
                                 </div>
                               </div>
-                              <p className="text-xs sm:text-sm mt-2 line-clamp-2 break-words" style={{ color: "var(--text-secondary)" }}>{doubt.description}</p>
+                              <p className="text-xs sm:text-sm mt-2 break-words whitespace-pre-wrap overflow-wrap-anywhere" style={{ color: "var(--text-secondary)" }}>{doubt.description}</p>
                             </div>
                           </div>
 
-                          {/* Replies */}
+                          {/* Replies Section - Collapsible */}
                           {doubt.replies?.length > 0 && (
-                            <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--border-primary)" }}>
-                              <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: "var(--text-accent)", fontFamily: "monospace" }}>
-                                <MessageSquare size={12} /> Replies ({doubt.replies.length})
-                              </p>
-                              {doubt.replies.map(reply => (
-                                <div key={reply._id} className="rounded-xl p-3" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)" }}>
-                                  <div className="flex justify-between items-start mb-1.5">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-theme-primary font-bold text-xs flex-shrink-0"
-                                        style={{ background: "linear-gradient(135deg,#059669,#047857)" }}>
-                                        {reply.user?.profileImage
-                                          ? <img src={reply.user.profileImage} alt={reply.user.name} className="w-full h-full object-cover rounded-full" />
-                                          : reply.user?.name?.charAt(0).toUpperCase() || "M"}
-                                      </div>
-                                      <div>
-                                        <p className="text-xs font-semibold text-theme-primary">{reply.user?.name || "Mentor"}</p>
-                                        <p className="text-xs" style={{ color: "var(--text-muted)" }}>{new Date(reply.createdAt).toLocaleDateString()}</p>
-                                      </div>
-                                    </div>
-                                    {user && reply.user?._id === user._id && (
-                                      <div className="flex gap-1">
-                                        <button onClick={() => handleEditReply(doubt._id, reply)}
-                                          className="p-1.5 rounded-lg transition hover:bg-white/10" style={{ color: "#60a5fa" }}>
-                                          <Edit2 size={12} />
-                                        </button>
-                                        <button onClick={() => handleDeleteReply(doubt._id, reply._id)}
-                                          className="p-1.5 rounded-lg transition hover:bg-red-500/20" style={{ color: "#f87171" }}>
-                                          <Trash2 size={12} />
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <p className="text-xs sm:text-sm" style={{ color: "var(--text-primary)" }}>{reply.content}</p>
-                                  
-                                  {/* Reply Images */}
-                                  {reply.images && reply.images.length > 0 && (
-                                    <div style={{ display: 'grid', gridTemplateColumns: reply.images.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(100px, 1fr))', gap: 8, marginTop: 8 }}>
-                                      {reply.images.map((img, imgIdx) => (
-                                        <img key={imgIdx} src={img} alt={`Reply image ${imgIdx + 1}`} 
-                                          style={{ width: '100%', height: reply.images.length === 1 ? 'auto' : 100, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-primary)', cursor: 'pointer' }}
-                                          onClick={() => window.open(img, '_blank')} />
-                                      ))}
-                                    </div>
-                                  )}
+                            <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border-primary)" }}>
+                              <button 
+                                onClick={() => setExpandedDoubts(prev => ({ ...prev, [doubt._id]: !prev[doubt._id] }))}
+                                className="w-full flex items-center justify-between text-xs font-semibold mb-2 p-2 rounded-lg hover:bg-white/5 transition"
+                                style={{ color: "var(--text-accent)", fontFamily: "monospace" }}>
+                                <div className="flex items-center gap-1.5">
+                                  <MessageSquare size={12} /> Replies ({doubt.replies.length})
                                 </div>
-                              ))}
+                                <ChevronDown 
+                                  size={14} 
+                                  style={{ 
+                                    transform: expandedDoubts[doubt._id] ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: 'transform 0.2s'
+                                  }} 
+                                />
+                              </button>
+                              
+                              {expandedDoubts[doubt._id] && (
+                                <div className="space-y-2">
+                                  {doubt.replies.map(reply => (
+                                    <div key={reply._id} className="rounded-xl p-2 sm:p-3" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)" }}>
+                                      <div className="flex justify-between items-start mb-1.5">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-theme-primary font-bold text-xs flex-shrink-0"
+                                            style={{ background: "linear-gradient(135deg,#059669,#047857)" }}>
+                                            {reply.user?.profileImage
+                                              ? <img src={reply.user.profileImage} alt={reply.user.name} className="w-full h-full object-cover rounded-full" />
+                                              : reply.user?.name?.charAt(0).toUpperCase() || "M"}
+                                          </div>
+                                          <div className="min-w-0">
+                                            <p className="text-xs font-semibold text-theme-primary truncate">{reply.user?.name || "Mentor"}</p>
+                                            <p className="text-xs whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{new Date(reply.createdAt).toLocaleDateString()}</p>
+                                          </div>
+                                        </div>
+                                        {user && reply.user?._id === user._id && (
+                                          <div className="flex gap-1 flex-shrink-0">
+                                            <button onClick={() => handleEditReply(doubt._id, reply)}
+                                              className="p-1.5 rounded-lg transition hover:bg-white/10" style={{ color: "#60a5fa" }}>
+                                              <Edit2 size={12} />
+                                            </button>
+                                            <button onClick={() => handleDeleteReply(doubt._id, reply._id)}
+                                              className="p-1.5 rounded-lg transition hover:bg-red-500/20" style={{ color: "#f87171" }}>
+                                              <Trash2 size={12} />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <p className="text-xs sm:text-sm break-words" style={{ color: "var(--text-primary)" }}>{reply.content}</p>
+                                      
+                                      {/* Reply Images */}
+                                      {reply.images && reply.images.length > 0 && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: reply.images.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(80px, 1fr))', gap: 6, marginTop: 8 }}>
+                                          {reply.images.map((img, imgIdx) => (
+                                            <img key={imgIdx} src={img} alt={`Reply image ${imgIdx + 1}`} 
+                                              style={{ width: '100%', height: reply.images.length === 1 ? 'auto' : 80, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-primary)', cursor: 'pointer' }}
+                                              onClick={() => window.open(img, '_blank')} />
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
 
