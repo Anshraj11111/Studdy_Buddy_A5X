@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import Card from '../components/Card'
@@ -6,6 +6,8 @@ import Button from '../components/Button'
 import Input from '../components/Input'
 import Badge from '../components/Badge'
 import { referralAPI } from '../services/api'
+import axios from 'axios'
+import { Heart, MessageCircle, Trash2, Edit2 } from 'lucide-react'
 
 const XP_LEVELS = [
   { name: 'Beginner', min: 0, max: 99, color: 'bg-slate-500' },
@@ -30,6 +32,11 @@ export default function Profile() {
   const [referralStats, setReferralStats] = useState(null)
   const [codeCopied, setCodeCopied] = useState(false)
   const [referralLoading, setReferralLoading] = useState(false)
+  const [recentPosts, setRecentPosts] = useState([])
+  const [postsLoading, setPostsLoading] = useState(true)
+  const [postsPage, setPostsPage] = useState(1)
+  const [postsHasMore, setPostsHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
 
   // Fetch referral info on first render
   useState(() => {
@@ -43,6 +50,56 @@ export default function Profile() {
     }
     fetchReferral()
   }, [])
+
+  // Fetch recent posts
+  useEffect(() => {
+    const fetchRecentPosts = async () => {
+      if (!user?._id) return
+      setPostsLoading(true)
+      try {
+        const token = localStorage.getItem('token')
+        const res = await axios.get(`/api/feed?userId=${user._id}&page=1&limit=20`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.data?.success) {
+          const posts = res.data.data.posts || []
+          const total = res.data.data.pagination?.total || 0
+          setRecentPosts(posts)
+          setPostsHasMore(posts.length < total)
+          setPostsPage(1)
+        }
+      } catch (err) {
+        console.error('Failed to fetch posts:', err)
+      } finally {
+        setPostsLoading(false)
+      }
+    }
+    fetchRecentPosts()
+  }, [user?._id])
+
+  // Load more posts
+  const loadMorePosts = async () => {
+    if (!user?._id || loadingMore || !postsHasMore) return
+    setLoadingMore(true)
+    try {
+      const token = localStorage.getItem('token')
+      const nextPage = postsPage + 1
+      const res = await axios.get(`/api/feed?userId=${user._id}&page=${nextPage}&limit=20`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.data?.success) {
+        const newPosts = res.data.data.posts || []
+        const total = res.data.data.pagination?.total || 0
+        setRecentPosts(prev => [...prev, ...newPosts])
+        setPostsPage(nextPage)
+        setPostsHasMore(recentPosts.length + newPosts.length < total)
+      }
+    } catch (err) {
+      console.error('Failed to load more posts:', err)
+    } finally {
+      setLoadingMore(false)
+    }
+  }
   const [formData, setFormData] = useState({
     name: user?.name || '',
     skills: user?.skills?.join(', ') || '',
@@ -74,7 +131,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -319,6 +376,154 @@ export default function Profile() {
               </div>
             </Card>
           )}
+
+          {/* Recent Posts */}
+          <Card className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-theme-primary">My Posts</h3>
+              {recentPosts.length > 0 && (
+                <span className="text-sm text-theme-tertiary">
+                  {recentPosts.length} post{recentPosts.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            {postsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+              </div>
+            ) : recentPosts.length > 0 ? (
+              <>
+                <div className="space-y-3">
+                  {recentPosts.map((post) => (
+                    <motion.div
+                      key={post._id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer relative group"
+                      style={{ 
+                        background: 'var(--bg-secondary)', 
+                        borderColor: 'var(--border-primary)' 
+                      }}
+                    >
+                      {/* Edit and Delete buttons */}
+                      <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Navigate to edit (for now, we'll use a simple approach)
+                            const newContent = prompt('Edit your post:', post.content);
+                            if (newContent && newContent.trim() && newContent !== post.content) {
+                              // Update post via API
+                              const token = localStorage.getItem('token');
+                              axios.put(`/api/feed/${post._id}`, { content: newContent.trim() }, {
+                                headers: { Authorization: `Bearer ${token}` }
+                              })
+                              .then(() => {
+                                // Refresh posts
+                                setRecentPosts(prev => prev.map(p => 
+                                  p._id === post._id ? { ...p, content: newContent.trim() } : p
+                                ));
+                                alert('Post updated successfully!');
+                              })
+                              .catch(err => {
+                                alert(err.response?.data?.error?.message || 'Failed to update post');
+                              });
+                            }
+                          }}
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}
+                          title="Edit post"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm('Delete this post?')) {
+                              const token = localStorage.getItem('token');
+                              axios.delete(`/api/feed/${post._id}`, {
+                                headers: { Authorization: `Bearer ${token}` }
+                              })
+                              .then(() => {
+                                setRecentPosts(prev => prev.filter(p => p._id !== post._id));
+                                alert('Post deleted successfully!');
+                              })
+                              .catch(() => {
+                                alert('Failed to delete post');
+                              });
+                            }
+                          }}
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
+                          title="Delete post"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      <p className="text-sm text-theme-primary mb-3 break-words whitespace-pre-wrap pr-20">
+                        {post.content}
+                      </p>
+                      {post.mediaUrl && (
+                        <div className="mb-3 rounded-lg overflow-hidden">
+                          {post.mediaType === 'video' ? (
+                            <video src={post.mediaUrl} controls className="w-full max-h-64 object-contain" />
+                          ) : (
+                            <img src={post.mediaUrl} alt="Post media" className="w-full max-h-64 object-contain" />
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-4 text-xs text-theme-tertiary">
+                        <span className="flex items-center gap-1">
+                          <Heart size={14} />
+                          {post.likes?.length || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle size={14} />
+                          {post.comments?.length || 0}
+                        </span>
+                        {post.category && post.category !== 'All' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>
+                            {post.category}
+                          </span>
+                        )}
+                        <span className="ml-auto">
+                          {new Date(post.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+                
+                {/* Load More Button */}
+                {postsHasMore && (
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      onClick={loadMorePosts}
+                      disabled={loadingMore}
+                      variant="secondary"
+                      className="flex items-center gap-2"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
+                          Loading...
+                        </>
+                      ) : (
+                        'Load More Posts'
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-theme-tertiary text-sm">No posts yet</p>
+                <p className="text-theme-muted text-xs mt-1">Share your first post in Communities!</p>
+              </div>
+            )}
+          </Card>
         </motion.div>
       </div>
     </div>

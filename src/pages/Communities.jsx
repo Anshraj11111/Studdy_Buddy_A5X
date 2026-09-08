@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { feedAPI, connectionAPI, followAPI, roomAPI } from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
@@ -1744,9 +1744,19 @@ function ProfileSidebar({ user }) {
             </div>
           )}
 
+          {/* My Recent Posts Button */}
+          <Link to="/profile">
+            <button
+              className="mt-3 w-full py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' }}>
+              <MessageSquare size={14} />
+              My Recent Posts
+            </button>
+          </Link>
+
           {/* View Full Profile toggle button */}
           <button onClick={() => setExpanded(v => !v)}
-            className="mt-3 w-full py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5"
+            className="mt-2 w-full py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5"
             style={{ background: expanded ? '#e0e7ff' : 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: expanded ? '#6366f1' : 'var(--text-tertiary)' }}>
             {expanded ? '▲ Show Less' : '▼ View Full Profile'}
           </button>
