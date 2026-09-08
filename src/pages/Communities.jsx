@@ -1122,22 +1122,43 @@ function FeedTab({ user, setFollowChangeCallback }) {
     }
   }
 
-  const handleLike = (id) => {
+  const handleLike = async (id) => {
+    console.log('🔵 Like clicked for post:', id)
+    
     // Optimistic update - instantly toggle like in UI
+    const originalPosts = posts
     setPosts(prev => prev.map(p => {
       if (p._id !== id) return p
       const liked = (p.likes || []).map(String).includes(String(user._id))
+      console.log('🔵 Current like status:', liked, 'Toggling to:', !liked)
       return { ...p, likes: liked ? (p.likes || []).filter(l => String(l) !== String(user._id)) : [...(p.likes || []), user._id] }
     }))
-    // Background API call (no await - fire and forget)
-    feedAPI.likePost(id).catch(() => {
-      // Revert on failure
+    
+    try {
+      // Wait for API response to confirm
+      console.log('🔵 Calling API: feedAPI.likePost')
+      const response = await feedAPI.likePost(id)
+      console.log('✅ Like API response:', response.data)
+      
+      const { liked, likeCount } = response.data.data
+      
+      // Update with server response to ensure sync
       setPosts(prev => prev.map(p => {
         if (p._id !== id) return p
-        const liked = !(p.likes || []).map(String).includes(String(user._id))
-        return { ...p, likes: liked ? (p.likes || []).filter(l => String(l) !== String(user._id)) : [...(p.likes || []), user._id] }
+        return { 
+          ...p, 
+          likes: liked 
+            ? [...(p.likes || []).filter(l => String(l) !== String(user._id)), user._id]
+            : (p.likes || []).filter(l => String(l) !== String(user._id))
+        }
       }))
-    })
+      console.log('✅ Like updated successfully')
+    } catch (err) {
+      console.error('❌ Like API failed:', err)
+      console.error('❌ Error response:', err.response?.data)
+      // Revert on failure
+      setPosts(originalPosts)
+    }
   }
 
   const handleDelete = async (id) => {
@@ -1424,19 +1445,40 @@ function ConnectionsTab({ user, setViewProfileId }) {
       .finally(() => setActionLoading(p => ({ ...p, [uid + '_conn']: false })))
   }
 
-  const toggleFollow = (uid, isFollowing) => {
+  const toggleFollow = async (uid, isFollowing) => {
     // Optimistic update - instantly toggle follow state
     setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, isFollowing: !isFollowing } : u))
     setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: !isFollowing } : c))
     setActionLoading(p => ({ ...p, [uid + '_follow']: true }))
-    const apiCall = isFollowing ? followAPI.unfollow(uid) : followAPI.follow(uid)
-    apiCall
-      .catch(() => {
-        // Revert on failure
-        setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, isFollowing: isFollowing } : u))
-        setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: isFollowing } : c))
-      })
-      .finally(() => setActionLoading(p => ({ ...p, [uid + '_follow']: false })))
+    
+    try {
+      const apiCall = isFollowing ? followAPI.unfollow(uid) : followAPI.follow(uid)
+      await apiCall
+      
+      // Update followingSet in FeedTab too for consistency
+      if (!isFollowing) {
+        // Just followed
+        setFollowingSet && setFollowingSet(prev => {
+          const newSet = new Set(prev)
+          newSet.add(String(uid))
+          return newSet
+        })
+      } else {
+        // Just unfollowed
+        setFollowingSet && setFollowingSet(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(String(uid))
+          return newSet
+        })
+      }
+    } catch (err) {
+      console.error('❌ Follow toggle failed:', err)
+      // Revert on failure
+      setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, isFollowing: isFollowing } : u))
+      setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: isFollowing } : c))
+    } finally {
+      setActionLoading(p => ({ ...p, [uid + '_follow']: false }))
+    }
   }
   const accept = (id, requesterId) => act(id, async () => {
     await connectionAPI.accept(id)
