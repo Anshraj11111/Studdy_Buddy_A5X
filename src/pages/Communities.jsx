@@ -1311,9 +1311,13 @@ function ConnectionsTab({ user, setViewProfileId }) {
         followAPI.getFollowing(user._id),
       ])
       const users = usersRes.data.data?.users || []
-      const followingIds = new Set((followingRes.data.data?.following || []).map(f => String(f._id)))
-      setDiscoverUsers(users.map(u => ({ ...u, isFollowing: followingIds.has(String(u._id)) })))
-    } catch { /* ignore */ } finally { setLoading(false) }
+      // Filter out null following users (deleted accounts)
+      const followingIds = new Set((followingRes.data.data?.following || []).filter(f => f && f._id).map(f => String(f._id)))
+      const mappedUsers = users.map(u => ({ ...u, isFollowing: followingIds.has(String(u._id)) }))
+      setDiscoverUsers(mappedUsers)
+    } catch (err) { 
+      console.error('❌ fetchDiscover error:', err)
+    } finally { setLoading(false) }
   }, [user._id])
 
   // Real-time search with debounce
@@ -1341,9 +1345,13 @@ function ConnectionsTab({ user, setViewProfileId }) {
         followAPI.getFollowing(user._id),
       ])
       const conns = connsRes.data.data?.connections || []
-      const followingIds = new Set((followingRes.data.data?.following || []).map(f => String(f._id)))
-      setMyConns(conns.map(c => ({ ...c, isFollowing: followingIds.has(String(c.user?._id)) })))
-    } catch { /* ignore */ } finally { setLoading(false) }
+      // Filter out null following users (deleted accounts)
+      const followingIds = new Set((followingRes.data.data?.following || []).filter(f => f && f._id).map(f => String(f._id)))
+      const mappedConns = conns.map(c => ({ ...c, isFollowing: followingIds.has(String(c.user?._id)) }))
+      setMyConns(mappedConns)
+    } catch (err) { 
+      console.error('❌ fetchMyConns error:', err)
+    } finally { setLoading(false) }
   }, [user._id])
 
   useEffect(() => {
@@ -1594,7 +1602,8 @@ function ConnectionsTab({ user, setViewProfileId }) {
               ? <div className="text-center py-12 text-sm text-theme-tertiary">No users found</div>
               : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {discoverUsers.map(u => <UserCard key={u._id} u={u} setViewProfileId={setViewProfileId} />)}
-                </div>}
+                </div>
+          }
         </div>
       )}
 

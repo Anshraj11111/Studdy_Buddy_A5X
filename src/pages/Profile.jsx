@@ -37,9 +37,12 @@ export default function Profile() {
   const [postsPage, setPostsPage] = useState(1)
   const [postsHasMore, setPostsHasMore] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [activityTab, setActivityTab] = useState('posts') // 'posts', 'comments', 'likes'
+  const [likedPosts, setLikedPosts] = useState([])
+  const [commentedPosts, setCommentedPosts] = useState([])
 
   // Fetch referral info on first render
-  useState(() => {
+  useEffect(() => {
     const fetchReferral = async () => {
       setReferralLoading(true)
       try {
@@ -98,6 +101,64 @@ export default function Profile() {
       console.error('Failed to load more posts:', err)
     } finally {
       setLoadingMore(false)
+    }
+  }
+
+  // Fetch posts user has liked
+  const fetchLikedPosts = async () => {
+    if (!user?._id) return
+    setPostsLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const res = await axios.get(`/api/feed?page=1&limit=50`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.data?.success) {
+        const allPosts = res.data.data.posts || []
+        // Filter posts that user has liked
+        const liked = allPosts.filter(post => 
+          post.likes?.some(like => String(like) === String(user._id))
+        )
+        setLikedPosts(liked)
+      }
+    } catch (err) {
+      console.error('Failed to fetch liked posts:', err)
+    } finally {
+      setPostsLoading(false)
+    }
+  }
+
+  // Fetch posts user has commented on
+  const fetchCommentedPosts = async () => {
+    if (!user?._id) return
+    setPostsLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const res = await axios.get(`/api/feed?page=1&limit=50`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.data?.success) {
+        const allPosts = res.data.data.posts || []
+        // Filter posts where user has commented
+        const commented = allPosts.filter(post => 
+          post.comments?.some(comment => String(comment.userId?._id) === String(user._id))
+        )
+        setCommentedPosts(commented)
+      }
+    } catch (err) {
+      console.error('Failed to fetch commented posts:', err)
+    } finally {
+      setPostsLoading(false)
+    }
+  }
+
+  // Handle tab change
+  const handleTabChange = (tab) => {
+    setActivityTab(tab)
+    if (tab === 'likes' && likedPosts.length === 0) {
+      fetchLikedPosts()
+    } else if (tab === 'comments' && commentedPosts.length === 0) {
+      fetchCommentedPosts()
     }
   }
   const [formData, setFormData] = useState({
@@ -377,151 +438,331 @@ export default function Profile() {
             </Card>
           )}
 
-          {/* Recent Posts */}
+          {/* Activity Section (LinkedIn-style) */}
           <Card className="mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-theme-primary">My Posts</h3>
-              {recentPosts.length > 0 && (
-                <span className="text-sm text-theme-tertiary">
-                  {recentPosts.length} post{recentPosts.length !== 1 ? 's' : ''}
-                </span>
-              )}
+            <div className="mb-4">
+              <h3 className="text-xl font-bold text-theme-primary mb-3">Activity</h3>
+              
+              {/* Tabs */}
+              <div className="flex gap-2 border-b" style={{ borderColor: 'var(--border-primary)' }}>
+                <button
+                  onClick={() => handleTabChange('posts')}
+                  className={`px-4 py-2 text-sm font-semibold transition-all relative ${
+                    activityTab === 'posts' ? 'text-primary-500' : 'text-theme-tertiary'
+                  }`}
+                  style={{
+                    borderBottom: activityTab === 'posts' ? '2px solid #6366f1' : '2px solid transparent'
+                  }}
+                >
+                  Posts
+                  {recentPosts.length > 0 && (
+                    <span className="ml-1.5 text-xs">({recentPosts.length})</span>
+                  )}
+                </button>
+                <button
+                  onClick={() => handleTabChange('comments')}
+                  className={`px-4 py-2 text-sm font-semibold transition-all relative ${
+                    activityTab === 'comments' ? 'text-primary-500' : 'text-theme-tertiary'
+                  }`}
+                  style={{
+                    borderBottom: activityTab === 'comments' ? '2px solid #6366f1' : '2px solid transparent'
+                  }}
+                >
+                  Comments
+                  {commentedPosts.length > 0 && (
+                    <span className="ml-1.5 text-xs">({commentedPosts.length})</span>
+                  )}
+                </button>
+                <button
+                  onClick={() => handleTabChange('likes')}
+                  className={`px-4 py-2 text-sm font-semibold transition-all relative ${
+                    activityTab === 'likes' ? 'text-primary-500' : 'text-theme-tertiary'
+                  }`}
+                  style={{
+                    borderBottom: activityTab === 'likes' ? '2px solid #6366f1' : '2px solid transparent'
+                  }}
+                >
+                  Likes
+                  {likedPosts.length > 0 && (
+                    <span className="ml-1.5 text-xs">({likedPosts.length})</span>
+                  )}
+                </button>
+              </div>
             </div>
+
             {postsLoading ? (
-              <div className="flex justify-center py-8">
+              <div className="flex justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
               </div>
-            ) : recentPosts.length > 0 ? (
+            ) : (
               <>
-                <div className="space-y-3">
-                  {recentPosts.map((post) => (
-                    <motion.div
-                      key={post._id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer relative group"
-                      style={{ 
-                        background: 'var(--bg-secondary)', 
-                        borderColor: 'var(--border-primary)' 
-                      }}
-                    >
-                      {/* Edit and Delete buttons */}
-                      <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Navigate to edit (for now, we'll use a simple approach)
-                            const newContent = prompt('Edit your post:', post.content);
-                            if (newContent && newContent.trim() && newContent !== post.content) {
-                              // Update post via API
-                              const token = localStorage.getItem('token');
-                              axios.put(`/api/feed/${post._id}`, { content: newContent.trim() }, {
-                                headers: { Authorization: `Bearer ${token}` }
-                              })
-                              .then(() => {
-                                // Refresh posts
-                                setRecentPosts(prev => prev.map(p => 
-                                  p._id === post._id ? { ...p, content: newContent.trim() } : p
-                                ));
-                                alert('Post updated successfully!');
-                              })
-                              .catch(err => {
-                                alert(err.response?.data?.error?.message || 'Failed to update post');
-                              });
-                            }
-                          }}
-                          className="p-2 rounded-lg transition-colors"
-                          style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}
-                          title="Edit post"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm('Delete this post?')) {
-                              const token = localStorage.getItem('token');
-                              axios.delete(`/api/feed/${post._id}`, {
-                                headers: { Authorization: `Bearer ${token}` }
-                              })
-                              .then(() => {
-                                setRecentPosts(prev => prev.filter(p => p._id !== post._id));
-                                alert('Post deleted successfully!');
-                              })
-                              .catch(() => {
-                                alert('Failed to delete post');
-                              });
-                            }
-                          }}
-                          className="p-2 rounded-lg transition-colors"
-                          style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
-                          title="Delete post"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                {/* Posts Tab */}
+                {activityTab === 'posts' && (
+                  <>
+                    {recentPosts.length > 0 ? (
+                      <>
+                        <div className="space-y-3">{recentPosts.map((post) => (
+                          <motion.div
+                            key={post._id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer relative group"
+                            style={{ 
+                              background: 'var(--bg-secondary)', 
+                              borderColor: 'var(--border-primary)' 
+                            }}
+                          >
+                            {/* Edit and Delete buttons */}
+                            <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const newContent = prompt('Edit your post:', post.content);
+                                  if (newContent && newContent.trim() && newContent !== post.content) {
+                                    const token = localStorage.getItem('token');
+                                    axios.put(`/api/feed/${post._id}`, { content: newContent.trim() }, {
+                                      headers: { Authorization: `Bearer ${token}` }
+                                    })
+                                    .then(() => {
+                                      setRecentPosts(prev => prev.map(p => 
+                                        p._id === post._id ? { ...p, content: newContent.trim() } : p
+                                      ));
+                                      alert('Post updated successfully!');
+                                    })
+                                    .catch(err => {
+                                      alert(err.response?.data?.error?.message || 'Failed to update post');
+                                    });
+                                  }
+                                }}
+                                className="p-2 rounded-lg transition-colors"
+                                style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}
+                                title="Edit post"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm('Delete this post?')) {
+                                    const token = localStorage.getItem('token');
+                                    axios.delete(`/api/feed/${post._id}`, {
+                                      headers: { Authorization: `Bearer ${token}` }
+                                    })
+                                    .then(() => {
+                                      setRecentPosts(prev => prev.filter(p => p._id !== post._id));
+                                      alert('Post deleted successfully!');
+                                    })
+                                    .catch(() => {
+                                      alert('Failed to delete post');
+                                    });
+                                  }
+                                }}
+                                className="p-2 rounded-lg transition-colors"
+                                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}
+                                title="Delete post"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
 
-                      <p className="text-sm text-theme-primary mb-3 break-words whitespace-pre-wrap pr-20">
-                        {post.content}
-                      </p>
-                      {post.mediaUrl && (
-                        <div className="mb-3 rounded-lg overflow-hidden">
-                          {post.mediaType === 'video' ? (
-                            <video src={post.mediaUrl} controls className="w-full max-h-64 object-contain" />
-                          ) : (
-                            <img src={post.mediaUrl} alt="Post media" className="w-full max-h-64 object-contain" />
-                          )}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-4 text-xs text-theme-tertiary">
-                        <span className="flex items-center gap-1">
-                          <Heart size={14} />
-                          {post.likes?.length || 0}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageCircle size={14} />
-                          {post.comments?.length || 0}
-                        </span>
-                        {post.category && post.category !== 'All' && (
-                          <span className="text-xs px-2 py-0.5 rounded-full"
-                            style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>
-                            {post.category}
-                          </span>
+                            <p className="text-sm text-theme-primary mb-3 break-words whitespace-pre-wrap pr-20">
+                              {post.content}
+                            </p>
+                            {post.mediaUrl && (
+                              <div className="mb-3 rounded-lg overflow-hidden">
+                                {post.mediaType === 'video' ? (
+                                  <video src={post.mediaUrl} controls className="w-full max-h-64 object-contain" />
+                                ) : (
+                                  <img src={post.mediaUrl} alt="Post media" className="w-full max-h-64 object-contain" />
+                                )}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-4 text-xs text-theme-tertiary">
+                              <span className="flex items-center gap-1">
+                                <Heart size={14} />
+                                {post.likes?.length || 0}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <MessageCircle size={14} />
+                                {post.comments?.length || 0}
+                              </span>
+                              {post.category && post.category !== 'All' && (
+                                <span className="text-xs px-2 py-0.5 rounded-full"
+                                  style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>
+                                  {post.category}
+                                </span>
+                              )}
+                              <span className="ml-auto">
+                                {new Date(post.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </motion.div>
+                        ))}</div>
+                        
+                        {postsHasMore && (
+                          <div className="mt-4 flex justify-center">
+                            <Button
+                              onClick={loadMorePosts}
+                              disabled={loadingMore}
+                              variant="secondary"
+                              className="flex items-center gap-2"
+                            >
+                              {loadingMore ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
+                                  Loading...
+                                </>
+                              ) : (
+                                'Load More Posts'
+                              )}
+                            </Button>
+                          </div>
                         )}
-                        <span className="ml-auto">
-                          {new Date(post.createdAt).toLocaleDateString()}
-                        </span>
+                      </>
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-theme-tertiary text-sm">No posts yet</p>
+                        <p className="text-theme-muted text-xs mt-1">Share your first post in Communities!</p>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
-                
-                {/* Load More Button */}
-                {postsHasMore && (
-                  <div className="mt-4 flex justify-center">
-                    <Button
-                      onClick={loadMorePosts}
-                      disabled={loadingMore}
-                      variant="secondary"
-                      className="flex items-center gap-2"
-                    >
-                      {loadingMore ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-500"></div>
-                          Loading...
-                        </>
-                      ) : (
-                        'Load More Posts'
-                      )}
-                    </Button>
+                    )}
+                  </>
+                )}
+
+                {/* Comments Tab */}
+                {activityTab === 'comments' && (
+                  <div className="space-y-3">
+                    {commentedPosts.length > 0 ? (
+                      commentedPosts.map((post) => (
+                        <motion.div
+                          key={post._id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-4 rounded-lg border transition-all hover:shadow-md"
+                          style={{ 
+                            background: 'var(--bg-secondary)', 
+                            borderColor: 'var(--border-primary)' 
+                          }}
+                        >
+                          <div className="flex items-start gap-3 mb-2">
+                            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
+                              style={{ background: '#6366f1' }}>
+                              {post.userId?.profileImage ? (
+                                <img src={post.userId.profileImage} alt={post.userId.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
+                                  {post.userId?.name?.[0]?.toUpperCase() || '?'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-theme-secondary">{post.userId?.name || 'Unknown'}</p>
+                              <p className="text-xs text-theme-primary mt-1 line-clamp-2">{post.content}</p>
+                            </div>
+                          </div>
+                          
+                          {/* Show user's comments */}
+                          <div className="ml-11 mt-2 pl-3 border-l-2" style={{ borderColor: '#6366f1' }}>
+                            {post.comments
+                              ?.filter(c => String(c.userId?._id) === String(user._id))
+                              .map((comment, idx) => (
+                                <div key={idx} className="mb-2 last:mb-0">
+                                  <p className="text-xs text-theme-secondary">
+                                    <span className="font-semibold text-primary-500">You commented:</span> {comment.content}
+                                  </p>
+                                </div>
+                              ))
+                            }
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-xs text-theme-tertiary mt-3">
+                            <span className="flex items-center gap-1">
+                              <Heart size={14} />
+                              {post.likes?.length || 0}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MessageCircle size={14} />
+                              {post.comments?.length || 0}
+                            </span>
+                            <span className="ml-auto">
+                              {new Date(post.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-theme-tertiary text-sm">No comments yet</p>
+                        <p className="text-theme-muted text-xs mt-1">Start engaging with posts!</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Likes Tab */}
+                {activityTab === 'likes' && (
+                  <div className="space-y-3">
+                    {likedPosts.length > 0 ? (
+                      likedPosts.map((post) => (
+                        <motion.div
+                          key={post._id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-4 rounded-lg border transition-all hover:shadow-md"
+                          style={{ 
+                            background: 'var(--bg-secondary)', 
+                            borderColor: 'var(--border-primary)' 
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
+                              style={{ background: '#6366f1' }}>
+                              {post.userId?.profileImage ? (
+                                <img src={post.userId.profileImage} alt={post.userId.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
+                                  {post.userId?.name?.[0]?.toUpperCase() || '?'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-theme-secondary mb-1">{post.userId?.name || 'Unknown'}</p>
+                              <p className="text-sm text-theme-primary break-words whitespace-pre-wrap">{post.content}</p>
+                              {post.mediaUrl && (
+                                <div className="mt-3 rounded-lg overflow-hidden">
+                                  {post.mediaType === 'video' ? (
+                                    <video src={post.mediaUrl} controls className="w-full max-h-48 object-contain" />
+                                  ) : (
+                                    <img src={post.mediaUrl} alt="Post media" className="w-full max-h-48 object-contain" />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-xs text-theme-tertiary mt-3">
+                            <span className="flex items-center gap-1 text-red-500">
+                              <Heart size={14} fill="currentColor" />
+                              You liked this
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MessageCircle size={14} />
+                              {post.comments?.length || 0}
+                            </span>
+                            <span className="ml-auto">
+                              {new Date(post.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-theme-tertiary text-sm">No liked posts yet</p>
+                        <p className="text-theme-muted text-xs mt-1">Start liking posts!</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-theme-tertiary text-sm">No posts yet</p>
-                <p className="text-theme-muted text-xs mt-1">Share your first post in Communities!</p>
-              </div>
             )}
           </Card>
         </motion.div>

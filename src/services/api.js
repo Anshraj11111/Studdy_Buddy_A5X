@@ -293,7 +293,7 @@ export const followAPI = {
 
 export const connectionAPI = {
   getUsers: (search = '', page = 1) =>
-    api.get(`/connections/users?search=${encodeURIComponent(search)}&page=${page}&limit=20`),
+    api.get(`/connections/users?search=${encodeURIComponent(search)}&page=${page}&limit=200`), // Increased from 20 to 200
   sendRequest: (userId) => api.post(`/connections/request/${userId}`),
   accept: (id) => api.put(`/connections/${id}/accept`),
   reject: (id) => api.put(`/connections/${id}/reject`),
