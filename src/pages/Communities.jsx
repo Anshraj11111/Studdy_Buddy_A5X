@@ -1302,34 +1302,61 @@ function ConnectionsTab({ user, setViewProfileId }) {
   const [myConns, setMyConns] = useState([])
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState({})
+  
+  // Infinite scroll state for Discover tab
+  const [discoverPage, setDiscoverPage] = useState(1)
+  const [hasMoreDiscover, setHasMoreDiscover] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
 
-  const fetchDiscover = useCallback(async (q = '') => {
-    setLoading(true)
+  const fetchDiscover = useCallback(async (q = '', page = 1, append = false) => {
+    if (page === 1) {
+      setLoading(true)
+    } else {
+      setLoadingMore(true)
+    }
+    
     try {
       const [usersRes, followingRes] = await Promise.all([
-        connectionAPI.getUsers(q),
+        connectionAPI.getUsers(q, page),
         followAPI.getFollowing(user._id),
       ])
       const users = usersRes.data.data?.users || []
+      const total = usersRes.data.data?.total || 0
+      
       // Filter out null following users (deleted accounts)
       const followingIds = new Set((followingRes.data.data?.following || []).filter(f => f && f._id).map(f => String(f._id)))
       const mappedUsers = users.map(u => ({ ...u, isFollowing: followingIds.has(String(u._id)) }))
-      setDiscoverUsers(mappedUsers)
+      
+      if (append) {
+        setDiscoverUsers(prev => [...prev, ...mappedUsers])
+      } else {
+        setDiscoverUsers(mappedUsers)
+      }
+      
+      // Check if there are more users to load
+      const currentCount = append ? discoverUsers.length + mappedUsers.length : mappedUsers.length
+      setHasMoreDiscover(currentCount < total)
+      
     } catch (err) { 
       console.error('❌ fetchDiscover error:', err)
-    } finally { setLoading(false) }
-  }, [user._id])
+    } finally { 
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }, [user._id, discoverUsers.length])
 
   // Real-time search with debounce
   useEffect(() => {
     if (subTab !== 'discover') return
     
     const timer = setTimeout(() => {
-      fetchDiscover(search)
+      setDiscoverPage(1)
+      setHasMoreDiscover(true)
+      fetchDiscover(search, 1, false)
     }, 300) // 300ms delay for debouncing
 
     return () => clearTimeout(timer)
-  }, [search, subTab, fetchDiscover])
+  }, [search, subTab])
 
   const fetchPending = useCallback(async () => {
     setLoading(true)
@@ -1355,7 +1382,11 @@ function ConnectionsTab({ user, setViewProfileId }) {
   }, [user._id])
 
   useEffect(() => {
-    if (subTab === 'discover') fetchDiscover('')
+    if (subTab === 'discover') {
+      setDiscoverPage(1)
+      setHasMoreDiscover(true)
+      fetchDiscover('', 1, false)
+    }
     else if (subTab === 'pending') fetchPending()
     else fetchMyConns()
   }, [subTab])
@@ -1600,9 +1631,35 @@ function ConnectionsTab({ user, setViewProfileId }) {
             ? <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={26} style={{ color: '#6366f1' }} /></div>
             : discoverUsers.length === 0
               ? <div className="text-center py-12 text-sm text-theme-tertiary">No users found</div>
-              : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {discoverUsers.map(u => <UserCard key={u._id} u={u} setViewProfileId={setViewProfileId} />)}
-                </div>
+              : <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {discoverUsers.map(u => <UserCard key={u._id} u={u} setViewProfileId={setViewProfileId} />)}
+                  </div>
+                  
+                  {/* Load More Button */}
+                  {hasMoreDiscover && (
+                    <div className="flex justify-center pt-4">
+                      <button
+                        onClick={() => {
+                          const nextPage = discoverPage + 1
+                          setDiscoverPage(nextPage)
+                          fetchDiscover(search, nextPage, true)
+                        }}
+                        disabled={loadingMore}
+                        className="px-6 py-2.5 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
+                        style={{ background: '#6366f1' }}>
+                        {loadingMore ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          'Load More Users'
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </>
           }
         </div>
       )}
