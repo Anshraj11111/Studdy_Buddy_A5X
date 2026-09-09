@@ -447,6 +447,7 @@ export const courseAPI = {
   
   // Protected
   getSecureVideoUrl: (lectureId) => api.get(`/courses/lectures/${lectureId}/video-url`),
+  playVideoWithToken: (token) => api.get(`/courses/play/${token}`), // New: Get actual URL with token
   enroll: (courseId) => api.post(`/courses/${courseId}/enroll`),
   markComplete: (courseId, videoId) => api.post(`/courses/${courseId}/videos/${videoId}/complete`),
   getMyCourses: () => api.get('/courses/my/enrolled'),

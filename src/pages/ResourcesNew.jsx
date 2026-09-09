@@ -92,6 +92,38 @@ function VideoPlayerModal({ resource, onClose }) {
   const [isMuted, setIsMuted] = useState(false);
   const containerRef = useRef(null);
 
+  // Anti-inspect protection: Detect DevTools
+  useEffect(() => {
+    const detectDevTools = () => {
+      const threshold = 160;
+      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+      
+      if (widthThreshold || heightThreshold) {
+        console.clear();
+        console.warn('⚠️ Developer tools detected! Video content is protected.');
+        // Optionally pause video or show warning
+      }
+    };
+
+    const interval = setInterval(detectDevTools, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Disable right-click on video container
+  useEffect(() => {
+    const preventContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('contextmenu', preventContextMenu);
+      return () => container.removeEventListener('contextmenu', preventContextMenu);
+    }
+  }, []);
+
   // Detect orientation changes - go fullscreen layout when landscape
   useEffect(() => {
     const checkOrientation = () => {
@@ -154,27 +186,24 @@ function VideoPlayerModal({ resource, onClose }) {
   useEffect(() => {
     let cancelled = false;
     
-    // If resource has URL directly (old resources), use it
-    if (resource?.url) {
-      if (isYouTubeUrl(resource.url)) {
-        const extractedId = getYouTubeId(resource.url);
-        if (extractedId) {
-          setVideoId(extractedId);
-          setTokenError('');
-        } else {
-          setTokenError('Invalid YouTube URL format');
-        }
-      } else {
-        setTokenError('Only YouTube videos are supported');
-      }
-      return () => { cancelled = true };
-    }
-    
-    // Fetch secure URL from backend using lecture ID
+    // Always fetch secure URL from backend using lecture ID (never use direct URL)
     if (resource?._id) {
       courseAPI.getSecureVideoUrl(resource._id)
         .then(res => {
           if (!cancelled) {
+            const token = res.data?.data?.token;
+            
+            if (!token) {
+              setTokenError('Failed to get video token');
+              return;
+            }
+            
+            // Now use the token to get the actual URL (token valid for 90 seconds only)
+            return courseAPI.playVideoWithToken(token);
+          }
+        })
+        .then(res => {
+          if (!cancelled && res) {
             const videoUrl = res.data?.data?.url;
             if (videoUrl && isYouTubeUrl(videoUrl)) {
               const extractedId = getYouTubeId(videoUrl);
