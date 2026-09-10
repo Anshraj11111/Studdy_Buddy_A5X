@@ -94,7 +94,25 @@ export default function Login() {
         formData.schoolPassword || '' // Empty string if not provided
       )
       navigate(user.role === 'mentor' ? '/mentor-dashboard' : '/dashboard', { replace: true })
-    } catch (err) { setErrors({ submit: err.message || 'Login failed' }) }
+    } catch (err) {
+      // Better error messages for users
+      let errorMsg = err.message || 'Login failed';
+      
+      // Check for specific error codes
+      if (err.message?.includes('Account not found')) {
+        errorMsg = '⚠️ Account not found. Please create an account first using Sign Up.';
+      } else if (err.message?.includes('Invalid password')) {
+        errorMsg = '🔒 Invalid password. Try using your school password if you forgot your personal password.';
+      } else if (err.message?.includes('Invalid school password')) {
+        errorMsg = '🏫 Invalid school password. Please check and try again.';
+      } else if (err.message?.includes('No school password set')) {
+        errorMsg = '⚠️ No school password found. Please use your personal password to login.';
+      } else if (err.message?.includes('Both passwords are incorrect')) {
+        errorMsg = '❌ Both passwords are incorrect. Please check your credentials and try again.';
+      }
+      
+      setErrors({ submit: errorMsg });
+    }
   }
 
   const inputClass = `w-full pl-11 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-white/[0.05] border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white/[0.08]`

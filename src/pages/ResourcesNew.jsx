@@ -246,6 +246,10 @@ function VideoPlayerModal({ resource, onClose }) {
             modestbranding: 1,
             playsinline: 1,
             enablejsapi: 1,
+            iv_load_policy: 3, // Hide video annotations
+            cc_load_policy: 0, // Hide closed captions
+            fs: 1, // Show fullscreen button
+            disablekb: 0, // Enable keyboard controls
           },
           events: {
             onStateChange: handlePlayerStateChange,
@@ -408,14 +412,43 @@ function VideoPlayerModal({ resource, onClose }) {
     : null;
 
   return (
-    <div 
-      className="fixed z-[100] flex items-center justify-center" 
-      style={{ 
-        inset: 0,
-        background: '#000',
-      }} 
-      onClick={onClose}
-    >
+    <>
+      {/* Global CSS to hide ALL YouTube branding */}
+      <style>{`
+        /* Hide YouTube logo, channel name, subscriber count */
+        .ytp-title-channel,
+        .ytp-title-expanded-heading,
+        .ytp-chrome-top .ytp-title,
+        .ytp-watermark,
+        .ytp-youtube-button,
+        .ytp-title-link,
+        .ytp-title-text,
+        .ytp-channel-name,
+        .ytp-title-expanded-overlay,
+        .ytp-gradient-top,
+        a[class*="ytp"],
+        .ytp-chrome-top,
+        .ytp-show-cards-title {
+          display: none !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+          opacity: 0 !important;
+        }
+        
+        /* Block all hover states on YouTube elements */
+        iframe[src*="youtube"] * {
+          cursor: default !important;
+        }
+      `}</style>
+
+      <div 
+        className="fixed z-[100] flex items-center justify-center" 
+        style={{ 
+          inset: 0,
+          background: '#000',
+        }} 
+        onClick={onClose}
+      >
       <motion.div
         ref={containerRef}
         initial={{ opacity: 0, scale: 0.95 }} 
@@ -595,13 +628,7 @@ function VideoPlayerModal({ resource, onClose }) {
                 </div>
               )}
               
-              {/* Completion badge */}
-              {watchProgress.isCompleted && (
-                <div className="absolute top-3 left-3 flex items-center gap-2 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg z-50">
-                  <Check size={14} strokeWidth={3} />
-                  100% Complete
-                </div>
-              )}
+              {/* Completion badge - REMOVED as per requirement */}
               
               {/* Bottom bar - covers YouTube logo/controls */}
               <div
@@ -617,16 +644,45 @@ function VideoPlayerModal({ resource, onClose }) {
                 onClick={e => e.stopPropagation()}
                 onContextMenu={e => e.preventDefault()}
               />
-              {/* Top bar - blocks channel title link */}
-              <div className="absolute left-0 right-0 top-0 z-50"
+              {/* Top bar - ENHANCED to block ALL YouTube branding, channel name, logo */}
+              <div 
+                className="absolute left-0 right-0 top-0 z-[9999]"
                 style={{
                   width: '100%',
-                  height: '40px',
+                  height: '80px', // Increased height to cover channel area
                   background: 'transparent',
                   pointerEvents: 'all',
                   cursor: 'default',
                 }}
-                onClick={e => e.stopPropagation()}
+                onClick={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  return false;
+                }}
+                onMouseDown={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return false;
+                }}
+                onMouseOver={e => e.preventDefault()}
+                onTouchStart={e => e.preventDefault()}
+              />
+              
+              {/* Left side overlay - blocks channel logo */}
+              <div 
+                className="absolute left-0 top-0 z-[9999]"
+                style={{
+                  width: '150px',
+                  height: '80px',
+                  background: 'transparent',
+                  pointerEvents: 'all',
+                  cursor: 'default',
+                }}
+                onClick={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  return false;
+                }}
               />
             </>
           )}
@@ -645,6 +701,7 @@ function VideoPlayerModal({ resource, onClose }) {
         )}
       </motion.div>
     </div>
+    </>
   );
 }
 
