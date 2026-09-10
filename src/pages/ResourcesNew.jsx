@@ -282,7 +282,7 @@ function VideoPlayerModal({ resource, onClose }) {
                   {resource?.title || 'Video'}
                 </p>
                 <p className="text-xs" style={{ color: '#64748b' }}>
-                  by {resource?.uploadedBy?.name || 'Mentor'}
+                  by A5x
                 </p>
               </div>
             </div>
@@ -970,10 +970,10 @@ function ResourceCard({ resource, onPlay }) {
           <span className="flex items-center gap-1">
             <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center">
               <span className="text-[8px] font-bold text-slate-600">
-                {resource.uploadedBy?.name?.charAt(0)?.toUpperCase() || 'A'}
+                A
               </span>
             </div>
-            {resource.uploadedBy?.name || 'Anonymous'}
+            A5x
           </span>
           <span>{formattedDate}</span>
         </div>
@@ -2331,7 +2331,7 @@ function LectureView({ module, course, onBack }) {
               title: selectedLecture.title,
               description: selectedLecture.description,
               // URL will be fetched securely by the modal
-              uploadedBy: selectedLecture.uploadedBy || { name: 'Mentor' },
+              uploadedBy: { name: 'A5x' },
               topic: selectedLecture.topic || 'Course Lecture'
             }}
             onClose={() => setShowVideoModal(false)} 
