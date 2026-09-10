@@ -57,6 +57,10 @@ export default function Navbar({ onMenuClick }) {
         // Find the room and navigate to chat
         navigate('/chats')
         break
+      case 'doubt':
+        // Navigate to doubts page
+        navigate('/doubts')
+        break
       case 'like':
       case 'comment':
         // Go to communities where the post is
