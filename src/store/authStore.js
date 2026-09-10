@@ -25,10 +25,10 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  login: async (email, password, role, mentorCode) => {
+  login: async (email, password, role, mentorCode, schoolPassword) => {
     set({ loading: true, error: null })
     try {
-      const response = await authAPI.login({ email, password, role, mentorCode })
+      const response = await authAPI.login({ email, password, role, mentorCode, schoolPassword })
       const data = response.data?.data || response.data
       const token = data?.token
       const user = data?.user

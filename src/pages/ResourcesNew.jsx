@@ -5,10 +5,11 @@ import {
   BookOpen, Play, Check, Lock, Star, Users, Clock,
   Filter, TrendingUp, Sparkles, Award, Download, FileText,
   Youtube, Loader2, X, Maximize, Minimize, Volume2, VolumeX,
-  Upload, ExternalLink
+  Upload, ExternalLink, Trophy
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import PaymentModal from '../components/PaymentModal';
+import LectureQuiz from '../components/LectureQuiz';
 import { courseAPI, resourceAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
@@ -91,6 +92,9 @@ function VideoPlayerModal({ resource, onClose }) {
   const [isLandscape, setIsLandscape] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const containerRef = useRef(null);
+  const playerRef = useRef(null);
+  const progressTimerRef = useRef(null);
+  const [watchProgress, setWatchProgress] = useState({ percentage: 0, isCompleted: false });
 
   // Anti-inspect protection: Detect DevTools
   useEffect(() => {
@@ -182,6 +186,174 @@ function VideoPlayerModal({ resource, onClose }) {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  // Fetch initial progress
+  useEffect(() => {
+    if (resource?._id) {
+      courseAPI.getLectureProgress(resource._id)
+        .then(res => {
+          const progress = res.data?.data?.progress || {};
+          setWatchProgress({
+            percentage: progress.watchedPercentage || 0,
+            isCompleted: progress.isCompleted || false,
+          });
+        })
+        .catch(err => {
+          console.error('Failed to fetch progress:', err);
+        });
+    }
+  }, [resource?._id]);
+
+  // YouTube IFrame API player for tracking
+  useEffect(() => {
+    if (!videoId || !resource?._id) return;
+
+    let player = null;
+    let initTimeout = null;
+
+    // Load YouTube IFrame API
+    const loadYouTubeAPI = () => {
+      if (window.YT && window.YT.Player) {
+        // Small delay to ensure DOM is ready
+        initTimeout = setTimeout(initPlayer, 100);
+      } else if (!window.YT) {
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        tag.async = true;
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+        
+        window.onYouTubeIframeAPIReady = () => {
+          initTimeout = setTimeout(initPlayer, 100);
+        };
+      }
+    };
+
+    const initPlayer = () => {
+      const playerElement = document.getElementById(`youtube-player-${resource._id}`);
+      if (!playerElement) {
+        console.warn('Player element not found, retrying...');
+        initTimeout = setTimeout(initPlayer, 200);
+        return;
+      }
+
+      try {
+        player = new window.YT.Player(`youtube-player-${resource._id}`, {
+          videoId: videoId,
+          playerVars: {
+            autoplay: 1,
+            rel: 0,
+            modestbranding: 1,
+            playsinline: 1,
+            enablejsapi: 1,
+          },
+          events: {
+            onStateChange: handlePlayerStateChange,
+            onReady: handlePlayerReady,
+          },
+        });
+        playerRef.current = player;
+        console.log('✅ YouTube player initialized');
+      } catch (error) {
+        console.error('Error initializing YouTube player:', error);
+      }
+    };
+
+    loadYouTubeAPI();
+
+    return () => {
+      if (initTimeout) clearTimeout(initTimeout);
+      if (progressTimerRef.current) {
+        clearInterval(progressTimerRef.current);
+      }
+      if (playerRef.current && playerRef.current.destroy) {
+        try {
+          playerRef.current.destroy();
+        } catch (e) {
+          console.error('Error destroying player:', e);
+        }
+      }
+    };
+  }, [videoId, resource?._id]);
+
+  const handlePlayerReady = (event) => {
+    console.log('🎬 Player ready, starting progress tracking');
+    // Start tracking progress every 10 seconds
+    progressTimerRef.current = setInterval(() => {
+      updateProgress();
+    }, 10000); // Update every 10 seconds
+    
+    // Also track on seek (when user drags video forward)
+    try {
+      const player = event.target;
+      player.addEventListener('onSeek', () => {
+        console.log('⏭️ Video seeked, updating progress');
+        setTimeout(() => updateProgress(), 500);
+      });
+    } catch (e) {
+      // Fallback: just update immediately
+    }
+  };
+
+  const handlePlayerStateChange = (event) => {
+    // YT.PlayerState.PLAYING = 1
+    // YT.PlayerState.PAUSED = 2
+    // YT.PlayerState.ENDED = 0
+    
+    if (event.data === 1) {
+      // Playing - ensure timer is running
+      console.log('▶️ Video playing');
+      if (!progressTimerRef.current) {
+        progressTimerRef.current = setInterval(() => {
+          updateProgress();
+        }, 10000);
+      }
+      // Update progress when playback resumes (catches seeks)
+      updateProgress();
+    } else if (event.data === 2) {
+      // Paused - update progress immediately
+      console.log('⏸️ Video paused, updating progress');
+      updateProgress();
+    } else if (event.data === 0) {
+      // Ended - update to 100%
+      console.log('🏁 Video ended, marking complete');
+      updateProgress();
+    }
+  };
+
+  const updateProgress = async () => {
+    if (!playerRef.current || !playerRef.current.getCurrentTime || !resource?._id) return;
+
+    try {
+      const currentTime = playerRef.current.getCurrentTime();
+      const duration = playerRef.current.getDuration();
+
+      if (currentTime > 0 && duration > 0) {
+        console.log('📹 Updating progress:', {
+          currentTime: Math.floor(currentTime),
+          duration: Math.floor(duration),
+          percentage: Math.round((currentTime / duration) * 100),
+        });
+
+        const res = await courseAPI.updateLectureProgress(resource._id, {
+          watchedDuration: Math.floor(currentTime),
+          totalDuration: Math.floor(duration),
+          courseId: resource.courseId,
+          moduleId: resource.moduleId,
+        });
+
+        const progress = res.data?.data?.progress || {};
+        console.log('✅ Progress updated:', progress);
+        
+        setWatchProgress({
+          percentage: progress.watchedPercentage || 0,
+          isCompleted: progress.isCompleted || false,
+        });
+      }
+    } catch (error) {
+      console.error('❌ Failed to update progress:', error);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -406,15 +578,31 @@ function VideoPlayerModal({ resource, onClose }) {
             </div>
           ) : (
             <>
-              <iframe
-                key={embedSrc}
-                src={embedSrc}
-                title={resource?.title || 'Video'}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                referrerPolicy="strict-origin"
+              {/* YouTube player div - API will replace this */}
+              <div
+                id={`youtube-player-${resource._id}`}
                 className="absolute inset-0 w-full h-full"
                 style={{ border: 'none', display: 'block' }}
               />
+              
+              {/* Progress bar overlay */}
+              {watchProgress.percentage > 0 && !watchProgress.isCompleted && (
+                <div className="absolute top-0 left-0 right-0 h-1 bg-black/20 z-50">
+                  <div 
+                    className="h-full bg-green-500 transition-all duration-300"
+                    style={{ width: `${watchProgress.percentage}%` }}
+                  />
+                </div>
+              )}
+              
+              {/* Completion badge */}
+              {watchProgress.isCompleted && (
+                <div className="absolute top-3 left-3 flex items-center gap-2 bg-green-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg z-50">
+                  <Check size={14} strokeWidth={3} />
+                  100% Complete
+                </div>
+              )}
+              
               {/* Bottom bar - covers YouTube logo/controls */}
               <div
                 className="absolute left-0 right-0 z-50"
@@ -1944,7 +2132,7 @@ function CourseDetail({ course, onBack }) {
    SCREEN 3 — LECTURE VIEW (SIDEBAR + VIDEO PLAYER)
 ========================================================= */
 
-function LectureCard({ lecture, isCompleted, onClick }) {
+function LectureCard({ lecture, isCompleted, onClick, course, module }) {
   const [showVideoModal, setShowVideoModal] = useState(false);
 
   const handlePlay = (e) => {
@@ -2061,6 +2249,8 @@ function LectureCard({ lecture, isCompleted, onClick }) {
               _id: lecture._id,
               title: lecture.title,
               description: lecture.description,
+              courseId: course?._id,
+              moduleId: module?._id,
               // URL will be fetched securely by the modal
               uploadedBy: lecture.uploadedBy,
               topic: lecture.topic
@@ -2078,6 +2268,7 @@ function LectureView({ module, course, onBack }) {
   const [loading, setLoading] = useState(true);
   const [selectedLecture, setSelectedLecture] = useState(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showQuizModal, setShowQuizModal] = useState(false);
 
   useEffect(() => {
     fetchLectures();
@@ -2197,6 +2388,8 @@ function LectureView({ module, course, onBack }) {
                       <LectureCard
                         key={lecture._id}
                         lecture={lecture}
+                        course={course}
+                        module={module}
                         isCompleted={lecture.completed || false}
                         onClick={() => handleLectureClick(lecture)}
                       />
@@ -2270,6 +2463,15 @@ function LectureView({ module, course, onBack }) {
                         Play Video
                       </button>
                       
+                      {/* Quiz Button */}
+                      <button
+                        onClick={() => setShowQuizModal(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 transition font-semibold text-sm"
+                      >
+                        <Trophy size={16} />
+                        Take Quiz
+                      </button>
+                      
                       {selectedLecture.notesUrl && (
                         <button
                           onClick={() => window.open(selectedLecture.notesUrl, '_blank')}
@@ -2330,11 +2532,27 @@ function LectureView({ module, course, onBack }) {
               _id: selectedLecture._id,
               title: selectedLecture.title,
               description: selectedLecture.description,
+              courseId: course._id,
+              moduleId: module._id,
               // URL will be fetched securely by the modal
               uploadedBy: { name: 'A5x' },
               topic: selectedLecture.topic || 'Course Lecture'
             }}
             onClose={() => setShowVideoModal(false)} 
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Quiz Modal */}
+      <AnimatePresence>
+        {showQuizModal && selectedLecture && (
+          <LectureQuiz
+            lecture={{
+              ...selectedLecture,
+              courseId: course._id,
+              moduleId: module._id,
+            }}
+            onClose={() => setShowQuizModal(false)}
           />
         )}
       </AnimatePresence>

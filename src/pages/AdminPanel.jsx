@@ -2,10 +2,11 @@ import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { adminAPI, adminPaymentAPI } from "../services/api"
 import api from "../services/api"
-import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X, Download, DollarSign, CheckCircle, XCircle, Clock } from "lucide-react"
+import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X, Download, DollarSign, CheckCircle, XCircle, Clock, Trophy } from "lucide-react"
 import PaymentManagement from '../components/PaymentManagement'
 import CourseManagement from '../components/CourseManagement'
 import DoubtsManagement from '../components/DoubtsManagement'
+import QuizManagement from '../components/QuizManagement'
 
 // ── Pre-Registered Students Component ──────────────────────────────────────
 function PreRegisteredStudents({ showToast }) {
@@ -2032,6 +2033,7 @@ export default function AdminPanel() {
             { id: 'prereg', label: 'Pre-Register Students', icon: <UserPlus size={14} /> },
             { id: 'doubts', label: 'Doubts Management', icon: <MessageSquare size={14} /> },
             { id: 'courses', label: 'Courses', icon: <BookOpen size={14} /> },
+            { id: 'quizzes', label: 'Quiz Management', icon: <Trophy size={14} /> },
             { id: 'payments', label: 'Payment Verification', icon: <DollarSign size={14} /> },
             { id: 'posts', label: 'Post Moderation', icon: <FileText size={14} /> },
             { id: 'messages', label: 'Message Monitor', icon: <Radio size={14} /> },
@@ -2265,6 +2267,11 @@ export default function AdminPanel() {
         {/* DOUBTS MANAGEMENT TAB */}
         {mainTab === 'doubts' && (
           <DoubtsManagement showToast={showToast} />
+        )}
+
+        {/* QUIZ MANAGEMENT TAB */}
+        {mainTab === 'quizzes' && (
+          <QuizManagement showToast={showToast} />
         )}
 
         {/* PAYMENT VERIFICATION TAB */}

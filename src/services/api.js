@@ -372,6 +372,20 @@ export const adminAPI = {
   // Post Moderation
   getAllPosts: (params = {}) => api.get('/admin/posts', { params }),
   deletePost: (id) => api.delete(`/admin/posts/${id}`),
+  
+  // Doubts Management
+  getAllDoubts: (params = {}) => api.get('/admin/doubts', { params }),
+  updateDoubt: (id, data) => api.put(`/admin/doubts/${id}`, data),
+  deleteDoubt: (id) => api.delete(`/admin/doubts/${id}`),
+  updateReply: (doubtId, replyId, data) => api.put(`/admin/doubts/${doubtId}/replies/${replyId}`, data),
+  deleteReply: (doubtId, replyId) => api.delete(`/admin/doubts/${doubtId}/replies/${replyId}`),
+  
+  // Quiz Management
+  getAllQuizzes: (params = {}) => api.get('/admin/quizzes', { params }),
+  createQuiz: (data) => api.post('/admin/quizzes', data),
+  updateQuiz: (id, data) => api.put(`/admin/quizzes/${id}`, data),
+  deleteQuiz: (id) => api.delete(`/admin/quizzes/${id}`),
+  getModuleLectures: (moduleId) => api.get(`/admin/modules/${moduleId}/lectures`),
 };
 
 /* ---------------- BROADCAST CHANNELS ---------------- */
@@ -451,4 +465,17 @@ export const courseAPI = {
   enroll: (courseId) => api.post(`/courses/${courseId}/enroll`),
   markComplete: (courseId, videoId) => api.post(`/courses/${courseId}/videos/${videoId}/complete`),
   getMyCourses: () => api.get('/courses/my/enrolled'),
+  
+  // Lecture progress tracking
+  updateLectureProgress: (lectureId, data) => api.post(`/lectures/${lectureId}/progress`, data),
+  getLectureProgress: (lectureId) => api.get(`/lectures/${lectureId}/progress`),
+  getCourseProgress: (courseId) => api.get(`/courses/${courseId}/progress`),
+  getModuleProgress: (moduleId) => api.get(`/modules/${moduleId}/progress`),
+  
+  // Quiz
+  getQuiz: (lectureId) => api.get(`/lectures/${lectureId}/quiz`),
+  startQuiz: (lectureId) => api.post(`/lectures/${lectureId}/quiz/start`),
+  submitQuiz: (lectureId, answers) => api.post(`/lectures/${lectureId}/quiz/submit`, { answers }),
+  getQuizAttempts: (lectureId) => api.get(`/lectures/${lectureId}/quiz/attempts`),
+  getAttemptDetails: (attemptId) => api.get(`/quiz-attempts/${attemptId}`),
 };

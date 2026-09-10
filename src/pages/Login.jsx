@@ -13,6 +13,7 @@ export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '', role: 'student', mentorCode: '', schoolPassword: '' })
   const [errors, setErrors] = useState({})
   const [showPassword, setShowPassword] = useState(false)
+  const [showSchoolPassword, setShowSchoolPassword] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const { login, googleLogin, loading } = useAuthStore()
   const { theme } = useThemeStore()
@@ -63,8 +64,18 @@ export default function Login() {
   const validate = () => {
     const e = {}
     if (!formData.email) e.email = 'Email is required'
-    if (!formData.password) e.password = 'Password is required'
-    // School password is now optional - students without it can pay to access resources
+    
+    // For students: Either password OR schoolPassword is required (at least one)
+    if (formData.role === 'student') {
+      if (!formData.password && !formData.schoolPassword) {
+        e.password = 'Either password or school password is required'
+        e.schoolPassword = 'Either password or school password is required'
+      }
+    } else {
+      // For mentors: password is mandatory
+      if (!formData.password) e.password = 'Password is required'
+    }
+    
     if (formData.role === 'mentor' && !formData.mentorCode) e.mentorCode = 'Mentor code is required'
     return e
   }
@@ -74,7 +85,14 @@ export default function Login() {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     try {
-      const { user } = await login(formData.email, formData.password, formData.role, formData.mentorCode)
+      // Pass schoolPassword to backend for alternative authentication
+      const { user } = await login(
+        formData.email, 
+        formData.password || '', // Empty string if not provided
+        formData.role, 
+        formData.mentorCode,
+        formData.schoolPassword || '' // Empty string if not provided
+      )
       navigate(user.role === 'mentor' ? '/mentor-dashboard' : '/dashboard', { replace: true })
     } catch (err) { setErrors({ submit: err.message || 'Login failed' }) }
   }
@@ -142,7 +160,9 @@ export default function Login() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-400">Password</label>
+              <label className="block text-sm font-medium mb-2 text-gray-400">
+                Password {formData.role === 'student' && <span className="text-gray-500 font-normal">(Optional if using school password)</span>}
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 <input type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••"
@@ -184,14 +204,20 @@ export default function Login() {
             {formData.role === 'student' && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
                 <label className="block text-sm font-medium mb-2 text-gray-400">
-                  School Password <span className="text-gray-500 font-normal">(Optional)</span>
+                  School Password <span className="text-gray-500 font-normal">(Optional if using personal password)</span>
                 </label>
-                <input type="password" name="schoolPassword" placeholder="Enter your school password (optional)"
-                  value={formData.schoolPassword} onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
-                  className={inputClass.replace('pl-11', 'pl-4')} />
+                <div className="relative">
+                  <input type={showSchoolPassword ? 'text' : 'password'} name="schoolPassword" placeholder="Enter your school password"
+                    value={formData.schoolPassword} onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
+                    className={inputClass.replace('pl-11', 'pl-4') + ' pr-11'} />
+                  <button type="button" onClick={() => setShowSchoolPassword(v => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
+                    {showSchoolPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
                 {errors.schoolPassword && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.schoolPassword}</p>}
                 <p className="text-xs text-gray-500 mt-1.5">
-                  💡 Have a school code? Get free access to all resources !
+                  💡 Use school password if you forgot your personal password!
                 </p>
               </motion.div>
             )}
