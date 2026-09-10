@@ -5,6 +5,7 @@ import api from "../services/api"
 import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X, Download, DollarSign, CheckCircle, XCircle, Clock } from "lucide-react"
 import PaymentManagement from '../components/PaymentManagement'
 import CourseManagement from '../components/CourseManagement'
+import DoubtsManagement from '../components/DoubtsManagement'
 
 // ── Pre-Registered Students Component ──────────────────────────────────────
 function PreRegisteredStudents({ showToast }) {
@@ -2029,9 +2030,10 @@ export default function AdminPanel() {
             { id: 'users', label: 'User Management', icon: <Users size={14} /> },
             { id: 'schools', label: 'School Channels', icon: <School size={14} /> },
             { id: 'prereg', label: 'Pre-Register Students', icon: <UserPlus size={14} /> },
+            { id: 'doubts', label: 'Doubts Management', icon: <MessageSquare size={14} /> },
             { id: 'courses', label: 'Courses', icon: <BookOpen size={14} /> },
             { id: 'payments', label: 'Payment Verification', icon: <DollarSign size={14} /> },
-            { id: 'posts', label: 'Post Moderation', icon: <MessageSquare size={14} /> },
+            { id: 'posts', label: 'Post Moderation', icon: <FileText size={14} /> },
             { id: 'messages', label: 'Message Monitor', icon: <Radio size={14} /> },
           ].map(t => (
             <button key={t.id} onClick={() => setMainTab(t.id)}
@@ -2258,6 +2260,11 @@ export default function AdminPanel() {
         {/* COURSES TAB */}
         {mainTab === 'courses' && (
           <CourseManagement showToast={showToast} />
+        )}
+
+        {/* DOUBTS MANAGEMENT TAB */}
+        {mainTab === 'doubts' && (
+          <DoubtsManagement showToast={showToast} />
         )}
 
         {/* PAYMENT VERIFICATION TAB */}
