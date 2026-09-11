@@ -256,6 +256,22 @@ function VideoPlayerModal({ resource, onClose}) {
     <>
       {/* Global CSS to hide ALL YouTube branding */}
       <style>{`
+        /* Prevent scrolling */
+        body {
+          overflow: hidden !important;
+        }
+        
+        /* Hide scrollbar but allow scrolling */
+        *::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
+        * {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+        
         /* Hide YouTube logo, channel name, subscriber count */
         .ytp-title-channel,
         .ytp-title-expanded-heading,
@@ -287,12 +303,13 @@ function VideoPlayerModal({ resource, onClose}) {
         style={{ 
           inset: 0,
           background: '#000',
+          overflow: 'hidden',
         }} 
         onClick={onClose}
       >
       <div
         ref={containerRef}
-        className="flex flex-col w-full overflow-hidden"
+        className="flex flex-col w-full"
         style={isLandscape ? {
           // Landscape: full screen, no header
           width: '100vw',
@@ -300,6 +317,7 @@ function VideoPlayerModal({ resource, onClose}) {
           maxWidth: '100vw',
           background: '#000',
           borderRadius: 0,
+          overflow: 'hidden',
         } : {
           // Portrait: card style with header
           maxWidth: '960px',
@@ -367,12 +385,14 @@ function VideoPlayerModal({ resource, onClose}) {
             width: '100vw',
             height: '100dvh',
             flex: '1 1 auto',
+            overflow: 'hidden',
           } : {
             // Portrait: 16:9 ratio
             position: 'relative',
             width: '100%',
             aspectRatio: '16/9',
             flex: '0 0 auto',
+            overflow: 'hidden',
           }}
         >
           {/* Close & exit fullscreen buttons for landscape mode */}

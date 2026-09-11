@@ -204,15 +204,37 @@
   .placeholder-theme-tertiary::placeholder { color: var(--text-tertiary) !important; }
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-secondary); }
+/* Hide scrollbar completely everywhere */
+::-webkit-scrollbar { 
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+::-webkit-scrollbar-track { 
+  display: none !important;
+  background: transparent !important;
+}
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, rgba(99,102,241,0.5), rgba(139,92,246,0.5));
-  border-radius: 99px;
+  display: none !important;
+  background: transparent !important;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, rgba(129,140,248,0.7), rgba(167,139,250,0.7));
+  display: none !important;
+  background: transparent !important;
 }
+
+/* Hide scrollbar for all browsers */
+* {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+html, body {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  overflow-x: hidden !important;
+}
+
 ::selection { background: rgba(99,102,241,0.3); color: #c4b5fd; }
 *, *::before, *::after {
   transition-property: color, background-color, border-color, box-shadow, opacity;
