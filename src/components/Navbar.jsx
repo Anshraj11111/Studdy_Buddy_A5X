@@ -5,6 +5,7 @@ import { Menu, X, LogOut, Settings, Bell, Heart, MessageCircle, UserPlus } from 
 import { useAuthStore } from '../store/authStore'
 import { useNotificationStore } from '../store/notificationStore'
 import ThemeToggle from './ThemeToggle'
+import NotificationPermissionPrompt from './NotificationPermission'
 import api from '../services/api'
 
 const LOGO_URL = '/studdybuddy-logo.png'
@@ -385,6 +386,9 @@ export default function Navbar({ onMenuClick }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Notification Permission Prompt - Only for mentors */}
+      {user && user.role === 'mentor' && <NotificationPermissionPrompt />}
     </nav>
   )
 }
