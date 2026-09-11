@@ -449,17 +449,111 @@ function VideoPlayerModal({ resource, onClose}) {
             </div>
           ) : (
             <>
-              {/* Simple YouTube iframe - Mobile friendly, no complex API */}
+              {/* Simple YouTube iframe - Mobile friendly, no complex API - FULLSCREEN DISABLED */}
               <iframe
-                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=0&fs=1`}
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=0&fs=0&controls=1&disablekb=0&iv_load_policy=3&cc_load_policy=0`}
                 className="absolute inset-0 w-full h-full"
                 style={{ 
                   border: 'none',
                   zIndex: 1,
                 }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 title={resource.title}
+              />
+              
+              {/* Top-left overlay to hide YouTube logo and channel name */}
+              <div 
+                className="absolute left-0 top-0"
+                style={{
+                  width: '250px',
+                  height: '100px',
+                  background: 'rgba(0,0,0,0.01)', // Slight transparency to see what's being blocked
+                  zIndex: 100,
+                  pointerEvents: 'all',
+                  cursor: 'default',
+                }}
+                onClick={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  return false;
+                }}
+                onMouseDown={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return false;
+                }}
+                onTouchStart={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchEnd={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              />
+              
+              {/* Top-right overlay to hide YouTube buttons */}
+              <div 
+                className="absolute right-0 top-0"
+                style={{
+                  width: '150px',
+                  height: '80px',
+                  background: 'transparent',
+                  zIndex: 100,
+                  pointerEvents: 'all',
+                  cursor: 'default',
+                }}
+                onClick={e => e.stopPropagation()}
+                onTouchStart={e => e.preventDefault()}
+              />
+              
+              {/* Bottom-right overlay to COMPLETELY DISABLE FULLSCREEN BUTTON */}
+              <div
+                className="absolute right-0 bottom-0"
+                style={{
+                  width: '150px',
+                  height: '100px',
+                  background: 'transparent',
+                  zIndex: 9999,
+                  pointerEvents: 'all',
+                  cursor: 'default',
+                }}
+                onClick={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  return false;
+                }}
+                onMouseDown={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  return false;
+                }}
+                onMouseUp={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  return false;
+                }}
+                onTouchStart={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                onTouchEnd={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                onPointerDown={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                onPointerUp={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                onDoubleClick={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  return false;
+                }}
               />
               
               {/* Overlays container - separate from player to avoid re-render issues */}
@@ -477,19 +571,51 @@ function VideoPlayerModal({ resource, onClose}) {
               
               {/* Blocking overlays - separate container with high z-index */}
               <div className="absolute inset-0" style={{ zIndex: 50, pointerEvents: 'none' }}>
-                {/* Bottom bar - covers YouTube logo/controls */}
+                {/* Bottom bar - BLACK BAR stays, but blocks all clicks on fullscreen button */}
                 <div
                   className="absolute left-0 right-0"
                   style={{ 
                     bottom: 0,
                     width: '100%',
-                    height: isLandscape ? '50px' : '50px',
+                    height: isLandscape ? '70px' : '70px',
                     background: '#000',
                     pointerEvents: 'all',
                     cursor: 'default',
+                    zIndex: 9998,
                   }} 
-                  onClick={e => e.stopPropagation()}
-                  onContextMenu={e => e.preventDefault()}
+                  onClick={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                  onMouseDown={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                  onMouseUp={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                  onContextMenu={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                  onTouchStart={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  onPointerDown={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  onDoubleClick={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
                 />
                 {/* Top bar - ENHANCED to block ALL YouTube branding, channel name, logo */}
                 <div 
@@ -526,6 +652,55 @@ function VideoPlayerModal({ resource, onClose}) {
                     cursor: 'default',
                   }}
                   onClick={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                />
+                
+                {/* ULTIMATE FULLSCREEN BUTTON BLOCKER - Bottom Right Corner - HIGHEST Z-INDEX */}
+                <div 
+                  className="absolute right-0 bottom-0"
+                  style={{
+                    width: '100px',
+                    height: '100px',
+                    background: '#000',
+                    pointerEvents: 'all',
+                    cursor: 'not-allowed',
+                    zIndex: 999,
+                  }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                  onMouseDown={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                  onMouseUp={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                  onTouchStart={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  onTouchEnd={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  onPointerDown={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  onPointerUp={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                  }}
+                  onDoubleClick={e => {
                     e.stopPropagation();
                     e.preventDefault();
                     return false;

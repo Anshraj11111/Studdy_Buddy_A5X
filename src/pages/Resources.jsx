@@ -197,6 +197,18 @@ function YouTubeModal({ resource, onClose }) {
                   zIndex: 60
                 }} 
               />
+              {/* DISABLE FULLSCREEN BUTTON - Bottom right corner */}
+              <div className="absolute right-0 bottom-0 bg-transparent" 
+                style={{ 
+                  width: '80px',
+                  height: '80px',
+                  pointerEvents: 'auto',
+                  zIndex: 70,
+                  cursor: 'not-allowed'
+                }}
+                onClick={(e) => e.preventDefault()}
+                onMouseDown={(e) => e.preventDefault()}
+              />
             </>
           )}
         </div>
@@ -337,6 +349,18 @@ function PlaylistVideoModal({ playlist, initialIndex = 0, onClose }) {
                     background: '#000000',
                     zIndex: 60
                   }} 
+                />
+                {/* DISABLE FULLSCREEN BUTTON - Bottom right corner */}
+                <div className="absolute right-0 bottom-0 bg-transparent" 
+                  style={{ 
+                    width: '80px',
+                    height: '80px',
+                    pointerEvents: 'auto',
+                    zIndex: 70,
+                    cursor: 'not-allowed'
+                  }}
+                  onClick={(e) => e.preventDefault()}
+                  onMouseDown={(e) => e.preventDefault()}
                 />
               </>
             )}
