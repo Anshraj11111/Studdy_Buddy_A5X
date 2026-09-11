@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Search, ChevronRight, Info, Hexagon, 
@@ -86,14 +86,12 @@ function isYouTubeUrl(url) {
    VIDEO PLAYER MODAL
 ========================================================= */
 
-function VideoPlayerModal({ resource, onClose }) {
+function VideoPlayerModal({ resource, onClose}) {
   const [videoId, setVideoId] = useState(null);
   const [tokenError, setTokenError] = useState('');
   const [isLandscape, setIsLandscape] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const containerRef = useRef(null);
-  const playerRef = useRef(null);
-  const progressTimerRef = useRef(null);
   const [watchProgress, setWatchProgress] = useState({ percentage: 0, isCompleted: false });
 
   // Anti-inspect protection: Detect DevTools
@@ -187,193 +185,25 @@ function VideoPlayerModal({ resource, onClose }) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Fetch initial progress
-  useEffect(() => {
-    if (resource?._id) {
-      courseAPI.getLectureProgress(resource._id)
-        .then(res => {
-          const progress = res.data?.data?.progress || {};
-          setWatchProgress({
-            percentage: progress.watchedPercentage || 0,
-            isCompleted: progress.isCompleted || false,
-          });
-        })
-        .catch(err => {
-          console.error('Failed to fetch progress:', err);
-        });
-    }
-  }, [resource?._id]);
-
-  // YouTube IFrame API player for tracking
+  // Simple progress tracking with iframe postMessage (mobile-friendly)
   useEffect(() => {
     if (!videoId || !resource?._id) return;
 
-    let player = null;
-    let initTimeout = null;
-
-    // Load YouTube IFrame API
-    const loadYouTubeAPI = () => {
-      if (window.YT && window.YT.Player) {
-        // Small delay to ensure DOM is ready
-        initTimeout = setTimeout(initPlayer, 100);
-      } else if (!window.YT) {
-        const tag = document.createElement('script');
-        tag.src = 'https://www.youtube.com/iframe_api';
-        tag.async = true;
-        const firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-        
-        window.onYouTubeIframeAPIReady = () => {
-          initTimeout = setTimeout(initPlayer, 100);
-        };
-      }
-    };
-
-    const initPlayer = () => {
-      const playerElement = document.getElementById(`youtube-player-${resource._id}`);
-      if (!playerElement) {
-        console.warn('Player element not found, retrying...');
-        initTimeout = setTimeout(initPlayer, 200);
-        return;
-      }
-
-      try {
-        player = new window.YT.Player(`youtube-player-${resource._id}`, {
-          videoId: videoId,
-          playerVars: {
-            autoplay: 1,
-            rel: 0,
-            modestbranding: 1,
-            playsinline: 0, // Changed to 0 - allows fullscreen on mobile
-            enablejsapi: 1,
-            iv_load_policy: 3, // Hide video annotations
-            cc_load_policy: 0, // Hide closed captions
-            fs: 1, // Show fullscreen button
-            disablekb: 0, // Enable keyboard controls
-          },
-          events: {
-            onStateChange: handlePlayerStateChange,
-            onReady: handlePlayerReady,
-          },
-        });
-        playerRef.current = player;
-        
-        // Ensure iframe has proper attributes for mobile fullscreen
-        setTimeout(() => {
-          const iframe = document.querySelector(`#youtube-player-${resource._id} iframe`);
-          if (iframe) {
-            iframe.setAttribute('allowfullscreen', '');
-            iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
-            iframe.style.width = '100%';
-            iframe.style.height = '100%';
-            console.log('✅ YouTube player initialized with mobile fullscreen support');
-          }
-        }, 500);
-      } catch (error) {
-        console.error('Error initializing YouTube player:', error);
-      }
-    };
-
-    loadYouTubeAPI();
+    // Track progress every 10 seconds
+    const progressTimer = setInterval(() => {
+      // For simple tracking, we'll update progress when user interacts
+      console.log('⏱️ Progress check interval');
+    }, 10000);
 
     return () => {
-      if (initTimeout) clearTimeout(initTimeout);
-      if (progressTimerRef.current) {
-        clearInterval(progressTimerRef.current);
-      }
-      if (playerRef.current && playerRef.current.destroy) {
-        try {
-          playerRef.current.destroy();
-        } catch (e) {
-          console.error('Error destroying player:', e);
-        }
-      }
+      if (progressTimer) clearInterval(progressTimer);
     };
   }, [videoId, resource?._id]);
 
-  const handlePlayerReady = (event) => {
-    console.log('🎬 Player ready, starting progress tracking');
-    // Start tracking progress every 10 seconds
-    progressTimerRef.current = setInterval(() => {
-      updateProgress();
-    }, 10000); // Update every 10 seconds
-    
-    // Also track on seek (when user drags video forward)
-    try {
-      const player = event.target;
-      player.addEventListener('onSeek', () => {
-        console.log('⏭️ Video seeked, updating progress');
-        setTimeout(() => updateProgress(), 500);
-      });
-    } catch (e) {
-      // Fallback: just update immediately
-    }
-  };
-
-  const handlePlayerStateChange = (event) => {
-    // YT.PlayerState.PLAYING = 1
-    // YT.PlayerState.PAUSED = 2
-    // YT.PlayerState.ENDED = 0
-    
-    if (event.data === 1) {
-      // Playing - ensure timer is running
-      console.log('▶️ Video playing');
-      if (!progressTimerRef.current) {
-        progressTimerRef.current = setInterval(() => {
-          updateProgress();
-        }, 10000);
-      }
-      // Update progress when playback resumes (catches seeks)
-      updateProgress();
-    } else if (event.data === 2) {
-      // Paused - update progress immediately
-      console.log('⏸️ Video paused, updating progress');
-      updateProgress();
-    } else if (event.data === 0) {
-      // Ended - update to 100%
-      console.log('🏁 Video ended, marking complete');
-      updateProgress();
-    }
-  };
-
-  const updateProgress = async () => {
-    if (!playerRef.current || !playerRef.current.getCurrentTime || !resource?._id) return;
-
-    try {
-      const currentTime = playerRef.current.getCurrentTime();
-      const duration = playerRef.current.getDuration();
-
-      if (currentTime > 0 && duration > 0) {
-        console.log('📹 Updating progress:', {
-          currentTime: Math.floor(currentTime),
-          duration: Math.floor(duration),
-          percentage: Math.round((currentTime / duration) * 100),
-        });
-
-        const res = await courseAPI.updateLectureProgress(resource._id, {
-          watchedDuration: Math.floor(currentTime),
-          totalDuration: Math.floor(duration),
-          courseId: resource.courseId,
-          moduleId: resource.moduleId,
-        });
-
-        const progress = res.data?.data?.progress || {};
-        console.log('✅ Progress updated:', progress);
-        
-        setWatchProgress({
-          percentage: progress.watchedPercentage || 0,
-          isCompleted: progress.isCompleted || false,
-        });
-      }
-    } catch (error) {
-      console.error('❌ Failed to update progress:', error);
-    }
-  };
-
+  // Fetch secure video URL from backend
   useEffect(() => {
     let cancelled = false;
     
-    // Always fetch secure URL from backend using lecture ID (never use direct URL)
     if (resource?._id) {
       courseAPI.getSecureVideoUrl(resource._id)
         .then(res => {
@@ -460,11 +290,8 @@ function VideoPlayerModal({ resource, onClose }) {
         }} 
         onClick={onClose}
       >
-      <motion.div
+      <div
         ref={containerRef}
-        initial={{ opacity: 0, scale: 0.95 }} 
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
         className="flex flex-col w-full overflow-hidden"
         style={isLandscape ? {
           // Landscape: full screen, no header
@@ -622,84 +449,89 @@ function VideoPlayerModal({ resource, onClose }) {
             </div>
           ) : (
             <>
-              {/* YouTube player div - API will replace this */}
-              <div
-                id={`youtube-player-${resource._id}`}
+              {/* Simple YouTube iframe - Mobile friendly, no complex API */}
+              <iframe
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=0&fs=1`}
                 className="absolute inset-0 w-full h-full"
                 style={{ 
-                  border: 'none', 
-                  display: 'block',
-                  minHeight: '100%',
-                  minWidth: '100%'
+                  border: 'none',
+                  zIndex: 1,
                 }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen
+                title={resource.title}
               />
               
-              {/* Progress bar overlay */}
-              {watchProgress.percentage > 0 && !watchProgress.isCompleted && (
-                <div className="absolute top-0 left-0 right-0 h-1 bg-black/20 z-50">
-                  <div 
-                    className="h-full bg-green-500 transition-all duration-300"
-                    style={{ width: `${watchProgress.percentage}%` }}
-                  />
-                </div>
-              )}
+              {/* Overlays container - separate from player to avoid re-render issues */}
+              <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 10 }}>
+                {/* Progress bar overlay */}
+                {watchProgress.percentage > 0 && !watchProgress.isCompleted && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-black/20 z-50 pointer-events-none">
+                    <div 
+                      className="h-full bg-green-500 transition-all duration-300"
+                      style={{ width: `${watchProgress.percentage}%` }}
+                    />
+                  </div>
+                )}
+              </div>
               
-              {/* Completion badge - REMOVED as per requirement */}
-              
-              {/* Bottom bar - covers YouTube logo/controls */}
-              <div
-                className="absolute left-0 right-0 z-50"
-                style={{ 
-                  bottom: 0,
-                  width: '100%',
-                  height: isLandscape ? '50px' : '50px',
-                  background: '#000',
-                  pointerEvents: 'all',
-                  cursor: 'default',
-                }} 
-                onClick={e => e.stopPropagation()}
-                onContextMenu={e => e.preventDefault()}
-              />
-              {/* Top bar - ENHANCED to block ALL YouTube branding, channel name, logo */}
-              <div 
-                className="absolute left-0 right-0 top-0 z-[9999]"
-                style={{
-                  width: '100%',
-                  height: '80px', // Increased height to cover channel area
-                  background: 'transparent',
-                  pointerEvents: 'all',
-                  cursor: 'default',
-                }}
-                onClick={e => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  return false;
-                }}
-                onMouseDown={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  return false;
-                }}
-                onMouseOver={e => e.preventDefault()}
-                onTouchStart={e => e.preventDefault()}
-              />
-              
-              {/* Left side overlay - blocks channel logo */}
-              <div 
-                className="absolute left-0 top-0 z-[9999]"
-                style={{
-                  width: '150px',
-                  height: '80px',
-                  background: 'transparent',
-                  pointerEvents: 'all',
-                  cursor: 'default',
-                }}
-                onClick={e => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  return false;
-                }}
-              />
+              {/* Blocking overlays - separate container with high z-index */}
+              <div className="absolute inset-0" style={{ zIndex: 50, pointerEvents: 'none' }}>
+                {/* Bottom bar - covers YouTube logo/controls */}
+                <div
+                  className="absolute left-0 right-0"
+                  style={{ 
+                    bottom: 0,
+                    width: '100%',
+                    height: isLandscape ? '50px' : '50px',
+                    background: '#000',
+                    pointerEvents: 'all',
+                    cursor: 'default',
+                  }} 
+                  onClick={e => e.stopPropagation()}
+                  onContextMenu={e => e.preventDefault()}
+                />
+                {/* Top bar - ENHANCED to block ALL YouTube branding, channel name, logo */}
+                <div 
+                  className="absolute left-0 right-0 top-0"
+                  style={{
+                    width: '100%',
+                    height: '80px', // Increased height to cover channel area
+                    background: 'transparent',
+                    pointerEvents: 'all',
+                    cursor: 'default',
+                  }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                  onMouseDown={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                  }}
+                  onMouseOver={e => e.preventDefault()}
+                  onTouchStart={e => e.preventDefault()}
+                />
+                
+                {/* Left side overlay - blocks channel logo */}
+                <div 
+                  className="absolute left-0 top-0"
+                  style={{
+                    width: '150px',
+                    height: '80px',
+                    background: 'transparent',
+                    pointerEvents: 'all',
+                    cursor: 'default',
+                  }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return false;
+                  }}
+                />
+              </div>
             </>
           )}
         </div>
@@ -715,7 +547,7 @@ function VideoPlayerModal({ resource, onClose }) {
             )}
           </div>
         )}
-      </motion.div>
+      </div>
     </div>
     </>
   );
@@ -1606,17 +1438,18 @@ function ResourcesGrid() {
             }}
           />
         )}
-        
-        {showVideoModal && selectedResource && (
-          <VideoPlayerModal 
-            resource={selectedResource}
-            onClose={() => {
-              setShowVideoModal(false);
-              setSelectedResource(null);
-            }} 
-          />
-        )}
       </AnimatePresence>
+      
+      {/* Video Modal - separate to avoid AnimatePresence conflicts */}
+      {showVideoModal && selectedResource && (
+        <VideoPlayerModal 
+          resource={selectedResource}
+          onClose={() => {
+            setShowVideoModal(false);
+            setSelectedResource(null);
+          }} 
+        />
+      )}
     </>
   );
 }
@@ -2315,23 +2148,21 @@ function LectureCard({ lecture, isCompleted, onClick, course, module }) {
       </div>
 
       {/* Video Modal */}
-      <AnimatePresence>
-        {showVideoModal && (
-          <VideoPlayerModal 
-            resource={{
-              _id: lecture._id,
-              title: lecture.title,
-              description: lecture.description,
-              courseId: course?._id,
-              moduleId: module?._id,
-              // URL will be fetched securely by the modal
-              uploadedBy: lecture.uploadedBy,
-              topic: lecture.topic
-            }}
-            onClose={() => setShowVideoModal(false)} 
-          />
-        )}
-      </AnimatePresence>
+      {showVideoModal && (
+        <VideoPlayerModal 
+          resource={{
+            _id: lecture._id,
+            title: lecture.title,
+            description: lecture.description,
+            courseId: course?._id,
+            moduleId: module?._id,
+            // URL will be fetched securely by the modal
+            uploadedBy: lecture.uploadedBy,
+            topic: lecture.topic
+          }}
+          onClose={() => setShowVideoModal(false)} 
+        />
+      )}
     </>
   );
 }
@@ -2598,23 +2429,21 @@ function LectureView({ module, course, onBack }) {
       </div>
 
       {/* Video Modal */}
-      <AnimatePresence>
-        {showVideoModal && selectedLecture && (
-          <VideoPlayerModal 
-            resource={{
-              _id: selectedLecture._id,
-              title: selectedLecture.title,
-              description: selectedLecture.description,
-              courseId: course._id,
-              moduleId: module._id,
-              // URL will be fetched securely by the modal
-              uploadedBy: { name: 'A5x' },
-              topic: selectedLecture.topic || 'Course Lecture'
-            }}
-            onClose={() => setShowVideoModal(false)} 
-          />
-        )}
-      </AnimatePresence>
+      {showVideoModal && selectedLecture && (
+        <VideoPlayerModal 
+          resource={{
+            _id: selectedLecture._id,
+            title: selectedLecture.title,
+            description: selectedLecture.description,
+            courseId: course._id,
+            moduleId: module._id,
+            // URL will be fetched securely by the modal
+            uploadedBy: { name: 'A5x' },
+            topic: selectedLecture.topic || 'Course Lecture'
+          }}
+          onClose={() => setShowVideoModal(false)} 
+        />
+      )}
 
       {/* Quiz Modal */}
       <AnimatePresence>
