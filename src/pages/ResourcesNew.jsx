@@ -577,7 +577,7 @@ function VideoPlayerModal({ resource, onClose}) {
                   style={{ 
                     bottom: 0,
                     width: '100%',
-                    height: isLandscape ? '45px' : '45px',
+                    height: isLandscape ? '57px' : '57px',
                     background: '#000',
                     pointerEvents: 'all',
                     cursor: 'default',
