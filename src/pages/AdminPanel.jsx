@@ -7,6 +7,7 @@ import PaymentManagement from '../components/PaymentManagement'
 import CourseManagement from '../components/CourseManagement'
 import DoubtsManagement from '../components/DoubtsManagement'
 import QuizManagement from '../components/QuizManagement'
+import QuizResults from '../components/QuizResults'
 
 // ── Pre-Registered Students Component ──────────────────────────────────────
 function PreRegisteredStudents({ showToast }) {
@@ -2034,6 +2035,7 @@ export default function AdminPanel() {
             { id: 'doubts', label: 'Doubts Management', icon: <MessageSquare size={14} /> },
             { id: 'courses', label: 'Courses', icon: <BookOpen size={14} /> },
             { id: 'quizzes', label: 'Quiz Management', icon: <Trophy size={14} /> },
+            { id: 'quiz-results', label: 'Quiz Results', icon: <TrendingUp size={14} /> },
             { id: 'payments', label: 'Payment Verification', icon: <DollarSign size={14} /> },
             { id: 'posts', label: 'Post Moderation', icon: <FileText size={14} /> },
             { id: 'messages', label: 'Message Monitor', icon: <Radio size={14} /> },
@@ -2272,6 +2274,11 @@ export default function AdminPanel() {
         {/* QUIZ MANAGEMENT TAB */}
         {mainTab === 'quizzes' && (
           <QuizManagement showToast={showToast} />
+        )}
+
+        {/* QUIZ RESULTS TAB */}
+        {mainTab === 'quiz-results' && (
+          <QuizResults showToast={showToast} />
         )}
 
         {/* PAYMENT VERIFICATION TAB */}

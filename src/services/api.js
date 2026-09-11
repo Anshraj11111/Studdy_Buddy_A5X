@@ -386,6 +386,11 @@ export const adminAPI = {
   updateQuiz: (id, data) => api.put(`/admin/quizzes/${id}`, data),
   deleteQuiz: (id) => api.delete(`/admin/quizzes/${id}`),
   getModuleLectures: (moduleId) => api.get(`/admin/modules/${moduleId}/lectures`),
+  
+  // Quiz Attempts & Results
+  getQuizAttempts: (params = {}) => api.get('/admin/quiz-attempts', { params }),
+  getQuizAttemptDetail: (id) => api.get(`/admin/quiz-attempts/${id}`),
+  getQuizStats: (params = {}) => api.get('/admin/quiz-stats', { params }),
 };
 
 /* ---------------- BROADCAST CHANNELS ---------------- */
