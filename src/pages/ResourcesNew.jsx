@@ -527,12 +527,12 @@ function VideoPlayerModal({ resource, onClose}) {
                 onTouchStart={e => e.preventDefault()}
               />
               
-              {/* Bottom-right overlay to COMPLETELY DISABLE FULLSCREEN BUTTON */}
+              {/* Bottom-right SMALL overlay - blocks ONLY fullscreen button, transparent */}
               <div
                 className="absolute right-0 bottom-0"
                 style={{
-                  width: '150px',
-                  height: '100px',
+                  width: '80px',
+                  height: '80px',
                   background: 'transparent',
                   zIndex: 9999,
                   pointerEvents: 'all',
@@ -591,12 +591,11 @@ function VideoPlayerModal({ resource, onClose}) {
               
               {/* Blocking overlays - separate container with high z-index */}
               <div className="absolute inset-0" style={{ zIndex: 50, pointerEvents: 'none' }}>
-                {/* Bottom bar - BLACK BAR stays, but blocks all clicks on fullscreen button */}
+                {/* Bottom LEFT bar - BLACK BAR to hide YouTube logo (excluding right corner) */}
                 <div
-                  className="absolute left-0 right-0"
+                  className="absolute left-0 bottom-0"
                   style={{ 
-                    bottom: 0,
-                    width: '100%',
+                    width: 'calc(100% - 0px)',
                     height: isLandscape ? '57px' : '57px',
                     background: '#000',
                     pointerEvents: 'all',
@@ -684,7 +683,7 @@ function VideoPlayerModal({ resource, onClose}) {
                   style={{
                     width: '100px',
                     height: '100px',
-                    background: '#000',
+                    background: 'transparent',
                     pointerEvents: 'all',
                     cursor: 'not-allowed',
                     zIndex: 999,
