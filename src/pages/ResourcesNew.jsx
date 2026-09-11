@@ -244,7 +244,7 @@ function VideoPlayerModal({ resource, onClose }) {
             autoplay: 1,
             rel: 0,
             modestbranding: 1,
-            playsinline: 1,
+            playsinline: 0, // Changed to 0 - allows fullscreen on mobile
             enablejsapi: 1,
             iv_load_policy: 3, // Hide video annotations
             cc_load_policy: 0, // Hide closed captions
@@ -257,7 +257,18 @@ function VideoPlayerModal({ resource, onClose }) {
           },
         });
         playerRef.current = player;
-        console.log('✅ YouTube player initialized');
+        
+        // Ensure iframe has proper attributes for mobile fullscreen
+        setTimeout(() => {
+          const iframe = document.querySelector(`#youtube-player-${resource._id} iframe`);
+          if (iframe) {
+            iframe.setAttribute('allowfullscreen', '');
+            iframe.setAttribute('allow', 'autoplay; fullscreen; picture-in-picture');
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            console.log('✅ YouTube player initialized with mobile fullscreen support');
+          }
+        }, 500);
       } catch (error) {
         console.error('Error initializing YouTube player:', error);
       }
@@ -615,7 +626,12 @@ function VideoPlayerModal({ resource, onClose }) {
               <div
                 id={`youtube-player-${resource._id}`}
                 className="absolute inset-0 w-full h-full"
-                style={{ border: 'none', display: 'block' }}
+                style={{ 
+                  border: 'none', 
+                  display: 'block',
+                  minHeight: '100%',
+                  minWidth: '100%'
+                }}
               />
               
               {/* Progress bar overlay */}

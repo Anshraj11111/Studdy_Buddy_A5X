@@ -80,7 +80,7 @@ export const useAuthStore = create((set) => ({
         localStorage.setItem('user', JSON.stringify(user))
         set({ user })
         // Force re-render by updating a timestamp
-        console.log('✅ Profile refreshed — hasFreeAccess:', user.hasFreeAccess, 'schoolName:', user.schoolName, 'schoolPassword:', user.schoolPassword)
+        console.log('✅ Profile refreshed — hasFreeAccess:', user.hasFreeAccess)
       }
     } catch (error) {
       console.warn('Failed to refresh profile:', error)
