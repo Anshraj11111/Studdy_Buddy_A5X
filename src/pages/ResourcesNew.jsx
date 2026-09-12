@@ -2232,7 +2232,7 @@ function CourseDetail({ course, onBack }) {
    SCREEN 3 — LECTURE VIEW (SIDEBAR + VIDEO PLAYER)
 ========================================================= */
 
-function LectureCard({ lecture, isCompleted, onClick, course, module }) {
+function LectureCard({ lecture, isCompleted, onClick, course, module, setSelectedLecture, setShowQuizModal }) {
   const [showVideoModal, setShowVideoModal] = useState(false);
 
   const handlePlay = (e) => {
@@ -2324,6 +2324,17 @@ function LectureCard({ lecture, isCompleted, onClick, course, module }) {
                 {isYouTubeUrl(lecture.url) ? <Youtube size={12} /> : <Play size={12} fill="currentColor" />}
                 {isYouTubeUrl(lecture.url) ? 'Watch' : 'View'}
               </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedLecture(lecture);
+                  setShowQuizModal(true);
+                }}
+                className="flex items-center gap-1.5 rounded-lg bg-indigo-100 px-3.5 py-2 text-[11px] font-bold text-indigo-700 hover:bg-indigo-200 transition"
+              >
+                <Award size={12} />
+                Quiz
+              </button>
               {lecture.notesUrl && (
                 <span className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3.5 py-2 text-[11px] font-bold text-slate-700">
                   <FileText size={12} />
@@ -2490,6 +2501,8 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
                         module={module}
                         isCompleted={lecture.completed || false}
                         onClick={() => handleLectureClick(lecture)}
+                        setSelectedLecture={setSelectedLecture}
+                        setShowQuizModal={setShowQuizModal}
                       />
                     ))
                   )}
@@ -2497,9 +2510,11 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
               )}
             </section>
 
-            {/* ============ VIDEO PLAYER SIDEBAR (Desktop Only) ============ */}
+            {/* ============ VIDEO PLAYER SIDEBAR (Desktop) ============ */}
             {selectedLecture && (
-              <aside className="hidden w-[400px] shrink-0 flex-col border-l border-slate-100 lg:flex">
+              <>
+                {/* Desktop Sidebar */}
+                <aside className="hidden w-[400px] shrink-0 flex-col border-l border-slate-100 lg:flex">
                 <div className="border-b border-slate-100 px-4 py-3">
                   <h3 className="text-sm font-bold text-slate-900">Now Playing</h3>
                 </div>
@@ -2617,6 +2632,7 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
                   </div>
                 </div>
               </aside>
+              </>
             )}
           </div>
         </main>
