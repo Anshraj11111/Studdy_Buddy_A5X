@@ -1142,17 +1142,19 @@ function FeedTab({ user, setFollowChangeCallback }) {
       
       const { liked, likeCount } = response.data.data
       
-      // Update with server response to ensure sync
+      // Update with server response - liked is the FINAL state from backend
       setPosts(prev => prev.map(p => {
         if (p._id !== id) return p
+        // If liked = true, add userId; if liked = false, remove userId
+        const newLikes = liked 
+          ? [...(p.likes || []).filter(l => String(l) !== String(user._id)), user._id]
+          : (p.likes || []).filter(l => String(l) !== String(user._id))
         return { 
           ...p, 
-          likes: liked 
-            ? [...(p.likes || []).filter(l => String(l) !== String(user._id)), user._id]
-            : (p.likes || []).filter(l => String(l) !== String(user._id))
+          likes: newLikes
         }
       }))
-      console.log('✅ Like updated successfully')
+      console.log('✅ Like updated successfully. New state: liked =', liked)
     } catch (err) {
       console.error('❌ Like API failed:', err)
       console.error('❌ Error response:', err.response?.data)
