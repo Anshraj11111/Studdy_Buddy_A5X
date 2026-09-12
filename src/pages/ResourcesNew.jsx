@@ -1818,10 +1818,10 @@ function CoursesGrid() {
     search: '',
   });
 
-  // Refresh profile on mount
+  // Refresh profile only once on mount
   useEffect(() => {
     refreshProfile();
-  }, [refreshProfile]);
+  }, []); // Empty dependency array
 
   useEffect(() => {
     fetchCourses();
@@ -1934,7 +1934,7 @@ function CoursesGrid() {
               key={course._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1, duration: 0.4 }}
+              transition={{ delay: Math.min(index * 0.05, 0.3), duration: 0.3 }}
             >
               <CourseCard 
                 course={course} 
@@ -2361,7 +2361,7 @@ function LectureCard({ lecture, isCompleted, onClick, course, module }) {
   );
 }
 
-function LectureView({ module, course, onBack }) {
+const LectureView = React.memo(function LectureView({ module, course, onBack }) {
   const [lectures, setLectures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLecture, setSelectedLecture] = useState(null);
@@ -2379,7 +2379,7 @@ function LectureView({ module, course, onBack }) {
       const moduleData = res.data?.data?.module || {};
       const fetchedLectures = moduleData.resources || [];
       setLectures(fetchedLectures);
-      if (fetchedLectures.length > 0) {
+      if (fetchedLectures.length > 0 && !selectedLecture) {
         setSelectedLecture(fetchedLectures[0]);
       }
     } catch (error) {
@@ -2654,7 +2654,7 @@ function LectureView({ module, course, onBack }) {
       </AnimatePresence>
     </>
   );
-}
+});
 
 /* =========================================================
    MAIN APP WITH NAVIGATION
