@@ -1,12 +1,61 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { doubtAPI, roomAPI } from "../services/api"
 import { useAuthStore } from "../store/authStore"
 import { useThemeStore } from "../store/themeStore"
-import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard, Image as ImageIcon, ChevronDown } from "lucide-react"
+import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard, Image as ImageIcon, ChevronDown, Smile } from "lucide-react"
 import Navbar from "../components/Navbar"
 import { uploadToCloudinary } from "../utils/cloudinary"
+
+// ─── EMOJI PICKER ─────────────────────────────────────────────────────────
+const EMOJIS = ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '⭐', '🌟', '✨', '⚡', '💥', '💫', '💦', '💨', '🚀', '🛸', '🔥', '💧', '🌊', '🎓', '📚', '📖', '✏️', '📝', '💻', '⌨️', '🖥️', '📱', '☎️', '📞', '📟', '📠', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '🧾', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '💊', '💉', '🩸', '🩹', '🩺', '🌡️', '🧬', '🦠', '🧫', '🧪', '🧯', '🚽', '🚿', '🛁', '🛀', '🧴', '🧷', '🧹', '🧺', '🧻', '🧼', '🧽', '🧯'];
+
+function EmojiPicker({ onSelect, onClose }) {
+  const pickerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      ref={pickerRef}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="absolute bottom-full mb-2 right-0 rounded-xl shadow-2xl p-3 z-50"
+      style={{ 
+        background: 'var(--bg-secondary)', 
+        border: '1px solid var(--border-primary)',
+        maxWidth: '280px',
+        maxHeight: '200px',
+        overflowY: 'auto'
+      }}
+    >
+      <div className="grid grid-cols-8 gap-1">
+        {EMOJIS.map((emoji, idx) => (
+          <button
+            key={idx}
+            onClick={() => {
+              onSelect(emoji);
+              onClose();
+            }}
+            className="text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1 transition"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
 
 export default function MentorDashboard() {
   const { user } = useAuthStore()
@@ -23,6 +72,7 @@ export default function MentorDashboard() {
   const [uploadingImages, setUploadingImages] = useState(false)
   const [stats, setStats] = useState({ totalDoubts: 0, pendingReplies: 0, activeChats: 0 })
   const [expandedDoubts, setExpandedDoubts] = useState({})
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -119,28 +169,61 @@ export default function MentorDashboard() {
       return
     }
     
+    // Optimistic UI update - add reply immediately
+    const tempReply = {
+      _id: 'temp-' + Date.now(),
+      user: { _id: user._id, name: user.name, profileImage: user.profileImage },
+      content: replyText,
+      images: cloudinaryUrls,
+      createdAt: new Date(),
+      sending: true // flag to show loading state
+    }
+    
+    setDoubts(prev => prev.map(d => 
+      d._id === doubtId 
+        ? { ...d, replies: [...(d.replies || []), tempReply] }
+        : d
+    ))
+    
+    // Clear form immediately
+    const savedReplyText = replyText
+    const savedImages = replyImages
+    setReplyText("")
+    setReplyImages([])
+    setReplyingTo(null)
+    
     try {
       if (editingReply) { 
-        await doubtAPI.editReply(doubtId, editingReply, { content: replyText, images: cloudinaryUrls })
-        setEditingReply(null) 
+        const response = await doubtAPI.editReply(doubtId, editingReply, { content: savedReplyText, images: cloudinaryUrls })
+        setEditingReply(null)
+        // Update with server response
+        setDoubts(prev => prev.map(d => d._id === doubtId ? response.data.data.doubt : d))
       }
       else {
-        await doubtAPI.addReply(doubtId, { content: replyText, images: cloudinaryUrls })
+        const response = await doubtAPI.addReply(doubtId, { content: savedReplyText, images: cloudinaryUrls })
+        // Replace temp reply with real one from server
+        setDoubts(prev => prev.map(d => d._id === doubtId ? response.data.data.doubt : d))
       }
       
       // Cleanup blob URLs
-      replyImages.forEach(img => {
+      savedImages.forEach(img => {
         if (img.url.startsWith('blob:')) {
           URL.revokeObjectURL(img.url)
         }
       })
       
-      setReplyText("")
-      setReplyImages([])
-      setReplyingTo(null)
-      fetchAllDoubts()
     } catch (err) { 
       console.error('Reply error:', err)
+      // Revert optimistic update on error
+      setDoubts(prev => prev.map(d => 
+        d._id === doubtId 
+          ? { ...d, replies: (d.replies || []).filter(r => r._id !== tempReply._id) }
+          : d
+      ))
+      // Restore form
+      setReplyText(savedReplyText)
+      setReplyImages(savedImages)
+      setReplyingTo(doubtId)
       alert(err.response?.data?.error?.message || "Failed to save reply") 
     }
   }
@@ -384,11 +467,33 @@ export default function MentorDashboard() {
                           {/* Reply Form */}
                           {replyingTo === doubt._id ? (
                             <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border-primary)" }}>
-                              <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
-                                placeholder="Write your reply..."
-                                rows={3}
-                                className="w-full text-sm text-theme-primary placeholder-gray-500 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none mb-2"
-                                style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)" }} />
+                              <div className="relative">
+                                <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
+                                  placeholder="Write your reply..."
+                                  rows={3}
+                                  className="w-full text-sm text-theme-primary placeholder-gray-500 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none mb-2"
+                                  style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)" }} />
+                                
+                                {/* Emoji Picker Button - positioned at top right of textarea */}
+                                <button
+                                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                                  type="button"
+                                  style={{ zIndex: 10 }}
+                                >
+                                  <Smile size={18} />
+                                </button>
+
+                                {/* Emoji Picker Dropdown */}
+                                <AnimatePresence>
+                                  {showEmojiPicker && (
+                                    <EmojiPicker
+                                      onSelect={(emoji) => setReplyText(prev => prev + emoji)}
+                                      onClose={() => setShowEmojiPicker(false)}
+                                    />
+                                  )}
+                                </AnimatePresence>
+                              </div>
                               
                               {/* Image Previews */}
                               {replyImages.length > 0 && (
