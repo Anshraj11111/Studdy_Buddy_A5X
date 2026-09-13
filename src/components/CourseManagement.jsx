@@ -983,7 +983,7 @@ function ModuleCard({ module, index, onEdit, onDelete, onAddLecture, onDeleteLec
                           <div className="flex-1">
                             <p className="text-sm font-semibold text-slate-900">{lecture.title}</p>
                             <p className="text-xs text-slate-500">
-                              {lecture.duration || 'N/A'} • {lecture.fileType}
+                              {lecture.duration || 'N/A'} • {lecture.fileType} • {lecture.viewCount || 0} views
                             </p>
                           </div>
                         </div>
@@ -1021,10 +1021,10 @@ function ModuleCard({ module, index, onEdit, onDelete, onAddLecture, onDeleteLec
                         <div className="relative bg-black group" style={{ paddingBottom: '56.25%' }}>
                           <iframe
                             className="absolute inset-0 w-full h-full"
-                            src={`https://www.youtube-nocookie.com/embed/${getYouTubeVideoId(lecture.fileUrl)}?autoplay=1&rel=0&modestbranding=1&fs=1&controls=1&disablekb=0&playsinline=1&iv_load_policy=3`}
+                            src={`https://www.youtube-nocookie.com/embed/${getYouTubeVideoId(lecture.fileUrl)}?rel=0&modestbranding=1&fs=1&controls=1&disablekb=0&playsinline=1&iv_load_policy=3`}
                             title={lecture.title}
                             frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                             allowFullScreen
                             style={{ border: 'none' }}
                           />
