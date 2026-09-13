@@ -12,7 +12,7 @@ import {
   Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
   UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
   Zap, FolderKanban, GraduationCap, Globe2, TrendingUp, BookOpen,
-  Sparkles, ChevronDown, Bell, BellOff, Edit2, MoreHorizontal, MessageSquare
+  Sparkles, ChevronDown, Bell, BellOff, Edit2, MoreHorizontal, MessageSquare, Smile
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -652,6 +652,55 @@ function PostComposer({ user, onPost }) {
   )
 }
 
+// ─── EMOJI PICKER ─────────────────────────────────────────────────────────
+const EMOJIS = ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', '🔠', '🔡', '🔢', '🔣', '🔤', '🅿️', '🚾', '🔽', '🔼', '🔙', '🔚', '🔛', '🔜', '🔝', '🛗', '🔃', '🔄', '🔁', '🔂', '▶️', '⏩', '⏭️', '⏯️', '◀️', '⏪', '⏮️', '🔼', '⏫', '🔽', '⏬', '⏸️', '⏹️', '⏺️', '⏏️', '🎦', '🔅', '🔆', '📶', '📳', '📴', '♀️', '♂️', '⚧️', '✖️', '➕', '➖', '➗', '♾️', '‼️', '⁉️', '❓', '❔', '❕', '❗', '〰️', '💱', '💲', '⚕️', '♻️', '⚜️', '🔱', '📛', '🔰', '⭐', '🌟', '✨', '⚡', '💥', '💫', '💦', '💨', '🕊️', '🦅', '🦆', '🦢', '🦉', '🦤', '🪶', '🦩', '🦚', '🦜', '🐦', '🐧', '🐥', '🐣', '🐤', '🦆', '🦃', '🐔', '🐓', '🐣', '🐥', '🦆', '🪿', '🦢', '🦜', '🦚', '🦩', '🦤', '🦉', '🦅', '🦇', '🦋', '🐌', '🐛', '🦟', '🦗', '🪰', '🪱', '🪲', '🪳', '🦂', '🕷️', '🕸️', '🐚', '🐙', '🦑', '🦀', '🦞', '🦐', '🦪', '🐠', '🐟', '🐡', '🐬', '🦈', '🐳', '🐋', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🪶', '🦜', '🦩', '🦚', '🐦', '🦃', '🦅', '🦆', '🦢', '🦉', '🦚', '🪶', '🐓', '🐔', '🐣', '🐤', '🐥', '🦆', '🐧', '🕊️', '🦩', '🦤', '🦜', '🦚', '🦉', '🦅', '🦇', '🦋', '🐌', '🐛', '🦟', '🦗', '🕷️', '🐚', '🐙', '🦑', '🦀', '🦞', '🦐', '🦪', '🐠', '🐟', '🐡', '🐬', '🦈', '🐳', '🐋', '🚀', '🛸', '🛰️', '💺', '🚁', '🛩️', '✈️', '🛫', '🛬', '🪂', '💈', '🛎️', '🧳', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🕛', '🕧', '🕐', '🕜', '🕑', '🕝', '🕒', '🕞', '🕓', '🕟', '🕔', '🕠', '🕕', '🕡', '🕖', '🕢', '🕗', '🕣', '🕘', '🕤', '🕙', '🕥', '🕚', '🕦', '🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘', '🌙', '🌚', '🌛', '🌜', '🌡️', '☀️', '🌝', '🌞', '🪐', '⭐', '🌟', '🌠', '🌌', '☁️', '⛅', '⛈️', '🌤️', '🌥️', '🌦️', '🌧️', '🌨️', '🌩️', '🌪️', '🌫️', '🌬️', '🌀', '🌈', '🌂', '☂️', '☔', '⛱️', '⚡', '❄️', '☃️', '⛄', '☄️', '🔥', '💧', '🌊'];
+
+function EmojiPicker({ onSelect, onClose }) {
+  const pickerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      ref={pickerRef}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="absolute bottom-full mb-2 right-0 rounded-xl shadow-2xl p-3 z-50"
+      style={{ 
+        background: 'var(--bg-secondary)', 
+        border: '1px solid var(--border-primary)',
+        maxWidth: '280px',
+        maxHeight: '200px',
+        overflowY: 'auto'
+      }}
+    >
+      <div className="grid grid-cols-8 gap-1">
+        {EMOJIS.map((emoji, idx) => (
+          <button
+            key={idx}
+            onClick={() => {
+              onSelect(emoji);
+              onClose();
+            }}
+            className="text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1 transition"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── SINGLE POST CARD ─────────────────────────────────────────────────────────
 function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate, initialFollowing }) {
   const [showComments, setShowComments] = useState(false)
@@ -665,6 +714,7 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
   const [copied, setCopied] = useState(false)
   const [viewProfileId, setViewProfileId] = useState(null)
   const [showImageLightbox, setShowImageLightbox] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const shareRef = useRef(null)
   const isLiked = (post.likes || []).map(String).includes(String(user?._id))
   const isOwner = String(post.userId?._id) === String(user?._id)
@@ -956,15 +1006,35 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
               ))}
               <div className="flex gap-2 items-center">
                 <Avatar src={user?.profileImage} name={user?.name} size={8} />
-                <div className="flex-1 flex items-center gap-2 rounded-full px-3 py-2" style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }}>
+                <div className="flex-1 flex items-center gap-2 rounded-full px-3 py-2 relative" style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }}>
                   <input value={commentText} onChange={e => setCommentText(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && submitComment()}
                     placeholder="Add a comment..."
                     className="flex-1 bg-transparent text-xs focus:outline-none text-theme-primary placeholder-gray-500" />
+                  
+                  {/* Emoji Picker Button */}
+                  <button 
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                    type="button"
+                  >
+                    <Smile size={16} />
+                  </button>
+
                   <button onClick={submitComment} disabled={submitting || !commentText.trim()}
                     style={{ color: '#6366f1' }} className="disabled:opacity-40 transition">
                     {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                   </button>
+
+                  {/* Emoji Picker Dropdown */}
+                  <AnimatePresence>
+                    {showEmojiPicker && (
+                      <EmojiPicker
+                        onSelect={(emoji) => setCommentText(prev => prev + emoji)}
+                        onClose={() => setShowEmojiPicker(false)}
+                      />
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             </motion.div>
