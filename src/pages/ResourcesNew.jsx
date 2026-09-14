@@ -185,20 +185,98 @@ function VideoPlayerModal({ resource, onClose}) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Simple progress tracking with iframe postMessage (mobile-friendly)
+  // YouTube IFrame API Progress Tracking
   useEffect(() => {
     if (!videoId || !resource?._id) return;
 
-    // Track progress every 10 seconds
-    const progressTimer = setInterval(() => {
-      // For simple tracking, we'll update progress when user interacts
-      console.log('⏱️ Progress check interval');
-    }, 10000);
+    // Load YouTube IFrame API
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    let player;
+    let progressInterval;
+    let lastProgress = 0;
+
+    window.onYouTubeIframeAPIReady = () => {
+      // Find the iframe
+      const iframe = containerRef.current?.querySelector('iframe');
+      if (!iframe) return;
+
+      player = new window.YT.Player(iframe, {
+        events: {
+          onReady: (event) => {
+            console.log('✅ YouTube player ready');
+            
+            // Start tracking progress every 5 seconds
+            progressInterval = setInterval(() => {
+              if (player && typeof player.getCurrentTime === 'function' && typeof player.getDuration === 'function') {
+                const currentTime = player.getCurrentTime();
+                const duration = player.getDuration();
+                
+                if (duration > 0) {
+                  const percentage = Math.floor((currentTime / duration) * 100);
+                  
+                  // Only update if progress increased by at least 5%
+                  if (percentage > lastProgress + 5 || percentage >= 95) {
+                    lastProgress = percentage;
+                    
+                    // Update local state
+                    setWatchProgress({
+                      percentage,
+                      isCompleted: percentage >= 95
+                    });
+                    
+                    // Send to backend
+                    courseAPI.updateLectureProgress(resource._id, {
+                      watchedDuration: currentTime,
+                      totalDuration: duration,
+                      courseId: resource.courseId,
+                      moduleId: resource.moduleId
+                    }).then(res => {
+                      console.log('✅ Progress updated:', percentage + '%', res.data?.data?.progress);
+                      if (res.data?.data?.progress?.isCompleted) {
+                        console.log('🎉 Lecture completed! Quiz unlocked!');
+                      }
+                    }).catch(err => {
+                      console.error('❌ Failed to update progress:', err);
+                    });
+                  }
+                }
+              }
+            }, 5000); // Check every 5 seconds
+          },
+          onStateChange: (event) => {
+            // Track when video ends
+            if (event.data === window.YT.PlayerState.ENDED) {
+              const duration = player.getDuration();
+              courseAPI.updateLectureProgress(resource._id, {
+                watchedDuration: duration,
+                totalDuration: duration,
+                courseId: resource.courseId,
+                moduleId: resource.moduleId
+              }).then(() => {
+                setWatchProgress({ percentage: 100, isCompleted: true });
+                console.log('🎉 Video finished - marked complete!');
+              });
+            }
+          }
+        }
+      });
+    };
 
     return () => {
-      if (progressTimer) clearInterval(progressTimer);
+      if (progressInterval) clearInterval(progressInterval);
+      if (player && typeof player.destroy === 'function') {
+        try {
+          player.destroy();
+        } catch (e) {
+          // Ignore destroy errors
+        }
+      }
     };
-  }, [videoId, resource?._id]);
+  }, [videoId, resource?._id, resource?.courseId, resource?.moduleId]);
 
   // Fetch secure video URL from backend
   useEffect(() => {
@@ -471,7 +549,8 @@ function VideoPlayerModal({ resource, onClose}) {
             <>
               {/* Simple YouTube iframe - Mobile friendly, no complex API - FULLSCREEN DISABLED */}
               <iframe
-                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=0&fs=0&controls=1&disablekb=0&iv_load_policy=3&cc_load_policy=0`}
+                id="youtube-player"
+                src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=0&fs=0&controls=1&disablekb=0&iv_load_policy=3&cc_load_policy=0&enablejsapi=1`}
                 className="absolute inset-0 w-full h-full"
                 style={{ 
                   border: 'none',
