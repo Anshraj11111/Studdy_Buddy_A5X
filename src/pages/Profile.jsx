@@ -5,7 +5,7 @@ import Card from '../components/Card'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import Badge from '../components/Badge'
-import { referralAPI } from '../services/api'
+import { referralAPI, feedAPI } from '../services/api'
 import axios from 'axios'
 import { Heart, MessageCircle, Trash2, Edit2 } from 'lucide-react'
 
@@ -109,20 +109,16 @@ export default function Profile() {
     if (!user?._id) return
     setPostsLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      const res = await axios.get(`/api/feed?page=1&limit=50`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      // Use dedicated API endpoint for liked posts
+      const res = await feedAPI.getLikedPosts(1, 50)
       if (res.data?.success) {
-        const allPosts = res.data.data.posts || []
-        // Filter posts that user has liked
-        const liked = allPosts.filter(post => 
-          post.likes?.some(like => String(like) === String(user._id))
-        )
-        setLikedPosts(liked)
+        const posts = res.data.data.posts || []
+        setLikedPosts(posts)
+        console.log('✅ Fetched liked posts:', posts.length)
       }
     } catch (err) {
-      console.error('Failed to fetch liked posts:', err)
+      console.error('❌ Failed to fetch liked posts:', err)
+      console.error('Error response:', err.response?.data)
     } finally {
       setPostsLoading(false)
     }

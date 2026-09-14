@@ -272,12 +272,17 @@ export const communityAPI = {
 export const feedAPI = {
   getPosts: (category = 'All', page = 1, search = '') =>
     api.get(`/feed?category=${category}&page=${page}&limit=20&search=${encodeURIComponent(search)}`),
+  getPostsByUser: (userId, page = 1) => 
+    api.get(`/feed?userId=${userId}&page=${page}&limit=20`),
+  getLikedPosts: (page = 1, limit = 20) => 
+    api.get(`/feed/liked?page=${page}&limit=${limit}`),
   createPost: (data) => api.post('/feed', data),
   deletePost: (id) => api.delete(`/feed/${id}`),
   likePost: (id) => api.post(`/feed/${id}/like`),
   addComment: (id, data) => api.post(`/feed/${id}/comment`, data),
   editComment: (postId, commentId, data) => api.put(`/feed/${postId}/comment/${commentId}`, data),
   deleteComment: (postId, commentId) => api.delete(`/feed/${postId}/comment/${commentId}`),
+  updatePost: (id, data) => api.put(`/feed/${id}`, data),
 };
 
 /* ---------------- FOLLOW / FOLLOWERS ---------------- */
