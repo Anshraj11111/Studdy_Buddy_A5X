@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { doubtAPI, roomAPI } from "../services/api"
+import { doubtAPI, roomAPI, aiAPI } from "../services/api"
 import Navbar from "../components/Navbar"
 import GlowingQuestionMark from "../components/GlowingQuestionMark"
 import { Link, useNavigate } from "react-router-dom"
-import { Search, Trash2, Edit, Users, X, MessageCircle, Loader2, Plus } from "lucide-react"
+import { Search, Trash2, Edit, Users, X, MessageCircle, Loader2, Plus, Bot, Send, Sparkles } from "lucide-react"
 import { useAuthStore } from "../store/authStore"
 
 const STATUS_FILTERS = [
@@ -49,6 +49,14 @@ export default function Doubts() {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [showMatchModal, setShowMatchModal] = useState(false)
   const [matchedRoom, setMatchedRoom] = useState(null)
+  
+  // AI Chatbot states
+  const [showAIChat, setShowAIChat] = useState(false)
+  const [aiMessages, setAiMessages] = useState([])
+  const [aiInput, setAiInput] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const aiMessagesEndRef = useRef(null)
+  
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const limit = 10
@@ -82,6 +90,11 @@ export default function Doubts() {
     if (user) { const t = setTimeout(fetchDoubts, 200); return () => clearTimeout(t) }
   }, [page, search, topic, user])
 
+  // Auto-scroll AI chat messages
+  useEffect(() => {
+    aiMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [aiMessages])
+
   useEffect(() => {
     if (statusFilter === "all") {
       setDoubts(allDoubts)
@@ -101,6 +114,47 @@ export default function Doubts() {
     if (!window.confirm("Delete this doubt?")) return
     try { await doubtAPI.delete(id); window.location.reload() }
     catch (err) { alert(err.response?.data?.error?.message || "Failed to delete") }
+  }
+
+  // AI Chatbot handlers
+  const handleOpenAIChat = () => {
+    setShowAIChat(true)
+    if (aiMessages.length === 0) {
+      setAiMessages([{
+        role: 'assistant',
+        content: `Hi ${user?.name || 'there'}! 👋 I'm your AI study assistant. Ask me anything about your doubts and I'll help you understand!`
+      }])
+    }
+  }
+
+  const handleSendAIMessage = async () => {
+    if (!aiInput.trim() || aiLoading) return
+    
+    const userMessage = aiInput.trim()
+    setAiInput('')
+    const newMessages = [...aiMessages, { role: 'user', content: userMessage }]
+    setAiMessages(newMessages)
+    setAiLoading(true)
+    
+    try {
+      const history = newMessages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+      const res = await aiAPI.chat(userMessage, history.slice(0, -1))
+      setAiMessages(prev => [...prev, { role: 'assistant', content: res.data.reply }])
+    } catch (err) {
+      const errMsg = err.response?.status === 429
+        ? 'You\'re sending messages too fast. Please wait a moment.'
+        : err.response?.data?.message || 'Failed to get AI response. Please try again.'
+      setAiMessages(prev => [...prev, { role: 'error', content: errMsg }])
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleAIKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendAIMessage()
+    }
   }
 
   const handleFindMatch = async (id, e) => {
@@ -148,13 +202,26 @@ export default function Doubts() {
             <h1 className="text-2xl sm:text-3xl font-bold text-theme-primary mb-1.5">My Doubts</h1>
             <p className="text-theme-secondary text-xs sm:text-sm">Track, manage and resolve your questions</p>
           </div>
-          <Link to="/doubts/new" className="w-full sm:w-auto">
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-lg transition-all"
+          <div className="flex gap-3 w-full sm:w-auto">
+            {/* Ask AI Button */}
+            <motion.button 
+              whileHover={{ scale: 1.02 }} 
+              whileTap={{ scale: 0.98 }}
+              onClick={handleOpenAIChat}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-lg transition-all"
               style={{ background: "#6366f1", boxShadow: "0 2px 8px rgba(99,102,241,0.3)" }}>
-              <Plus size={16} />Post Doubt
+              Ask AI
             </motion.button>
-          </Link>
+            
+            {/* Post Doubt Button */}
+            <Link to="/doubts/new" className="flex-1 sm:flex-initial">
+              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                className="w-full flex items-center justify-center gap-2 px-5 py-2.5 text-white text-sm font-semibold rounded-lg transition-all"
+                style={{ background: "#6366f1", boxShadow: "0 2px 8px rgba(99,102,241,0.3)" }}>
+                <Plus size={16} />Post Doubt
+              </motion.button>
+            </Link>
+          </div>
         </motion.div>
 
         {/* Status Filter Tabs */}
@@ -411,7 +478,147 @@ export default function Doubts() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* AI Chat Modal */}
+        <AnimatePresence>
+          {showAIChat && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(8px)" }}
+              onClick={() => setShowAIChat(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col"
+                style={{ 
+                  background: "var(--bg-primary)", 
+                  border: "1px solid var(--border-primary)",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+                }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: "var(--border-primary)" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl" style={{ background: "linear-gradient(135deg, #6366f1, #8b5cf6)" }}>
+                      <Bot size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-theme-primary">AI Study Assistant</h3>
+                      <p className="text-xs text-theme-tertiary">Ask me anything about your doubts</p>
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowAIChat(false)}
+                    className="p-2 rounded-lg hover:bg-opacity-10"
+                    style={{ background: "rgba(255,255,255,0.05)" }}
+                  >
+                    <X size={20} className="text-theme-tertiary" />
+                  </motion.button>
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {aiMessages.map((msg, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[80%] p-3 rounded-2xl ${
+                          msg.role === 'user' 
+                            ? 'rounded-tr-none' 
+                            : 'rounded-tl-none'
+                        }`}
+                        style={{
+                          background: msg.role === 'user' 
+                            ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' 
+                            : msg.role === 'error'
+                            ? 'rgba(239, 68, 68, 0.1)'
+                            : 'var(--bg-secondary)',
+                          color: msg.role === 'user' ? 'white' : 'var(--text-primary)',
+                          border: msg.role === 'error' ? '1px solid rgba(239, 68, 68, 0.3)' : 'none'
+                        }}
+                      >
+                        {msg.role === 'assistant' && (
+                          <div className="flex items-center gap-2 mb-2">
+                            <Sparkles size={14} style={{ color: '#6366f1' }} />
+                            <span className="text-xs font-semibold" style={{ color: '#6366f1' }}>AI Assistant</span>
+                          </div>
+                        )}
+                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                  {aiLoading && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex justify-start"
+                    >
+                      <div className="p-3 rounded-2xl rounded-tl-none" style={{ background: 'var(--bg-secondary)' }}>
+                        <div className="flex items-center gap-2">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          >
+                            <Loader2 size={16} style={{ color: '#6366f1' }} />
+                          </motion.div>
+                          <span className="text-sm text-theme-tertiary">Thinking...</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                  <div ref={aiMessagesEndRef} />
+                </div>
+
+                {/* Input */}
+                <div className="p-4 border-t" style={{ borderColor: "var(--border-primary)" }}>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={aiInput}
+                      onChange={(e) => setAiInput(e.target.value)}
+                      onKeyPress={handleAIKeyPress}
+                      placeholder="Ask me anything..."
+                      className="flex-1 px-4 py-3 rounded-xl text-sm outline-none"
+                      style={{
+                        background: "var(--bg-secondary)",
+                        border: "1px solid var(--border-primary)",
+                        color: "var(--text-primary)"
+                      }}
+                      disabled={aiLoading}
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleSendAIMessage}
+                      disabled={!aiInput.trim() || aiLoading}
+                      className="px-5 py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ 
+                        background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                        color: "white"
+                      }}
+                    >
+                      <Send size={18} />
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
 }
+
