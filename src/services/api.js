@@ -282,6 +282,8 @@ export const feedAPI = {
   addComment: (id, data) => api.post(`/feed/${id}/comment`, data),
   editComment: (postId, commentId, data) => api.put(`/feed/${postId}/comment/${commentId}`, data),
   deleteComment: (postId, commentId) => api.delete(`/feed/${postId}/comment/${commentId}`),
+  addReply: (postId, commentId, data) => api.post(`/feed/${postId}/comment/${commentId}/reply`, data),
+  deleteReply: (postId, commentId, replyId) => api.delete(`/feed/${postId}/comment/${commentId}/reply/${replyId}`),
   updatePost: (id, data) => api.put(`/feed/${id}`, data),
 };
 

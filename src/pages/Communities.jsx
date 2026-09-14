@@ -50,8 +50,33 @@ function CommentItem({ comment, postId, user, onUpdate }) {
   const [editingComment, setEditingComment] = useState(false);
   const [editText, setEditText] = useState(comment.content);
   const [editSubmitting, setEditSubmitting] = useState(false);
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiCategory, setEmojiCategory] = useState('smileys');
   
   const isCommentOwner = String(comment.userId?._id) === String(user?._id);
+  const hasReplies = comment.replies && comment.replies.length > 0;
+
+  const emojiCategories = {
+    smileys: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓'],
+    gestures: ['👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '💪', '🦾', '🦵', '🦶', '👂', '🦻', '👃', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✊', '👊', '🤛', '🤜'],
+    hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '💌'],
+    objects: ['⭐', '🌟', '✨', '⚡', '💥', '💫', '💦', '💨', '🚀', '🛸', '🔥', '💧', '🌊', '🎓', '📚', '📖', '✏️', '📝', '💻', '⌨️', '🖥️', '📱', '☎️', '📞', '💡', '🔦', '🕯️', '💰', '💳', '💎', '⚖️', '🔧', '🔨', '⚒️', '🛠️', '⚙️']
+  };
+
+  const categoryIcons = {
+    smileys: '😊',
+    gestures: '👍',
+    hearts: '❤️',
+    objects: '⭐'
+  };
+
+  const addEmoji = (emoji) => {
+    setReplyText(replyText + emoji);
+  };
 
   const handleEditComment = async () => {
     if (!editText.trim()) return;
@@ -76,8 +101,33 @@ function CommentItem({ comment, postId, user, onUpdate }) {
     }
   };
 
+  const handleAddReply = async () => {
+    if (!replyText.trim()) return;
+    setReplySubmitting(true);
+    try {
+      const res = await feedAPI.addReply(postId, comment._id, { content: replyText.trim() });
+      onUpdate(res.data.data.post);
+      setReplyText('');
+      setShowReplyInput(false);
+      setShowReplies(true);
+    } catch (err) {
+      alert(err.response?.data?.error?.message || 'Failed to add reply');
+    }
+    setReplySubmitting(false);
+  };
+
+  const handleDeleteReply = async (replyId) => {
+    if (!confirm('Delete this reply?')) return;
+    try {
+      const res = await feedAPI.deleteReply(postId, comment._id, replyId);
+      onUpdate(res.data.data.post);
+    } catch (err) {
+      alert('Failed to delete reply');
+    }
+  };
+
   return (
-    <div className="flex gap-2.5 items-start group">
+    <div className="flex gap-2.5 items-start group py-1">
       <Avatar src={comment.userId?.profileImage} name={comment.userId?.name} size={8} />
       <div className="flex-1 min-w-0">
         {editingComment ? (
@@ -105,28 +155,184 @@ function CommentItem({ comment, postId, user, onUpdate }) {
             </button>
           </div>
         ) : (
-          <div className="rounded-lg px-3 py-2 pr-16 relative" style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }}>
-            <p className="text-xs font-bold text-theme-primary break-words">{comment.userId?.name}</p>
-            <p className="text-xs mt-0.5 text-theme-secondary break-words">{comment.content}</p>
-            {isCommentOwner && (
-              <div className="absolute top-2 right-2 flex gap-1">
+          <>
+            <div className="rounded-lg px-3 py-2 pr-16 relative" style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }}>
+              <p className="text-xs font-bold text-theme-primary break-words">{comment.userId?.name}</p>
+              <p className="text-xs mt-0.5 text-theme-secondary break-words">{comment.content}</p>
+              {isCommentOwner && (
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <button
+                    onClick={() => setEditingComment(true)}
+                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title="Edit comment"
+                  >
+                    <Edit2 size={12} className="text-gray-600 dark:text-gray-400" />
+                  </button>
+                  <button
+                    onClick={handleDeleteComment}
+                    className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                    title="Delete comment"
+                  >
+                    <Trash2 size={12} className="text-red-600" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Reply Button & Count */}
+            <div className="flex items-center gap-3 mt-1.5 ml-3">
+              <button
+                onClick={() => setShowReplyInput(!showReplyInput)}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+              >
+                Reply
+              </button>
+              {hasReplies && (
                 <button
-                  onClick={() => setEditingComment(true)}
-                  className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  title="Edit comment"
+                  onClick={() => setShowReplies(!showReplies)}
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:underline flex items-center gap-1"
                 >
-                  <Edit2 size={12} className="text-gray-600 dark:text-gray-400" />
+                  <MessageSquare size={12} />
+                  {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}
                 </button>
-                <button
-                  onClick={handleDeleteComment}
-                  className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                  title="Delete comment"
-                >
-                  <Trash2 size={12} className="text-red-600" />
-                </button>
+              )}
+            </div>
+
+            {/* Reply Input */}
+            {showReplyInput && (
+              <div className="mt-2 ml-3">
+                <div className="flex gap-2 items-start">
+                  <Avatar src={user?.profileImage} name={user?.name} size={6} />
+                  <div className="flex-1 relative">
+                    <input
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && !showEmojiPicker && handleAddReply()}
+                      placeholder="Write a reply..."
+                      className="w-full rounded-lg px-3 py-2 pr-10 text-xs focus:outline-none"
+                      style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)", color: 'var(--text-primary)' }}
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      title="Add emoji"
+                    >
+                      <Smile size={16} className="text-gray-500" />
+                    </button>
+                    
+                    {/* Emoji Picker Dropdown - WhatsApp Style */}
+                    {showEmojiPicker && (
+                      <>
+                        {/* Backdrop */}
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setShowEmojiPicker(false)}
+                        />
+                        {/* Picker - Fixed position to avoid cut-off */}
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="fixed z-50 rounded-2xl shadow-2xl overflow-hidden"
+                          style={{ 
+                            background: 'var(--bg-primary)', 
+                            border: '1px solid var(--border-primary)',
+                            width: '352px',
+                            maxWidth: 'calc(100vw - 32px)',
+                            bottom: '80px',
+                            right: '16px',
+                            maxHeight: 'calc(100vh - 160px)'
+                          }}
+                        >
+                          {/* Category Tabs */}
+                          <div className="flex border-b px-2 py-2 sticky top-0 z-10" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-primary)' }}>
+                            {Object.entries(categoryIcons).map(([cat, icon]) => (
+                              <button
+                                key={cat}
+                                onClick={() => setEmojiCategory(cat)}
+                                className={`flex-1 py-2 text-xl rounded-lg transition-colors ${
+                                  emojiCategory === cat 
+                                    ? 'bg-indigo-100 dark:bg-indigo-900/30' 
+                                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                                }`}
+                              >
+                                {icon}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          {/* Emoji Grid - Scrollable */}
+                          <div 
+                            className="p-3 overflow-y-auto overflow-x-hidden"
+                            style={{ 
+                              maxHeight: 'calc(100vh - 240px)',
+                              minHeight: '200px'
+                            }}
+                          >
+                            <div className="grid grid-cols-8 gap-1">
+                              {emojiCategories[emojiCategory].map((emoji, i) => (
+                                <button
+                                  key={i}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addEmoji(emoji);
+                                  }}
+                                  className="text-2xl hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg p-2 transition-all hover:scale-110 transform flex items-center justify-center"
+                                  style={{ width: '40px', height: '40px' }}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleAddReply}
+                    disabled={replySubmitting || !replyText.trim()}
+                    className="p-1.5 rounded text-indigo-500 disabled:opacity-40 flex-shrink-0"
+                  >
+                    {replySubmitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                  </button>
+                  <button
+                    onClick={() => { setShowReplyInput(false); setReplyText(''); setShowEmojiPicker(false); }}
+                    className="p-1.5 rounded text-gray-500 flex-shrink-0"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
               </div>
             )}
-          </div>
+
+            {/* Replies List */}
+            {showReplies && hasReplies && (
+              <div className="mt-3 ml-6 space-y-2 border-l-2 border-indigo-200 dark:border-indigo-800 pl-3">
+                {comment.replies.map((reply) => (
+                  <div key={reply._id} className="flex gap-2 items-start group/reply py-1">
+                    <Avatar src={reply.userId?.profileImage} name={reply.userId?.name} size={6} />
+                    <div className="flex-1 min-w-0">
+                      <div className="rounded-lg px-2.5 py-1.5 pr-12 relative" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+                        <p className="text-xs font-bold text-theme-primary break-words">{reply.userId?.name}</p>
+                        <p className="text-xs mt-0.5 text-theme-secondary break-words">{reply.content}</p>
+                        {String(reply.userId?._id) === String(user?._id) && (
+                          <button
+                            onClick={() => handleDeleteReply(reply._id)}
+                            className="absolute top-1.5 right-1.5 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors opacity-0 group-hover/reply:opacity-100"
+                            title="Delete reply"
+                          >
+                            <Trash2 size={11} className="text-red-600" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -137,9 +343,9 @@ function Avatar({ src, name, size = 9 }) {
   const palette = ['bg-indigo-500', 'bg-purple-500', 'bg-blue-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500']
   const bg = palette[(name?.charCodeAt(0) || 0) % palette.length]
   const sz = `w-${size} h-${size}`
-  if (src) return <img src={src} alt={name} className={`${sz} rounded-full object-cover flex-shrink-0 ring-2 ring-white dark:ring-gray-800`} />
+  if (src) return <img src={src} alt={name} className={`${sz} rounded-full object-cover flex-shrink-0`} style={{ boxShadow: '0 0 0 2px var(--bg-primary)' }} />
   return (
-    <div className={`${sz} rounded-full ${bg} flex items-center justify-center flex-shrink-0 text-white font-bold text-sm ring-2 ring-white dark:ring-gray-800`}>
+    <div className={`${sz} rounded-full ${bg} flex items-center justify-center flex-shrink-0 text-white font-bold text-sm`} style={{ boxShadow: '0 0 0 2px var(--bg-primary)' }}>
       {name?.[0]?.toUpperCase() || '?'}
     </div>
   )
@@ -715,10 +921,29 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
   const [viewProfileId, setViewProfileId] = useState(null)
   const [showImageLightbox, setShowImageLightbox] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [emojiCategory, setEmojiCategory] = useState('smileys')
   const shareRef = useRef(null)
   const isLiked = (post.likes || []).map(String).includes(String(user?._id))
   const isOwner = String(post.userId?._id) === String(user?._id)
   const grad = CAT_GRADIENT[post.category] || CAT_GRADIENT.All
+
+  const emojiCategories = {
+    smileys: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓'],
+    gestures: ['👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '💪', '🦾', '🦵', '🦶', '👂', '🦻', '👃', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✊', '👊', '🤛', '🤜'],
+    hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '💌'],
+    objects: ['⭐', '🌟', '✨', '⚡', '💥', '💫', '💦', '💨', '🚀', '🛸', '🔥', '💧', '🌊', '🎓', '📚', '📖', '✏️', '📝', '💻', '⌨️', '🖥️', '📱', '☎️', '📞', '💡', '🔦', '🕯️', '💰', '💳', '💎', '⚖️', '🔧', '🔨', '⚒️', '🛠️', '⚙️']
+  };
+
+  const categoryIcons = {
+    smileys: '😊',
+    gestures: '👍',
+    hearts: '❤️',
+    objects: '⭐'
+  };
+
+  const addEmoji = (emoji) => {
+    setCommentText(commentText + emoji);
+  };
 
   // Sync follow state when parent followingSet loads (initialFollowing goes null → true/false)
   useEffect(() => {
@@ -994,7 +1219,7 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
         <AnimatePresence>
           {showComments && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-3 space-y-3">
+              exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-3 space-y-3 px-1">
               {(post.comments || []).map(c => (
                 <CommentItem 
                   key={c._id} 
@@ -1026,15 +1251,74 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
                     {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                   </button>
 
-                  {/* Emoji Picker Dropdown */}
-                  <AnimatePresence>
-                    {showEmojiPicker && (
-                      <EmojiPicker
-                        onSelect={(emoji) => setCommentText(prev => prev + emoji)}
-                        onClose={() => setShowEmojiPicker(false)}
+                  {/* Emoji Picker Dropdown - WhatsApp Style */}
+                  {showEmojiPicker && (
+                    <>
+                      {/* Backdrop */}
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setShowEmojiPicker(false)}
                       />
-                    )}
-                  </AnimatePresence>
+                      {/* Picker */}
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="fixed z-50 rounded-2xl shadow-2xl overflow-hidden"
+                        style={{ 
+                          background: 'var(--bg-primary)', 
+                          border: '1px solid var(--border-primary)',
+                          width: '352px',
+                          maxWidth: 'calc(100vw - 32px)',
+                          bottom: '80px',
+                          right: '16px',
+                          maxHeight: 'calc(100vh - 160px)'
+                        }}
+                      >
+                        {/* Category Tabs */}
+                        <div className="flex border-b px-2 py-2 sticky top-0 z-10" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-primary)' }}>
+                          {Object.entries(categoryIcons).map(([cat, icon]) => (
+                            <button
+                              key={cat}
+                              onClick={() => setEmojiCategory(cat)}
+                              className={`flex-1 py-2 text-xl rounded-lg transition-colors ${
+                                emojiCategory === cat 
+                                  ? 'bg-indigo-100 dark:bg-indigo-900/30' 
+                                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                              }`}
+                            >
+                              {icon}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {/* Emoji Grid */}
+                        <div 
+                          className="p-3 overflow-y-auto overflow-x-hidden"
+                          style={{ 
+                            maxHeight: 'calc(100vh - 240px)',
+                            minHeight: '200px'
+                          }}
+                        >
+                          <div className="grid grid-cols-8 gap-1">
+                            {emojiCategories[emojiCategory].map((emoji, i) => (
+                              <button
+                                key={i}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addEmoji(emoji);
+                                }}
+                                className="text-2xl hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg p-2 transition-all hover:scale-110 transform flex items-center justify-center"
+                                style={{ width: '40px', height: '40px' }}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>
