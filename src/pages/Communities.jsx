@@ -697,6 +697,12 @@ function PostComposer({ user, onPost }) {
   const [media, setMedia] = useState(null)
   const [posting, setPosting] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [mentions, setMentions] = useState([]) // Store mentioned users
+  const [showMentions, setShowMentions] = useState(false)
+  const [mentionSearch, setMentionSearch] = useState('')
+  const [mentionUsers, setMentionUsers] = useState([])
+  const [cursorPosition, setCursorPosition] = useState(0)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
   const fileRef = useRef()
   const textRef = useRef()
 
@@ -727,12 +733,82 @@ function PostComposer({ user, onPost }) {
     e.target.value = ''
   }
 
+  // Detect @ mentions
+  const handleContentChange = async (e) => {
+    const text = e.target.value.slice(0, 7000)
+    const cursorPos = e.target.selectionStart
+    setContent(text)
+    setCursorPosition(cursorPos)
+
+    // Check if user is typing @mention
+    const textBeforeCursor = text.substring(0, cursorPos)
+    const mentionMatch = textBeforeCursor.match(/@(\w+)$/)
+    
+    if (mentionMatch) {
+      const searchQuery = mentionMatch[1]
+      setMentionSearch(searchQuery)
+      
+      if (searchQuery.length >= 1) {
+        try {
+          const res = await feedAPI.searchUsers(searchQuery)
+          setMentionUsers(res.data.data.users || [])
+          
+          // Calculate dropdown position relative to textarea
+          if (textRef.current) {
+            const rect = textRef.current.getBoundingClientRect()
+            setDropdownPosition({
+              top: rect.bottom + 5,
+              left: rect.left,
+              width: rect.width
+            })
+          }
+          
+          setShowMentions(true)
+        } catch (err) {
+          console.error('Failed to search users:', err)
+        }
+      } else {
+        setShowMentions(false)
+      }
+    } else {
+      setShowMentions(false)
+    }
+  }
+
+  // Select a user from mention dropdown
+  const selectMention = (mentionedUser) => {
+    const textBeforeCursor = content.substring(0, cursorPosition)
+    const textAfterCursor = content.substring(cursorPosition)
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/)
+    
+    if (mentionMatch) {
+      const newText = textBeforeCursor.substring(0, mentionMatch.index) + 
+                      `@${mentionedUser.name} ` + 
+                      textAfterCursor
+      setContent(newText)
+      
+      // Add to mentions array if not already there
+      if (!mentions.find(m => m._id === mentionedUser._id)) {
+        setMentions([...mentions, mentionedUser])
+      }
+    }
+    
+    setShowMentions(false)
+    textRef.current?.focus()
+  }
+
   const submit = async () => {
     if (!content.trim() && !media) return
     setPosting(true)
     try {
-      await onPost({ content, category, mediaUrl: media?.dataUrl || null, mediaType: media?.type || null })
-      setContent(''); setCategory('All'); setMedia(null); setOpen(false)
+      await onPost({ 
+        content, 
+        category, 
+        mediaUrl: media?.dataUrl || null, 
+        mediaType: media?.type || null,
+        mentions: mentions.map(m => m._id)
+      })
+      setContent(''); setCategory('All'); setMedia(null); setMentions([]); setOpen(false)
     } catch (err) {
       const msg = err.response?.data?.error?.message || 'Failed to post'
       alert('⚠️ ' + msg)
@@ -807,11 +883,12 @@ function PostComposer({ user, onPost }) {
               </div>
 
               <div className="px-5 py-4 flex-1 overflow-y-auto">
-                <textarea ref={textRef} value={content} onChange={e => setContent(e.target.value.slice(0, 7000))}
-                  placeholder="What do you want to talk about?"
+                <textarea ref={textRef} value={content} onChange={handleContentChange}
+                  placeholder="What do you want to talk about? (Use @ to mention someone)"
                   rows={5}
                   maxLength={7000}
                   className="w-full bg-transparent text-sm text-theme-primary placeholder-gray-500 resize-none focus:outline-none leading-relaxed" />
+                
                 {content.length > 6000 && (
                   <p className="text-xs mt-1 text-right" style={{ color: content.length >= 7000 ? '#ef4444' : '#f59e0b' }}>
                     {content.length}/7000
@@ -854,6 +931,54 @@ function PostComposer({ user, onPost }) {
           </>
         )}
       </AnimatePresence>
+
+      {/* Mention Dropdown Portal - Renders outside modal */}
+      {showMentions && mentionUsers.length > 0 && createPortal(
+        <div 
+          className="rounded-lg shadow-2xl"
+          style={{ 
+            position: 'fixed',
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${Math.min(dropdownPosition.width, 450)}px`,
+            zIndex: 9999,
+            background: 'var(--bg-card)', 
+            border: '2px solid var(--border-primary)', 
+            maxHeight: '280px', 
+            overflowY: 'auto',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+          }}>
+          {mentionUsers.map((u, idx) => (
+            <button
+              key={u._id}
+              onClick={() => selectMention(u)}
+              className="w-full flex items-center gap-4 px-4 py-3 text-left transition-all hover:opacity-80"
+              style={{ 
+                background: idx % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)',
+                borderBottom: idx < mentionUsers.length - 1 ? '1px solid var(--border-primary)' : 'none'
+              }}
+            >
+              <div className="flex-shrink-0">
+                <Avatar src={u.profileImage} name={u.name} size={12} />
+              </div>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="text-base font-bold text-theme-primary truncate">{u.name}</p>
+                <p className="text-xs text-theme-secondary capitalize">{u.role || 'Student'}</p>
+              </div>
+              <div className="flex-shrink-0">
+                <div className="px-2 py-1 rounded text-xs font-semibold" 
+                  style={{ 
+                    background: u.role === 'mentor' ? '#6366f1' : '#10b981',
+                    color: 'white'
+                  }}>
+                  @{u.name.split(' ')[0]}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
     </>
   )
 }
@@ -926,6 +1051,23 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
   const isLiked = (post.likes || []).map(String).includes(String(user?._id))
   const isOwner = String(post.userId?._id) === String(user?._id)
   const grad = CAT_GRADIENT[post.category] || CAT_GRADIENT.All
+
+  // Format content with clickable @mentions
+  const formatContent = (text) => {
+    if (!text) return null;
+    
+    const parts = text.split(/(@\w+)/g);
+    return parts.map((part, i) => {
+      if (part.match(/^@\w+$/)) {
+        return (
+          <span key={i} className="font-semibold cursor-pointer hover:underline" style={{ color: '#6366f1' }}>
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
 
   const emojiCategories = {
     smileys: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓'],
@@ -1112,8 +1254,8 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
           <div className="mb-3">
             <p className="text-sm text-theme-primary whitespace-pre-wrap leading-relaxed">
               {expanded || post.content.length <= PREVIEW_LIMIT
-                ? post.content
-                : post.content.slice(0, PREVIEW_LIMIT) + '...'}
+                ? formatContent(post.content)
+                : formatContent(post.content.slice(0, PREVIEW_LIMIT) + '...')}
             </p>
             {post.content.length > PREVIEW_LIMIT && (
               <button

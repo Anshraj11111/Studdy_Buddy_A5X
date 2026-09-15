@@ -276,6 +276,7 @@ export const feedAPI = {
     api.get(`/feed?userId=${userId}&page=${page}&limit=20`),
   getLikedPosts: (page = 1, limit = 20) => 
     api.get(`/feed/liked?page=${page}&limit=${limit}`),
+  searchUsers: (query) => api.get(`/feed/users/search?q=${encodeURIComponent(query)}`),
   createPost: (data) => api.post('/feed', data),
   deletePost: (id) => api.delete(`/feed/${id}`),
   likePost: (id) => api.post(`/feed/${id}/like`),
