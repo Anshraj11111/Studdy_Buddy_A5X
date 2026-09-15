@@ -1563,12 +1563,24 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
           <PollDisplay post={post} user={user} onVote={async (optionIndex) => {
             try {
               const res = await feedAPI.votePoll(post._id, optionIndex);
-              // Update local post data with new poll results
-              post.poll = res.data.data.poll;
-              // Force re-render
-              setPosts(posts => [...posts]);
+              
+              // Check if response is valid
+              if (!res || !res.data) {
+                alert('Failed to vote: Invalid server response');
+                return;
+              }
+              
+              // Backend returns: { success: true, data: { poll: {...} } }
+              if (res.data.success && res.data.data && res.data.data.poll) {
+                // Update the specific post with new poll data
+                const updatedPost = { ...post, poll: res.data.data.poll };
+                onUpdate(updatedPost);
+              } else {
+                alert('Vote may have been recorded but display update failed');
+              }
             } catch (err) {
-              alert('Failed to vote: ' + (err.response?.data?.error?.message || 'Unknown error'));
+              console.error('Vote error:', err);
+              alert('Failed to vote: ' + (err.response?.data?.error?.message || err.message || 'Unknown error'));
             }
           }} />
         )}
@@ -1936,7 +1948,11 @@ function FeedTab({ user, setFollowChangeCallback }) {
   }
 
   const handleUpdate = (updatedPost) => {
-    setPosts(prev => prev.map(p => p._id === updatedPost._id ? updatedPost : p))
+    if (!updatedPost || !updatedPost._id) {
+      console.error('handleUpdate called with invalid post:', updatedPost);
+      return;
+    }
+    setPosts(prev => prev.map(p => p && p._id === updatedPost._id ? updatedPost : p).filter(Boolean));
   }
 
   const activeCat = CATEGORIES.find(c => c.label === filterCat)
