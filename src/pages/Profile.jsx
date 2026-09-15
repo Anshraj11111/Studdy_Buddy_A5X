@@ -573,6 +573,42 @@ export default function Profile() {
                                 )}
                               </div>
                             )}
+
+                            {/* Poll Display */}
+                            {post.poll && post.poll.question && (() => {
+                              const totalVotes = post.poll.totalVotes || 0;
+                              return (
+                              <div className="mb-3 p-3 rounded-lg" style={{ background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                <p className="text-xs font-bold text-theme-primary mb-2">📊 {post.poll.question}</p>
+                                <div className="space-y-1">
+                                  {post.poll.options.map((opt, idx) => {
+                                    const voteCount = opt.votes?.length || 0;
+                                    const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                                    return (
+                                      <div key={idx} className="relative">
+                                        <div 
+                                          className="absolute inset-0 rounded transition-all"
+                                          style={{ 
+                                            background: 'rgba(139,92,246,0.15)',
+                                            width: `${percentage}%`
+                                          }}
+                                        />
+                                        <div className="relative px-2 py-1 flex items-center justify-between text-xs">
+                                          <span className="text-theme-primary font-medium">{opt.text}</span>
+                                          <span className="font-bold" style={{ color: '#8b5cf6' }}>{percentage}%</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <p className="text-xs text-theme-tertiary mt-2">
+                                  {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
+                                  {post.poll.expiresAt && ` • ${new Date(post.poll.expiresAt) > new Date() ? 'Ends' : 'Ended'} ${new Date(post.poll.expiresAt).toLocaleDateString()}`}
+                                </p>
+                              </div>
+                              );
+                            })()}
+
                             <div className="flex items-center gap-4 text-xs text-theme-tertiary">
                               <span className="flex items-center gap-1">
                                 <Heart size={14} />
@@ -653,6 +689,14 @@ export default function Profile() {
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-semibold text-theme-secondary">{post.userId?.name || 'Unknown'}</p>
                               <p className="text-xs text-theme-primary mt-1 line-clamp-2">{post.content}</p>
+                              
+                              {/* Poll Display in Comments Tab */}
+                              {post.poll && post.poll.question && (
+                                <div className="mt-2 p-2 rounded text-xs" style={{ background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                  <p className="font-bold text-theme-primary">📊 {post.poll.question}</p>
+                                  <p className="text-theme-tertiary mt-1">{post.poll.totalVotes || 0} votes</p>
+                                </div>
+                              )}
                             </div>
                           </div>
                           
@@ -730,6 +774,26 @@ export default function Profile() {
                                   ) : (
                                     <img src={post.mediaUrl} alt="Post media" className="w-full max-h-48 object-contain" />
                                   )}
+                                </div>
+                              )}
+
+                              {/* Poll Display in Likes Tab */}
+                              {post.poll && post.poll.question && (
+                                <div className="mt-3 p-2 rounded" style={{ background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                  <p className="text-xs font-bold text-theme-primary mb-1">📊 {post.poll.question}</p>
+                                  <div className="space-y-1">
+                                    {post.poll.options.map((opt, idx) => {
+                                      const voteCount = opt.votes?.length || 0;
+                                      const totalVotes = post.poll.totalVotes || 0;
+                                      const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                                      return (
+                                        <div key={idx} className="text-xs flex items-center justify-between">
+                                          <span className="text-theme-primary">{opt.text}</span>
+                                          <span className="font-bold" style={{ color: '#8b5cf6' }}>{percentage}%</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
                               )}
                             </div>

@@ -11,7 +11,7 @@ import { getSocket } from '../services/socket'
 import {
   Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
   UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
-  Zap, FolderKanban, GraduationCap, Globe2, TrendingUp, BookOpen,
+  Zap, FolderKanban, GraduationCap, Globe2, TrendingUp, BarChart3,
   Sparkles, ChevronDown, Bell, BellOff, Edit2, MoreHorizontal, MessageSquare, Smile
 } from 'lucide-react'
 
@@ -701,8 +701,14 @@ function PostComposer({ user, onPost }) {
   const [showMentions, setShowMentions] = useState(false)
   const [mentionSearch, setMentionSearch] = useState('')
   const [mentionUsers, setMentionUsers] = useState([])
+  const [showHashtags, setShowHashtags] = useState(false)
+  const [hashtagSuggestions, setHashtagSuggestions] = useState([])
   const [cursorPosition, setCursorPosition] = useState(0)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
+  const [showPollCreator, setShowPollCreator] = useState(false)
+  const [pollQuestion, setPollQuestion] = useState('')
+  const [pollOptions, setPollOptions] = useState(['', ''])
+  const [pollDuration, setPollDuration] = useState(24) // hours
   const fileRef = useRef()
   const textRef = useRef()
 
@@ -733,7 +739,7 @@ function PostComposer({ user, onPost }) {
     e.target.value = ''
   }
 
-  // Detect @ mentions
+  // Detect @ mentions and # hashtags
   const handleContentChange = async (e) => {
     const text = e.target.value.slice(0, 7000)
     const cursorPos = e.target.selectionStart
@@ -743,10 +749,12 @@ function PostComposer({ user, onPost }) {
     // Check if user is typing @mention
     const textBeforeCursor = text.substring(0, cursorPos)
     const mentionMatch = textBeforeCursor.match(/@(\w+)$/)
+    const hashtagMatch = textBeforeCursor.match(/#(\w+)$/)
     
     if (mentionMatch) {
       const searchQuery = mentionMatch[1]
       setMentionSearch(searchQuery)
+      setShowHashtags(false)
       
       if (searchQuery.length >= 1) {
         try {
@@ -770,8 +778,43 @@ function PostComposer({ user, onPost }) {
       } else {
         setShowMentions(false)
       }
+    } else if (hashtagMatch) {
+      const searchQuery = hashtagMatch[1]
+      setShowMentions(false)
+      
+      if (searchQuery.length >= 1) {
+        try {
+          // Get trending hashtags
+          const res = await feedAPI.getTrendingHashtags(20)
+          const trending = res.data.data.hashtags || []
+          
+          // Filter hashtags by search query
+          const filtered = trending.filter(h => 
+            h.tag.toLowerCase().startsWith(searchQuery.toLowerCase())
+          )
+          
+          setHashtagSuggestions(filtered)
+          
+          // Calculate dropdown position
+          if (textRef.current) {
+            const rect = textRef.current.getBoundingClientRect()
+            setDropdownPosition({
+              top: rect.bottom + 5,
+              left: rect.left,
+              width: rect.width
+            })
+          }
+          
+          setShowHashtags(true)
+        } catch (err) {
+          console.error('Failed to fetch hashtags:', err)
+        }
+      } else {
+        setShowHashtags(false)
+      }
     } else {
       setShowMentions(false)
+      setShowHashtags(false)
     }
   }
 
@@ -797,22 +840,84 @@ function PostComposer({ user, onPost }) {
     textRef.current?.focus()
   }
 
+  // Select a hashtag from dropdown
+  const selectHashtag = (hashtag) => {
+    const textBeforeCursor = content.substring(0, cursorPosition)
+    const textAfterCursor = content.substring(cursorPosition)
+    const hashtagMatch = textBeforeCursor.match(/#(\w*)$/)
+    
+    if (hashtagMatch) {
+      const newText = textBeforeCursor.substring(0, hashtagMatch.index) + 
+                      `#${hashtag} ` + 
+                      textAfterCursor
+      setContent(newText)
+    }
+    
+    setShowHashtags(false)
+    textRef.current?.focus()
+  }
+
   const submit = async () => {
-    if (!content.trim() && !media) return
+    if (!content.trim() && !media && !showPollCreator) return
+    
+    // Validate poll if present
+    if (showPollCreator) {
+      if (!pollQuestion.trim()) {
+        alert('⚠️ Please enter a poll question');
+        return;
+      }
+      const validOptions = pollOptions.filter(opt => opt.trim());
+      if (validOptions.length < 2) {
+        alert('⚠️ Poll must have at least 2 options');
+        return;
+      }
+    }
+    
     setPosting(true)
     try {
-      await onPost({ 
+      const postData = { 
         content, 
         category, 
         mediaUrl: media?.dataUrl || null, 
         mediaType: media?.type || null,
         mentions: mentions.map(m => m._id)
-      })
-      setContent(''); setCategory('All'); setMedia(null); setMentions([]); setOpen(false)
+      };
+      
+      // Add poll data if poll is being created
+      if (showPollCreator) {
+        postData.poll = {
+          question: pollQuestion.trim(),
+          options: pollOptions.filter(opt => opt.trim()),
+          duration: pollDuration
+        };
+      }
+      
+      await onPost(postData);
+      setContent(''); setCategory('All'); setMedia(null); setMentions([]); 
+      setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); setPollDuration(24);
+      setOpen(false);
     } catch (err) {
       const msg = err.response?.data?.error?.message || 'Failed to post'
       alert('⚠️ ' + msg)
     } finally { setPosting(false) }
+  }
+
+  const addPollOption = () => {
+    if (pollOptions.length < 6) {
+      setPollOptions([...pollOptions, ''])
+    }
+  }
+
+  const removePollOption = (idx) => {
+    if (pollOptions.length > 2) {
+      setPollOptions(pollOptions.filter((_, i) => i !== idx))
+    }
+  }
+
+  const updatePollOption = (idx, value) => {
+    const newOptions = [...pollOptions]
+    newOptions[idx] = value
+    setPollOptions(newOptions)
   }
 
   return (
@@ -841,10 +946,10 @@ function PostComposer({ user, onPost }) {
               style={{ color: '#10b981' }}>
               <Video size={15} /> Video
             </button>
-            <button onClick={openFull}
-              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-lg transition hover:bg-yellow-50"
-              style={{ color: '#f59e0b' }}>
-              <BookOpen size={15} /> Article
+            <button onClick={() => { openFull(); setShowPollCreator(true) }}
+              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-lg transition hover:bg-purple-50"
+              style={{ color: '#8b5cf6' }}>
+              <BarChart3 size={15} /> Poll
             </button>
           </div>
         </div>
@@ -904,6 +1009,73 @@ function PostComposer({ user, onPost }) {
                       className="absolute top-2 right-2 rounded-full p-1 transition" style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}>
                       <X size={14} />
                     </button>
+                  </div>
+                )}
+
+                {/* Poll Creator */}
+                {showPollCreator && (
+                  <div className="mt-3 p-4 rounded-lg" style={{ background: 'rgba(139,92,246,0.1)', border: '2px solid #8b5cf6' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 size={18} style={{ color: '#8b5cf6' }} />
+                      <p className="font-bold text-sm" style={{ color: '#8b5cf6' }}>Create Poll</p>
+                      <button onClick={() => setShowPollCreator(false)} className="ml-auto p-1">
+                        <X size={16} style={{ color: '#8b5cf6' }} />
+                      </button>
+                    </div>
+                    
+                    <input 
+                      type="text"
+                      value={pollQuestion}
+                      onChange={(e) => setPollQuestion(e.target.value)}
+                      placeholder="Ask a question..."
+                      maxLength={200}
+                      className="w-full px-3 py-2 mb-3 rounded-lg text-sm focus:outline-none"
+                      style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+
+                    <div className="space-y-2 mb-3">
+                      {pollOptions.map((opt, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input 
+                            type="text"
+                            value={opt}
+                            onChange={(e) => updatePollOption(idx, e.target.value)}
+                            placeholder={`Option ${idx + 1}`}
+                            maxLength={100}
+                            className="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none"
+                            style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                          />
+                          {pollOptions.length > 2 && (
+                            <button onClick={() => removePollOption(idx)} className="p-2">
+                              <X size={16} style={{ color: '#ef4444' }} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {pollOptions.length < 6 && (
+                      <button onClick={addPollOption} className="text-xs font-semibold mb-3" style={{ color: '#8b5cf6' }}>
+                        + Add option (max 6)
+                      </button>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-theme-secondary">Poll duration:</label>
+                      <select 
+                        value={pollDuration} 
+                        onChange={(e) => setPollDuration(Number(e.target.value))}
+                        className="px-2 py-1 text-xs rounded focus:outline-none"
+                        style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}
+                      >
+                        <option value={1}>1 hour</option>
+                        <option value={6}>6 hours</option>
+                        <option value={12}>12 hours</option>
+                        <option value={24}>1 day</option>
+                        <option value={72}>3 days</option>
+                        <option value={168}>1 week</option>
+                      </select>
+                    </div>
                   </div>
                 )}
               </div>
@@ -972,6 +1144,63 @@ function PostComposer({ user, onPost }) {
                     color: 'white'
                   }}>
                   @{u.name.split(' ')[0]}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+
+      {/* Hashtag Dropdown Portal - Renders outside modal */}
+      {showHashtags && hashtagSuggestions.length > 0 && createPortal(
+        <div 
+          className="rounded-lg shadow-2xl"
+          style={{ 
+            position: 'fixed',
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${Math.min(dropdownPosition.width, 450)}px`,
+            zIndex: 9999,
+            background: 'var(--bg-card)', 
+            border: '2px solid #10b981', 
+            maxHeight: '280px', 
+            overflowY: 'auto',
+            boxShadow: '0 10px 40px rgba(16,185,129,0.3)'
+          }}>
+          <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide" 
+            style={{ 
+              background: 'rgba(16,185,129,0.1)', 
+              color: '#10b981',
+              borderBottom: '1px solid var(--border-primary)'
+            }}>
+            Trending Hashtags
+          </div>
+          {hashtagSuggestions.map((h, idx) => (
+            <button
+              key={h.tag}
+              onClick={() => selectHashtag(h.tag)}
+              className="w-full flex items-center gap-4 px-4 py-3 text-left transition-all hover:opacity-80"
+              style={{ 
+                background: idx % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)',
+                borderBottom: idx < hashtagSuggestions.length - 1 ? '1px solid var(--border-primary)' : 'none'
+              }}
+            >
+              <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full" 
+                style={{ background: 'rgba(16,185,129,0.1)' }}>
+                <span className="text-xl font-bold" style={{ color: '#10b981' }}>#</span>
+              </div>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="text-base font-bold text-theme-primary">#{h.tag}</p>
+                <p className="text-xs text-theme-secondary">{h.count} {h.count === 1 ? 'post' : 'posts'}</p>
+              </div>
+              <div className="flex-shrink-0">
+                <div className="px-3 py-1 rounded-full text-xs font-semibold" 
+                  style={{ 
+                    background: 'rgba(16,185,129,0.15)',
+                    color: '#10b981'
+                  }}>
+                  Trending
                 </div>
               </div>
             </button>
@@ -1052,15 +1281,24 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
   const isOwner = String(post.userId?._id) === String(user?._id)
   const grad = CAT_GRADIENT[post.category] || CAT_GRADIENT.All
 
-  // Format content with clickable @mentions
+  // Format content with clickable @mentions and #hashtags
   const formatContent = (text) => {
     if (!text) return null;
     
-    const parts = text.split(/(@\w+)/g);
+    const parts = text.split(/(@\w+|#\w+)/g);
     return parts.map((part, i) => {
+      // @mentions - blue color
       if (part.match(/^@\w+$/)) {
         return (
           <span key={i} className="font-semibold cursor-pointer hover:underline" style={{ color: '#6366f1' }}>
+            {part}
+          </span>
+        );
+      }
+      // #hashtags - green color
+      if (part.match(/^#\w+$/)) {
+        return (
+          <span key={i} className="font-semibold cursor-pointer hover:underline" style={{ color: '#10b981' }}>
             {part}
           </span>
         );
@@ -1318,6 +1556,21 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
             </button>
           </div>,
           document.body
+        )}
+
+        {/* Poll Display */}
+        {post.poll && post.poll.question && (
+          <PollDisplay post={post} user={user} onVote={async (optionIndex) => {
+            try {
+              const res = await feedAPI.votePoll(post._id, optionIndex);
+              // Update local post data with new poll results
+              post.poll = res.data.data.poll;
+              // Force re-render
+              setPosts(posts => [...posts]);
+            } catch (err) {
+              alert('Failed to vote: ' + (err.response?.data?.error?.message || 'Unknown error'));
+            }
+          }} />
         )}
 
         {/* Stats */}
@@ -2545,6 +2798,100 @@ function TrendingSidebar() {
       </div>
     </div>
   )
+}
+
+// ─── POLL DISPLAY COMPONENT ───────────────────────────────────────────────────
+function PollDisplay({ post, user, onVote }) {
+  const poll = post.poll;
+  if (!poll || !poll.question) return null;
+
+  const hasExpired = new Date() > new Date(poll.expiresAt);
+  const userId = String(user?._id);
+  
+  // Check if user voted and which option
+  let userVotedIndex = -1;
+  poll.options.forEach((opt, idx) => {
+    if (opt.votes && opt.votes.map(String).includes(userId)) {
+      userVotedIndex = idx;
+    }
+  });
+
+  const hasVoted = userVotedIndex !== -1;
+
+  // Calculate percentages
+  const totalVotes = poll.totalVotes || 0;
+
+  return (
+    <div className="mb-3 p-4 rounded-lg" style={{ background: 'rgba(139,92,246,0.05)', border: '2px solid rgba(139,92,246,0.2)' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <BarChart3 size={18} style={{ color: '#8b5cf6' }} />
+        <p className="font-bold text-sm text-theme-primary">{poll.question}</p>
+      </div>
+
+      <div className="space-y-2 mb-3">
+        {poll.options.map((option, idx) => {
+          const voteCount = option.votes?.length || 0;
+          const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+          const isUserVote = idx === userVotedIndex;
+
+          return (
+            <button
+              key={idx}
+              onClick={() => !hasExpired && onVote(idx)}
+              disabled={hasExpired}
+              className="w-full text-left rounded-lg overflow-hidden transition-all"
+              style={{
+                border: isUserVote ? '2px solid #8b5cf6' : '1px solid var(--border-primary)',
+                background: 'var(--bg-primary)',
+                opacity: hasExpired ? 0.6 : 1,
+                cursor: hasExpired ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <div className="relative p-3">
+                {/* Progress bar */}
+                <div
+                  className="absolute inset-0 transition-all duration-500"
+                  style={{
+                    background: isUserVote ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.1)',
+                    width: `${percentage}%`
+                  }}
+                />
+                
+                {/* Option text and percentage */}
+                <div className="relative flex items-center justify-between">
+                  <span className="text-sm font-medium text-theme-primary flex items-center gap-2">
+                    {option.text}
+                    {isUserVote && <span className="text-xs" style={{ color: '#8b5cf6' }}>✓ Your vote</span>}
+                  </span>
+                  <span className="text-sm font-bold" style={{ color: '#8b5cf6' }}>
+                    {hasVoted || hasExpired ? `${percentage}%` : ''}
+                  </span>
+                </div>
+
+                {/* Vote count */}
+                {(hasVoted || hasExpired) && (
+                  <p className="relative text-xs text-theme-secondary mt-1">
+                    {voteCount} {voteCount === 1 ? 'vote' : 'votes'}
+                  </p>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-theme-secondary">
+        <span>{totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}</span>
+        <span>
+          {hasExpired ? (
+            <span className="text-red-500">Poll ended</span>
+          ) : (
+            `Ends ${new Date(poll.expiresAt).toLocaleDateString()}`
+          )}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────

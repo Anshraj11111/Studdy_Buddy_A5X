@@ -270,14 +270,16 @@ export const communityAPI = {
 /* ---------------- FEED (Community Posts) ---------------- */
 
 export const feedAPI = {
-  getPosts: (category = 'All', page = 1, search = '') =>
-    api.get(`/feed?category=${category}&page=${page}&limit=20&search=${encodeURIComponent(search)}`),
+  getPosts: (category = 'All', page = 1, search = '', hashtag = '') =>
+    api.get(`/feed?category=${category}&page=${page}&limit=20&search=${encodeURIComponent(search)}&hashtag=${encodeURIComponent(hashtag)}`),
   getPostsByUser: (userId, page = 1) => 
     api.get(`/feed?userId=${userId}&page=${page}&limit=20`),
   getLikedPosts: (page = 1, limit = 20) => 
     api.get(`/feed/liked?page=${page}&limit=${limit}`),
   searchUsers: (query) => api.get(`/feed/users/search?q=${encodeURIComponent(query)}`),
+  getTrendingHashtags: (limit = 20) => api.get(`/feed/hashtags/trending?limit=${limit}`),
   createPost: (data) => api.post('/feed', data),
+  votePoll: (postId, optionIndex) => api.post(`/feed/${postId}/poll/vote`, { optionIndex }),
   deletePost: (id) => api.delete(`/feed/${id}`),
   likePost: (id) => api.post(`/feed/${id}/like`),
   addComment: (id, data) => api.post(`/feed/${id}/comment`, data),
