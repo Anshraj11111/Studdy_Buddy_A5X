@@ -5,7 +5,7 @@ import api from "../services/api"
 import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X, Download, DollarSign, CheckCircle, XCircle, Clock, Trophy } from "lucide-react"
 import PaymentManagement from '../components/PaymentManagement'
 import CourseManagement from '../components/CourseManagement'
-import DoubtsManagement from '../components/DoubtsManagement'
+import CourseAccessManagement from '../components/CourseAccessManagement'
 import QuizManagement from '../components/QuizManagement'
 import QuizResults from '../components/QuizResults'
 
@@ -1862,7 +1862,7 @@ export default function AdminPanel() {
     { label: "Total Users", value: stats?.totalUsers, icon: Users, color: "#818cf8" },
     { label: "Students", value: stats?.totalStudents, icon: GraduationCap, color: "#60a5fa" },
     { label: "Mentors", value: stats?.totalMentors, icon: Shield, color: "#c4b5fd" },
-    { label: "Doubts", value: stats?.totalDoubts, icon: BookOpen, color: "#34d399" },
+    { label: "Course Access", value: stats?.studentsWithAccess, icon: CheckCircle, color: "#34d399" },
     { label: "Resources", value: stats?.totalResources, icon: FileText, color: "#fbbf24" },
   ]
 
@@ -2034,7 +2034,7 @@ export default function AdminPanel() {
             { id: 'users', label: 'User Management', icon: <Users size={14} /> },
             { id: 'schools', label: 'School Channels', icon: <School size={14} /> },
             { id: 'prereg', label: 'Pre-Register Students', icon: <UserPlus size={14} /> },
-            { id: 'doubts', label: 'Doubts Management', icon: <MessageSquare size={14} /> },
+            { id: 'access', label: 'Course Access', icon: <CheckCircle size={14} /> },
             { id: 'courses', label: 'Courses', icon: <BookOpen size={14} /> },
             { id: 'quizzes', label: 'Quiz Management', icon: <Trophy size={14} /> },
             { id: 'quiz-results', label: 'Quiz Results', icon: <TrendingUp size={14} /> },
@@ -2268,9 +2268,9 @@ export default function AdminPanel() {
           <CourseManagement showToast={showToast} />
         )}
 
-        {/* DOUBTS MANAGEMENT TAB */}
-        {mainTab === 'doubts' && (
-          <DoubtsManagement showToast={showToast} />
+        {/* COURSE ACCESS TAB */}
+        {mainTab === 'access' && (
+          <CourseAccessManagement showToast={showToast} />
         )}
 
         {/* QUIZ MANAGEMENT TAB */}
