@@ -1782,7 +1782,7 @@ export default function AdminPanel() {
     setEditForm({
       name:           u.name           || '',
       schoolName:     u.schoolName     || '',
-      schoolPassword: u.schoolPassword || '', // pre-fill if already set
+      schoolPassword: u.schoolPasswordPlain || '', // Use PLAIN password for editing
       city:           u.city           || '',
     })
   }
