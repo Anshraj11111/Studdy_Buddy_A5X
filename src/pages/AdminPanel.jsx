@@ -22,6 +22,7 @@ function PreRegisteredStudents({ showToast }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [schoolFilter, setSchoolFilter] = useState('all')
   const [schoolCodes, setSchoolCodes] = useState([])
+  const [totalCount, setTotalCount] = useState(0) // Track total from API
 
   // Fetch available school codes
   const fetchSchoolCodes = async () => {
@@ -42,6 +43,7 @@ function PreRegisteredStudents({ showToast }) {
       
       const res = await api.get('/admin/pre-registered', { params })
       setStudents(res.data.data.students || [])
+      setTotalCount(res.data.data.total || 0) // Store total count
     } catch (err) {
       console.error('Error fetching pre-registered students:', err)
       showToast(err.response?.data?.error?.message || 'Failed to load students', 'error')
@@ -250,7 +252,7 @@ function PreRegisteredStudents({ showToast }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Users size={18} color="#818cf8" />
               <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>Pre-Registered Students</span>
-              {students.length > 0 && <span style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', borderRadius: 99, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>{students.length}</span>}
+              {totalCount > 0 && <span style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', borderRadius: 99, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>{totalCount}</span>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <select value={schoolFilter} onChange={e => setSchoolFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', border: '1px solid var(--border-primary)', color: '#e0e7ff', fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
