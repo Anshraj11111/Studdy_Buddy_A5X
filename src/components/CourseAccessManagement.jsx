@@ -11,6 +11,8 @@ const CourseAccessManagement = ({ showToast }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [schools, setSchools] = useState([]);
+  const [selectedSchool, setSelectedSchool] = useState('all');
 
   const fetchStats = async () => {
     try {
@@ -21,11 +23,21 @@ const CourseAccessManagement = ({ showToast }) => {
     }
   };
 
+  const fetchSchools = async () => {
+    try {
+      const res = await api.get('/admin/course-access/schools');
+      setSchools(res.data.data.schools || []);
+    } catch (err) {
+      console.error('Error fetching schools:', err);
+    }
+  };
+
   const fetchStudents = async () => {
     setLoading(true);
     try {
       const params = { filter, page, limit: 20 };
       if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (selectedSchool !== 'all') params.schoolName = selectedSchool;
       
       const res = await api.get('/admin/course-access/list', { params });
       setStudents(res.data.data.students || []);
@@ -40,11 +52,12 @@ const CourseAccessManagement = ({ showToast }) => {
 
   useEffect(() => {
     fetchStats();
+    fetchSchools();
   }, []);
 
   useEffect(() => {
     fetchStudents();
-  }, [filter, page]);
+  }, [filter, page, selectedSchool]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -186,15 +199,54 @@ const CourseAccessManagement = ({ showToast }) => {
           >
             <p style={{ color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, marginBottom: 12 }}>Access Breakdown</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div 
+                onClick={() => { setFilter('school'); setPage(1); }}
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(52,211,153,0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
                 <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>🎓 School Code</span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#34d399' }}>{stats.breakdown.school}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div 
+                onClick={() => { setFilter('premium'); setPage(1); }}
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(251,191,36,0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
                 <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>👑 Premium</span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#fbbf24' }}>{stats.breakdown.premium}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div 
+                onClick={() => { setFilter('paid'); setPage(1); }}
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  padding: '6px 8px',
+                  borderRadius: 6,
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
                 <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>💳 Paid Courses</span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#818cf8' }}>{stats.breakdown.paid}</span>
               </div>
@@ -221,6 +273,28 @@ const CourseAccessManagement = ({ showToast }) => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <select
+              value={selectedSchool}
+              onChange={e => { setSelectedSchool(e.target.value); setPage(1); }}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 8,
+                background: 'rgba(52,211,153,0.15)',
+                border: '1px solid rgba(52,211,153,0.3)',
+                color: '#34d399',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value="all" style={{ background: '#1e293b', color: '#e0e7ff' }}>All Schools</option>
+              {schools.map(school => (
+                <option key={school} value={school} style={{ background: '#1e293b', color: '#e0e7ff' }}>
+                  {school}
+                </option>
+              ))}
+            </select>
+            <select
               value={filter}
               onChange={e => { setFilter(e.target.value); setPage(1); }}
               style={{
@@ -238,9 +312,12 @@ const CourseAccessManagement = ({ showToast }) => {
               <option value="all" style={{ background: '#1e293b' }}>All Students</option>
               <option value="with" style={{ background: '#1e293b' }}>With Access</option>
               <option value="without" style={{ background: '#1e293b' }}>Without Access</option>
+              <option value="school" style={{ background: '#1e293b' }}>🎓 School Code Only</option>
+              <option value="premium" style={{ background: '#1e293b' }}>👑 Premium Only</option>
+              <option value="paid" style={{ background: '#1e293b' }}>💳 Paid Courses Only</option>
             </select>
             <button
-              onClick={() => { fetchStats(); fetchStudents(); }}
+              onClick={() => { fetchStats(); fetchStudents(); fetchSchools(); }}
               style={{
                 background: 'rgba(99,102,241,0.15)',
                 border: '1px solid var(--border-primary)',
