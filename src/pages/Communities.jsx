@@ -128,7 +128,11 @@ function CommentItem({ comment, postId, user, onUpdate }) {
 
   return (
     <div className="flex gap-2.5 items-start group py-1">
-      <Avatar src={comment.userId?.profileImage} name={comment.userId?.name} size={8} />
+      <Avatar 
+        src={comment.userId?.profileImage} 
+        name={comment.userId?.name || 'Deleted User'} 
+        size={8} 
+      />
       <div className="flex-1 min-w-0">
         {editingComment ? (
           <div className="flex gap-2 items-start">
@@ -157,7 +161,9 @@ function CommentItem({ comment, postId, user, onUpdate }) {
         ) : (
           <>
             <div className="rounded-lg px-3 py-2 pr-16 relative" style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }}>
-              <p className="text-xs font-bold text-theme-primary break-words">{comment.userId?.name}</p>
+              <p className="text-xs font-bold text-theme-primary break-words">
+                {comment.userId?.name || <span style={{ opacity: 0.5, fontStyle: 'italic' }}>Deleted User</span>}
+              </p>
               <p className="text-xs mt-0.5 text-theme-secondary break-words">{comment.content}</p>
               {isCommentOwner && (
                 <div className="absolute top-2 right-2 flex gap-1">
