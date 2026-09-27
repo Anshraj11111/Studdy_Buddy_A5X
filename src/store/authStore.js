@@ -117,14 +117,29 @@ export const useAuthStore = create((set) => ({
           const status = error.response?.status
 
           // ONLY logout on confirmed invalid/expired token
-          if (status === 401 && (errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN' || errorCode === 'USER_NOT_FOUND')) {
-            localStorage.removeItem('token')
-            localStorage.removeItem('user')
-            set({ token: null, user: null, isTokenValidated: false })
-            if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
-              window.location.href = '/login'
+          // Be more lenient - don't logout on network errors or temporary issues
+          if (status === 401) {
+            const isDefinitelyInvalid = errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN';
+            
+            if (isDefinitelyInvalid) {
+              // Clear invalid token
+              localStorage.removeItem('token')
+              localStorage.removeItem('user')
+              set({ token: null, user: null, isTokenValidated: false })
+              if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+                window.location.href = '/login'
+              }
+              return
+            } else if (errorCode === 'USER_NOT_FOUND') {
+              // User deleted - but keep them logged in for now with cached data
+              // Let them continue using the app, they'll get kicked out on next critical action
+              console.warn('⚠️ User not found in DB (might be deleted) - keeping cached session for now')
+              set({ isTokenValidated: true })
+            } else {
+              // Unknown 401 error - keep session alive (might be temporary server issue)
+              console.warn('⚠️ 401 error but not token-related - keeping cached session')
+              set({ isTokenValidated: true })
             }
-            return
           } else {
             // Network error / cold start — keep user logged in with cached data
             console.warn('⚠️ Could not validate token (network issue) — using cached session')
