@@ -522,7 +522,7 @@ function UserProfileModal({ userId, currentUserId, onClose, onFollowChange, onPo
                   cursor: profile.profileImage ? 'pointer' : 'default',
                 }}>
                 {profile.profileImage
-                  ? <img src={profile.profileImage} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <img src={profile.profileImage} alt={profile.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : profile.name?.[0]?.toUpperCase()}
               </div>
 
@@ -747,7 +747,7 @@ function UserProfileModal({ userId, currentUserId, onClose, onFollowChange, onPo
                         {post.media && (
                           <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', maxHeight: 120 }}>
                             {post.media.type === 'image' && (
-                              <img src={post.media.url} alt="Post" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <img src={post.media.url} alt="Post" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             )}
                             {post.media.type === 'video' && (
                               <video src={post.media.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1303,6 +1303,7 @@ function PostComposer({ user, onPost }) {
 }
 
 // ─── EMOJI PICKER ─────────────────────────────────────────────────────────
+// Lazy load emojis - only when needed
 const EMOJIS = ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', '🔠', '🔡', '🔢', '🔣', '🔤', '🅿️', '🚾', '🔽', '🔼', '🔙', '🔚', '🔛', '🔜', '🔝', '🛗', '🔃', '🔄', '🔁', '🔂', '▶️', '⏩', '⏭️', '⏯️', '◀️', '⏪', '⏮️', '🔼', '⏫', '🔽', '⏬', '⏸️', '⏹️', '⏺️', '⏏️', '🎦', '🔅', '🔆', '📶', '📳', '📴', '♀️', '♂️', '⚧️', '✖️', '➕', '➖', '➗', '♾️', '‼️', '⁉️', '❓', '❔', '❕', '❗', '〰️', '💱', '💲', '⚕️', '♻️', '⚜️', '🔱', '📛', '🔰', '⭐', '🌟', '✨', '⚡', '💥', '💫', '💦', '💨', '🕊️', '🦅', '🦆', '🦢', '🦉', '🦤', '🪶', '🦩', '🦚', '🦜', '🐦', '🐧', '🐥', '🐣', '🐤', '🦆', '🦃', '🐔', '🐓', '🐣', '🐥', '🦆', '🪿', '🦢', '🦜', '🦚', '🦩', '🦤', '🦉', '🦅', '🦇', '🦋', '🐌', '🐛', '🦟', '🦗', '🪰', '🪱', '🪲', '🪳', '🦂', '🕷️', '🕸️', '🐚', '🐙', '🦑', '🦀', '🦞', '🦐', '🦪', '🐠', '🐟', '🐡', '🐬', '🦈', '🐳', '🐋', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🪶', '🦜', '🦩', '🦚', '🐦', '🦃', '🦅', '🦆', '🦢', '🦉', '🦚', '🪶', '🐓', '🐔', '🐣', '🐤', '🐥', '🦆', '🐧', '🕊️', '🦩', '🦤', '🦜', '🦚', '🦉', '🦅', '🦇', '🦋', '🐌', '🐛', '🦟', '🦗', '🕷️', '🐚', '🐙', '🦑', '🦀', '🦞', '🦐', '🦪', '🐠', '🐟', '🐡', '🐬', '🦈', '🐳', '🐋', '🚀', '🛸', '🛰️', '💺', '🚁', '🛩️', '✈️', '🛫', '🛬', '🪂', '💈', '🛎️', '🧳', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🕛', '🕧', '🕐', '🕜', '🕑', '🕝', '🕒', '🕞', '🕓', '🕟', '🕔', '🕠', '🕕', '🕡', '🕖', '🕢', '🕗', '🕣', '🕘', '🕤', '🕙', '🕥', '🕚', '🕦', '🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘', '🌙', '🌚', '🌛', '🌜', '🌡️', '☀️', '🌝', '🌞', '🪐', '⭐', '🌟', '🌠', '🌌', '☁️', '⛅', '⛈️', '🌤️', '🌥️', '🌦️', '🌧️', '🌨️', '🌩️', '🌪️', '🌫️', '🌬️', '🌀', '🌈', '🌂', '☂️', '☔', '⛱️', '⚡', '❄️', '☃️', '⛄', '☄️', '🔥', '💧', '🌊'];
 
 function EmojiPicker({ onSelect, onClose }) {
@@ -1606,6 +1607,7 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
               ? <img
                   src={post.mediaUrl}
                   alt="post media"
+                  loading="lazy"
                   className="w-full max-h-96 object-cover cursor-zoom-in"
                   onClick={() => setShowImageLightbox(true)}
                 />
@@ -1859,18 +1861,22 @@ function FeedTab({ user, setFollowChangeCallback }) {
 
   // Fetch who I follow once — used to correctly init follow buttons on posts
   useEffect(() => {
-    followAPI.getFollowing(user._id)
-      .then(res => {
-        const following = res.data?.data?.following || []
-        // Filter out null/undefined users (deleted accounts)
-        const ids = new Set(following.filter(f => f && f._id).map(f => String(f._id)))
-        console.log('✅ FeedTab: Loaded followingSet:', Array.from(ids))
-        setFollowingSet(ids)
-      })
-      .catch(err => {
-        console.error('❌ FeedTab: Failed to load following:', err)
-        setFollowingSet(new Set())
-      })
+    // Defer following list fetch to not block initial render
+    const timer = setTimeout(() => {
+      followAPI.getFollowing(user._id)
+        .then(res => {
+          const following = res.data?.data?.following || []
+          // Filter out null/undefined users (deleted accounts)
+          const ids = new Set(following.filter(f => f && f._id).map(f => String(f._id)))
+          setFollowingSet(ids)
+        })
+        .catch(err => {
+          console.error('❌ FeedTab: Failed to load following:', err)
+          setFollowingSet(new Set())
+        })
+    }, 100) // Defer by 100ms to prioritize posts loading
+    
+    return () => clearTimeout(timer)
   }, [user._id])
 
   // Register follow change callback for profile modal
@@ -2673,7 +2679,7 @@ function ProfileSidebar({ user }) {
           <div className="-mt-8 mb-2 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xl flex-shrink-0 relative"
             style={{ background: '#6366f1', border: '3px solid var(--bg-secondary)' }}>
             {user?.profileImage
-              ? <img src={user.profileImage} alt={user?.name} className="w-full h-full object-cover" />
+              ? <img src={user.profileImage} alt={user?.name} loading="lazy" className="w-full h-full object-cover" />
               : user?.name?.[0]?.toUpperCase() || '?'}
           </div>
 

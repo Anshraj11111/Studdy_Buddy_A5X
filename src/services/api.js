@@ -167,6 +167,7 @@ export const authAPI = {
   googleLogin: (data) => api.post("/auth/google", data),
   getProfile: () => api.get("/auth/profile"),
   updateProfile: (data) => api.put("/auth/profile", data),
+  dailyVisit: () => api.post("/auth/daily-visit"),
   forgotPassword: (email) => api.post("/auth/forgot-password", { email }),
   resetPassword: (data) => api.post("/auth/reset-password", data),
   refreshToken: () => api.post("/auth/refresh-token"),

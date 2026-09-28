@@ -92,10 +92,21 @@ export const useAuthStore = create((set) => ({
     const token = localStorage.getItem('token')
     const cachedUser = localStorage.getItem('user')
 
+    console.log('[AUTH DEBUG] initAuth - token exists:', !!token, 'cachedUser exists:', !!cachedUser)
+
     if (token) {
       // Immediately unblock the UI using cached user data
       const parsedUser = cachedUser ? JSON.parse(cachedUser) : null
+      console.log('[AUTH DEBUG] Parsed user from localStorage:', parsedUser?.name, 'xp:', parsedUser?.xp)
       set({ token, user: parsedUser, isInitialized: true, isTokenValidated: false })
+
+      // Award daily visit XP (first visit of the day)
+      try {
+        await authAPI.dailyVisit()
+        console.log('[AUTH DEBUG] Daily visit XP awarded')
+      } catch (err) {
+        console.log('[AUTH DEBUG] Daily visit XP failed:', err.message)
+      }
 
       // Validate token + refresh in PARALLEL — not sequential
       // Previously: getProfile() then refreshToken() = 2 round trips sequentially
@@ -109,6 +120,7 @@ export const useAuthStore = create((set) => ({
         // Handle profile result
         if (profileRes.status === 'fulfilled') {
           const freshUser = profileRes.value.data.data.user
+          console.log('[AUTH DEBUG] Fresh user from API:', freshUser?.name, 'xp:', freshUser?.xp)
           localStorage.setItem('user', JSON.stringify(freshUser))
           set({ user: freshUser, isTokenValidated: true })
         } else {
