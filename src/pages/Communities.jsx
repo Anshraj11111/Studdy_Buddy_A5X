@@ -370,12 +370,14 @@ function RoleBadge({ role }) {
 }
 
 // ─── USER PROFILE MODAL (LinkedIn-style) ─────────────────────────────────────
-function UserProfileModal({ userId, currentUserId, onClose, onFollowChange }) {
+function UserProfileModal({ userId, currentUserId, onClose, onFollowChange, onPostClick }) {
   const isDark = useThemeStore(s => s.isDark)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [following, setFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
+  const [userPosts, setUserPosts] = useState([])
+  const [postsLoading, setPostsLoading] = useState(false)
 
   useEffect(() => {
     if (!userId) return
@@ -388,6 +390,16 @@ function UserProfileModal({ userId, currentUserId, onClose, onFollowChange }) {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+    
+    // Fetch user's posts
+    setPostsLoading(true)
+    feedAPI.getPostsByUser(userId, 1)
+      .then(res => {
+        const posts = res.data?.data?.posts || []
+        setUserPosts(posts.slice(0, 5)) // Show only 5 recent posts
+      })
+      .catch(() => {})
+      .finally(() => setPostsLoading(false))
   }, [userId])
 
   const handleFollow = async () => {
@@ -686,6 +698,78 @@ function UserProfileModal({ userId, currentUserId, onClose, onFollowChange }) {
                   </div>
                 </div>
               )}
+
+              {/* ── Recent Posts ──────────────────────────────── */}
+              <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.15)'}` }}>
+                <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(167,139,250,0.9)' : '#8b5cf6', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>📝 Recent Posts</p>
+                {postsLoading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0' }}>
+                    <Loader2 size={20} className="animate-spin" style={{ color: '#818cf8' }} />
+                  </div>
+                ) : userPosts.length === 0 ? (
+                  <p style={{ fontSize: '0.8rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b', textAlign: 'center', padding: '16px 0' }}>No posts yet</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {userPosts.map(post => (
+                      <div key={post._id} 
+                        onClick={() => {
+                          onClose()
+                          if (onPostClick) {
+                            onPostClick(post._id)
+                          }
+                        }}
+                        style={{ 
+                          padding: '12px', 
+                          borderRadius: 12, 
+                          background: isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.03)', 
+                          border: `1px solid ${isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)'}`,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.06)'
+                          e.currentTarget.style.borderColor = isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.2)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.03)'
+                          e.currentTarget.style.borderColor = isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)'
+                        }}>
+                        <p style={{ 
+                          margin: 0, 
+                          fontSize: '0.82rem', 
+                          lineHeight: 1.5, 
+                          color: isDark ? 'rgba(226,232,240,0.85)' : '#334155',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>{post.content}</p>
+                        {post.media && (
+                          <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', maxHeight: 120 }}>
+                            {post.media.type === 'image' && (
+                              <img src={post.media.url} alt="Post" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            )}
+                            {post.media.type === 'video' && (
+                              <video src={post.media.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            )}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, fontSize: '0.72rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Heart size={12} /> {post.likes?.length || 0}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <MessageCircle size={12} /> {post.comments?.length || 0}
+                          </span>
+                          <span style={{ marginLeft: 'auto' }}>
+                            {new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1410,7 +1494,10 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
 
   return (
     <>
-    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+    <div 
+      data-post-id={post._id}
+      className="rounded-lg overflow-hidden" 
+      style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
       <div className="p-4 sm:p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-3">
@@ -2923,6 +3010,34 @@ export default function Communities() {
   const [tab, setTab] = useState(() => searchParams.get('tab') || 'feed')
   const [viewProfileId, setViewProfileId] = useState(null)
   const [onFollowChangeCallback, setOnFollowChangeCallback] = useState(null)
+  const [scrollToPostId, setScrollToPostId] = useState(null)
+
+  // Effect to scroll to post and highlight it
+  useEffect(() => {
+    if (scrollToPostId && tab === 'feed') {
+      const scrollAndHighlight = () => {
+        const postElement = document.querySelector(`[data-post-id="${scrollToPostId}"]`)
+        if (postElement) {
+          // Scroll to post
+          postElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          // Add highlight animation
+          postElement.style.animation = 'highlight-pulse 1.5s ease-in-out'
+          // Clear state after animation
+          setTimeout(() => setScrollToPostId(null), 1500)
+        } else {
+          // Retry after delay if post not found (might still be loading)
+          setTimeout(scrollAndHighlight, 500)
+        }
+      }
+      // Wait for tab switch animation to complete
+      setTimeout(scrollAndHighlight, 300)
+    }
+  }, [scrollToPostId, tab])
+
+  const handlePostClick = (postId) => {
+    setTab('feed')
+    setScrollToPostId(postId)
+  }
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
@@ -2935,6 +3050,7 @@ export default function Communities() {
           currentUserId={user?._id}
           onClose={() => setViewProfileId(null)}
           onFollowChange={onFollowChangeCallback}
+          onPostClick={handlePostClick}
         />
       )}
 
