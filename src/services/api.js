@@ -271,8 +271,8 @@ export const communityAPI = {
 /* ---------------- FEED (Community Posts) ---------------- */
 
 export const feedAPI = {
-  getPosts: (category = 'All', page = 1, search = '', hashtag = '') =>
-    api.get(`/feed?category=${category}&page=${page}&limit=20&search=${encodeURIComponent(search)}&hashtag=${encodeURIComponent(hashtag)}&sort=random`),
+  getPosts: (category = 'All', page = 1, search = '', hashtag = '', sort = 'random') =>
+    api.get(`/feed?category=${category}&page=${page}&limit=20&search=${encodeURIComponent(search)}&hashtag=${encodeURIComponent(hashtag)}&sort=${sort}`),
   getPostsByUser: (userId, page = 1) => 
     api.get(`/feed?userId=${userId}&page=${page}&limit=20&sort=latest`),
   getLikedPosts: (page = 1, limit = 20) => 

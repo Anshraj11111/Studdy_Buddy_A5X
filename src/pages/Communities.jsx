@@ -1849,7 +1849,7 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
 }
 
 // ─── FEED TAB ─────────────────────────────────────────────────────────────────
-function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange }) {
+function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange, useLatestSort }) {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -1904,7 +1904,7 @@ function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange })
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const fetchPosts = useCallback(async (cat, q, pageNum = 1, append = false, userId = null) => {
+  const fetchPosts = useCallback(async (cat, q, pageNum = 1, append = false, userId = null, sortOrder = null) => {
     if (append) setLoadingMore(true)
     else setLoading(true)
     
@@ -1916,7 +1916,10 @@ function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange })
         res = await feedAPI.getPostsByUser(userId, pageNum)
       } else {
         // Fetch all posts with category/search
-        res = await feedAPI.getPosts(cat, pageNum, q)
+        // Use provided sort or default to 'random'
+        const sort = sortOrder || (useLatestSort ? 'latest' : 'random')
+        console.log('📥 Fetching feed with sort:', sort)
+        res = await feedAPI.getPosts(cat, pageNum, q, '', sort)
       }
       
       const newPosts = res.data.data?.posts || []
@@ -1935,7 +1938,7 @@ function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange })
       if (append) setLoadingMore(false)
       else setLoading(false)
     }
-  }, [])
+  }, [useLatestSort])
 
   // Infinite scroll observer
   useEffect(() => {
@@ -3055,6 +3058,19 @@ export default function Communities() {
   const [scrollToPostId, setScrollToPostId] = useState(null)
   const [filterUserId, setFilterUserId] = useState(null) // Filter feed by specific user
   const [feedPosts, setFeedPosts] = useState([]) // Track feed posts for debugging
+  const [useLatestSort, setUseLatestSort] = useState(false) // Use latest sort when coming from notification
+
+  // Check for postId in URL params (from notifications)
+  useEffect(() => {
+    const postIdFromUrl = searchParams.get('postId')
+    if (postIdFromUrl) {
+      console.log('📬 Notification clicked - navigating to post:', postIdFromUrl)
+      setTab('feed')
+      setScrollToPostId(postIdFromUrl)
+      setFilterUserId(null) // Clear user filter to show all posts
+      setUseLatestSort(true) // Use latest sort to ensure post is in feed
+    }
+  }, [searchParams])
 
   // Effect to scroll to post and highlight it
   useEffect(() => {
@@ -3168,6 +3184,7 @@ export default function Communities() {
                       setFollowChangeCallback={setOnFollowChangeCallback}
                       filterUserId={filterUserId}
                       onPostsChange={setFeedPosts}
+                      useLatestSort={useLatestSort}
                     />
                   </div>
                   <div className="hidden lg:block">

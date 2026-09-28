@@ -62,10 +62,23 @@ export default function Navbar({ onMenuClick }) {
         // Navigate to doubts page
         navigate('/doubts')
         break
+      case 'mention':
+        // Navigate to the post where user was mentioned
+        if (n.postId) {
+          navigate(`/communities?postId=${n.postId}`)
+        } else {
+          navigate('/communities')
+        }
+        break
       case 'like':
       case 'comment':
+      case 'reply':
         // Go to communities where the post is
-        navigate('/communities')
+        if (n.postId) {
+          navigate(`/communities?postId=${n.postId}`)
+        } else {
+          navigate('/communities')
+        }
         break
       case 'connection_request':
       case 'connection':
