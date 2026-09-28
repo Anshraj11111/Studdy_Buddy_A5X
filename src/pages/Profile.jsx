@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -28,6 +29,7 @@ const getProgress = (xp) => {
 
 export default function Profile() {
   const { user, updateProfile, loading } = useAuthStore()
+  const navigate = useNavigate()
   const [isEditing, setIsEditing] = useState(false)
   const [referralStats, setReferralStats] = useState(null)
   const [codeCopied, setCodeCopied] = useState(false)
@@ -502,6 +504,17 @@ export default function Profile() {
                             key={post._id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
+                            onClick={() => {
+                              navigate('/communities?tab=feed')
+                              // Small delay to ensure page loads, then scroll to post
+                              setTimeout(() => {
+                                const postElement = document.querySelector(`[data-post-id="${post._id}"]`)
+                                if (postElement) {
+                                  postElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                  postElement.style.animation = 'highlight-pulse 1.5s ease-in-out'
+                                }
+                              }, 300)
+                            }}
                             className="p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer relative group"
                             style={{ 
                               background: 'var(--bg-secondary)', 

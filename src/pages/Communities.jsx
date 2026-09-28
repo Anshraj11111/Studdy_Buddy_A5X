@@ -713,9 +713,13 @@ function UserProfileModal({ userId, currentUserId, onClose, onFollowChange, onPo
                     {userPosts.map(post => (
                       <div key={post._id} 
                         onClick={() => {
+                          console.log('🖱️ Post clicked in modal:', post._id, 'by user:', userId)
                           onClose()
                           if (onPostClick) {
-                            onPostClick(post._id)
+                            console.log('📍 Calling onPostClick with:', post._id, userId)
+                            onPostClick(post._id, userId)
+                          } else {
+                            console.log('⚠️ onPostClick is not defined')
                           }
                         }}
                         style={{ 
@@ -745,7 +749,7 @@ function UserProfileModal({ userId, currentUserId, onClose, onFollowChange, onPo
                           overflow: 'hidden'
                         }}>{post.content}</p>
                         {post.media && (
-                          <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', maxHeight: 120 }}>
+                          <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', maxHeight: 120, pointerEvents: 'none' }}>
                             {post.media.type === 'image' && (
                               <img src={post.media.url} alt="Post" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             )}
@@ -754,7 +758,7 @@ function UserProfileModal({ userId, currentUserId, onClose, onFollowChange, onPo
                             )}
                           </div>
                         )}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, fontSize: '0.72rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, fontSize: '0.72rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b', pointerEvents: 'none' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Heart size={12} /> {post.likes?.length || 0}
                           </span>
@@ -1845,7 +1849,7 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
 }
 
 // ─── FEED TAB ─────────────────────────────────────────────────────────────────
-function FeedTab({ user, setFollowChangeCallback }) {
+function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange }) {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -1858,6 +1862,13 @@ function FeedTab({ user, setFollowChangeCallback }) {
   const [followingSet, setFollowingSet] = useState(null) // Set of userId strings I follow
   const catRef = useRef()
   const observerTarget = useRef(null)
+  
+  // Notify parent when posts change
+  useEffect(() => {
+    if (onPostsChange) {
+      onPostsChange(posts)
+    }
+  }, [posts, onPostsChange])
 
   // Fetch who I follow once — used to correctly init follow buttons on posts
   useEffect(() => {
@@ -1893,12 +1904,21 @@ function FeedTab({ user, setFollowChangeCallback }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const fetchPosts = useCallback(async (cat, q, pageNum = 1, append = false) => {
+  const fetchPosts = useCallback(async (cat, q, pageNum = 1, append = false, userId = null) => {
     if (append) setLoadingMore(true)
     else setLoading(true)
     
     try {
-      const res = await feedAPI.getPosts(cat, pageNum, q)
+      let res
+      if (userId) {
+        // Fetch posts by specific user
+        console.log('📥 Fetching posts for user:', userId)
+        res = await feedAPI.getPostsByUser(userId, pageNum)
+      } else {
+        // Fetch all posts with category/search
+        res = await feedAPI.getPosts(cat, pageNum, q)
+      }
+      
       const newPosts = res.data.data?.posts || []
       
       if (append) {
@@ -1939,13 +1959,29 @@ function FeedTab({ user, setFollowChangeCallback }) {
   }, [hasMore, loading, loadingMore, page, filterCat, activeSearch, fetchPosts])
 
   useEffect(() => { 
-    const timer = setTimeout(() => {
+    // Only fetch all posts if no user filter is active
+    if (!filterUserId) {
+      const timer = setTimeout(() => {
+        setPage(1)
+        setHasMore(true)
+        fetchPosts('All', '', 1, false)
+      }, 200)
+      return () => clearTimeout(timer)
+    }
+  }, [fetchPosts, filterUserId])
+
+  // Watch for filterUserId changes - load posts by specific user
+  useEffect(() => {
+    if (filterUserId) {
+      console.log('🔍 Filter changed to user:', filterUserId)
       setPage(1)
       setHasMore(true)
-      fetchPosts('All', '', 1, false)
-    }, 200)
-    return () => clearTimeout(timer)
-  }, [fetchPosts])
+      setFilterCat('All')
+      setActiveSearch('')
+      setSearch('')
+      fetchPosts('All', '', 1, false, filterUserId)
+    }
+  }, [filterUserId, fetchPosts])
 
   const handleSearch = () => {
     setActiveSearch(search)
@@ -3017,31 +3053,56 @@ export default function Communities() {
   const [viewProfileId, setViewProfileId] = useState(null)
   const [onFollowChangeCallback, setOnFollowChangeCallback] = useState(null)
   const [scrollToPostId, setScrollToPostId] = useState(null)
+  const [filterUserId, setFilterUserId] = useState(null) // Filter feed by specific user
+  const [feedPosts, setFeedPosts] = useState([]) // Track feed posts for debugging
 
   // Effect to scroll to post and highlight it
   useEffect(() => {
     if (scrollToPostId && tab === 'feed') {
+      console.log('🔎 Looking for post with ID:', scrollToPostId)
+      console.log('🔎 Current posts in feed:', feedPosts.map(p => p._id))
+      
+      let attempts = 0
+      const maxAttempts = 10 // Retry up to 10 times
+      let scrolled = false // Flag to prevent multiple scrolls
+      
       const scrollAndHighlight = () => {
+        if (scrolled) return // Already scrolled, skip
+        
         const postElement = document.querySelector(`[data-post-id="${scrollToPostId}"]`)
+        console.log('🔍 Attempt', attempts + 1, '- Found element:', postElement ? 'YES' : 'NO')
+        
         if (postElement) {
+          scrolled = true // Mark as scrolled
           // Scroll to post
           postElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
           // Add highlight animation
           postElement.style.animation = 'highlight-pulse 1.5s ease-in-out'
           // Clear state after animation
           setTimeout(() => setScrollToPostId(null), 1500)
+          console.log('✅ Scrolled to post:', scrollToPostId)
         } else {
-          // Retry after delay if post not found (might still be loading)
-          setTimeout(scrollAndHighlight, 500)
+          attempts++
+          if (attempts < maxAttempts) {
+            // Retry after delay if post not found (might still be loading)
+            console.log(`⏳ Post not found, retrying... (${attempts}/${maxAttempts})`)
+            setTimeout(scrollAndHighlight, 500)
+          } else {
+            console.log('❌ Post not found after', maxAttempts, 'attempts:', scrollToPostId)
+            console.log('❌ Available posts:', feedPosts.map(p => ({ id: p._id, content: p.content.substring(0, 50) })))
+            setScrollToPostId(null)
+          }
         }
       }
       // Wait for tab switch animation to complete
       setTimeout(scrollAndHighlight, 300)
     }
-  }, [scrollToPostId, tab])
+  }, [scrollToPostId, tab, feedPosts])
 
-  const handlePostClick = (postId) => {
+  const handlePostClick = (postId, userId) => {
+    console.log('🎯 handlePostClick called with postId:', postId, 'userId:', userId)
     setTab('feed')
+    setFilterUserId(userId) // Set filter to show only that user's posts
     setScrollToPostId(postId)
   }
 
@@ -3104,7 +3165,9 @@ export default function Communities() {
                   <div className="min-w-0">
                     <FeedTab 
                       user={user} 
-                      setFollowChangeCallback={setOnFollowChangeCallback} 
+                      setFollowChangeCallback={setOnFollowChangeCallback}
+                      filterUserId={filterUserId}
+                      onPostsChange={setFeedPosts}
                     />
                   </div>
                   <div className="hidden lg:block">
