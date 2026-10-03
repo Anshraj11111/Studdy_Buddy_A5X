@@ -14,8 +14,11 @@ export const useAuthStore = create((set) => ({
     try {
       const response = await authAPI.register({ email, password, name, role, mentorCode, skills, schoolName, schoolPassword, city })
       const { token, user } = response.data.data
+      // Store in BOTH localStorage AND sessionStorage for better persistence
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
+      sessionStorage.setItem('token', token) // Backup storage
+      sessionStorage.setItem('user', JSON.stringify(user))
       set({ user, token, loading: false, error: null, isTokenValidated: true })
       return response.data.data
     } catch (error) {
@@ -33,8 +36,11 @@ export const useAuthStore = create((set) => ({
       const token = data?.token
       const user = data?.user
       if (!token || !user) throw new Error('Invalid response from server')
+      // Store in BOTH localStorage AND sessionStorage for better persistence  
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
+      sessionStorage.setItem('token', token) // Backup storage for mobile
+      sessionStorage.setItem('user', JSON.stringify(user))
       set({ user, token, loading: false, error: null, isTokenValidated: true })
       return data
     } catch (error) {
@@ -52,8 +58,11 @@ export const useAuthStore = create((set) => ({
       const token = data?.token
       const user = data?.user
       if (!token || !user) throw new Error('Invalid response from server')
+      // Store in BOTH localStorage AND sessionStorage for better persistence  
       localStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(user))
+      sessionStorage.setItem('token', token) // Backup storage for mobile
+      sessionStorage.setItem('user', JSON.stringify(user))
       set({ user, token, loading: false, error: null, isTokenValidated: true })
       return data
     } catch (error) {
@@ -64,8 +73,11 @@ export const useAuthStore = create((set) => ({
   },
 
   logout: () => {
+    // Clear BOTH storage locations
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('user')
     set({ user: null, token: null, isTokenValidated: false })
   },
 
@@ -89,8 +101,9 @@ export const useAuthStore = create((set) => ({
 
   // Initialize auth state from localStorage
   initAuth: async () => {
-    const token = localStorage.getItem('token')
-    const cachedUser = localStorage.getItem('user')
+    // Try both storage methods for better persistence on mobile
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    const cachedUser = localStorage.getItem('user') || sessionStorage.getItem('user')
 
     console.log('[AUTH DEBUG] initAuth - token exists:', !!token, 'cachedUser exists:', !!cachedUser)
 
@@ -128,13 +141,17 @@ export const useAuthStore = create((set) => ({
           const errorCode = error.response?.data?.error?.code
           const status = error.response?.status
 
-          // ONLY logout on confirmed invalid/expired token
-          // Be more lenient - don't logout on network errors or temporary issues
+          // MUCH MORE LENIENT LOGOUT POLICY - Only logout on explicit token issues
           if (status === 401) {
-            const isDefinitelyInvalid = errorCode === 'TOKEN_EXPIRED' || errorCode === 'INVALID_TOKEN';
+            // ONLY logout if token is definitively expired or invalid
+            const isTokenExpired = errorCode === 'TOKEN_EXPIRED' || 
+                                 errorCode === 'JWT_EXPIRED' || 
+                                 errorCode === 'INVALID_TOKEN' ||
+                                 error.message?.includes('jwt expired');
             
-            if (isDefinitelyInvalid) {
-              // Clear invalid token
+            if (isTokenExpired) {
+              // Token is definitely expired - logout required
+              console.log('🔒 Token expired - logging out')
               localStorage.removeItem('token')
               localStorage.removeItem('user')
               set({ token: null, user: null, isTokenValidated: false })
@@ -142,19 +159,19 @@ export const useAuthStore = create((set) => ({
                 window.location.href = '/login'
               }
               return
-            } else if (errorCode === 'USER_NOT_FOUND') {
-              // User deleted - but keep them logged in for now with cached data
-              // Let them continue using the app, they'll get kicked out on next critical action
-              console.warn('⚠️ User not found in DB (might be deleted) - keeping cached session for now')
-              set({ isTokenValidated: true })
             } else {
-              // Unknown 401 error - keep session alive (might be temporary server issue)
-              console.warn('⚠️ 401 error but not token-related - keeping cached session')
+              // For USER_NOT_FOUND, network issues, server errors - STAY LOGGED IN
+              console.warn('⚠️ Auth failed but keeping user logged in:', errorCode || error.message)
               set({ isTokenValidated: true })
+              
+              // Show user they're working offline but still logged in
+              if (typeof window !== 'undefined' && window.showToast) {
+                window.showToast('Working offline - you\'re still logged in', 'info')
+              }
             }
           } else {
-            // Network error / cold start — keep user logged in with cached data
-            console.warn('⚠️ Could not validate token (network issue) — using cached session')
+            // All non-401 errors (network, 500, timeout) - keep logged in
+            console.warn('⚠️ Network/server issue - keeping user logged in')
             set({ isTokenValidated: true })
           }
         }
