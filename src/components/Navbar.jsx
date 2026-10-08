@@ -31,7 +31,7 @@ export default function Navbar({ onMenuClick }) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const { user, logout } = useAuthStore()
-  const { notifications, unreadCount, markAllRead } = useNotificationStore()
+  const { notifications, unreadCount, markAllRead, fetch: fetchNotifications } = useNotificationStore()
   const navigate = useNavigate()
   const location = useLocation()
   const notifRef = useRef()
@@ -95,6 +95,8 @@ export default function Navbar({ onMenuClick }) {
 
   const openNotif = () => {
     setNotifOpen(v => !v)
+    // Fetch fresh notifications every time bell is opened
+    if (!notifOpen) fetchNotifications()
     if (!notifOpen && unreadCount > 0) markAllRead()
   }
 

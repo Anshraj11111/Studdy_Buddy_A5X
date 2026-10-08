@@ -88,6 +88,29 @@ function AppShell() {
     return () => offNotification()
   }, [token, user, isTokenValidated])
 
+  // Poll notifications every 30s + refresh on tab focus (catches missed socket events)
+  useEffect(() => {
+    if (!token || !user || !isTokenValidated) return
+
+    // Refresh when user comes back to the tab (phone unlock, tab switch, etc.)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Also poll every 30 seconds as a safety net
+    const interval = setInterval(() => {
+      fetchNotifications()
+    }, 30000)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearInterval(interval)
+    }
+  }, [token, user, isTokenValidated])
+
   if (!isInitialized && !isAdminRoute) {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
