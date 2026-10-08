@@ -111,7 +111,8 @@ export const useAuthStore = create((set) => ({
       // Immediately unblock the UI using cached user data
       const parsedUser = cachedUser ? JSON.parse(cachedUser) : null
       console.log('[AUTH DEBUG] Parsed user from localStorage:', parsedUser?.name, 'xp:', parsedUser?.xp)
-      set({ token, user: parsedUser, isInitialized: true, isTokenValidated: false })
+      // PWA FIX: Set isTokenValidated: true immediately from cache so PWA doesn't show login screen
+      set({ token, user: parsedUser, isInitialized: true, isTokenValidated: true })
 
       // Award daily visit XP (first visit of the day)
       try {

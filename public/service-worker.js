@@ -1,4 +1,4 @@
-const CACHE_NAME = 'studdy-buddy-v1'
+const CACHE_NAME = 'studdy-buddy-v3'
 const urlsToCache = [
   '/',
   '/index.html',
@@ -17,6 +17,14 @@ self.addEventListener('install', (event) => {
 // Fetch event
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') {
+    return
+  }
+
+  // NEVER cache API requests - always go to network
+  if (event.request.url.includes('/api/') || 
+      event.request.url.includes('onrender.com') ||
+      event.request.url.includes('studdybuddy')) {
+    event.respondWith(fetch(event.request))
     return
   }
 
