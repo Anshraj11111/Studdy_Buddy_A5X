@@ -2311,11 +2311,13 @@ function CourseDetail({ course, onBack }) {
    SCREEN 3 — LECTURE VIEW (SIDEBAR + VIDEO PLAYER)
 ========================================================= */
 
-function LectureCard({ lecture, isCompleted, onClick, course, module, setSelectedLecture, setShowQuizModal }) {
+function LectureCard({ lecture, isCompleted, isLocked, watchedPercentage, onClick, course, module, setSelectedLecture, setShowQuizModal }) {
   const [showVideoModal, setShowVideoModal] = useState(false);
 
   const handlePlay = (e) => {
     e.stopPropagation();
+    // If locked, trigger parent onClick which shows warning
+    if (isLocked) { onClick(); return; }
     const videoUrl = lecture.url || lecture.fileUrl;
     
     if (!videoUrl) {
@@ -2326,12 +2328,9 @@ function LectureCard({ lecture, isCompleted, onClick, course, module, setSelecte
     if (isYouTubeUrl(videoUrl)) {
       setShowVideoModal(true);
     } else {
-      // For non-YouTube videos, try to open in current tab on mobile
       if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        // Mobile device - open in same tab
         window.location.href = videoUrl;
       } else {
-        // Desktop - open in new tab
         window.open(videoUrl, '_blank');
       }
     }
@@ -2341,7 +2340,9 @@ function LectureCard({ lecture, isCompleted, onClick, course, module, setSelecte
     <>
       <div
         onClick={onClick}
-        className="group w-full border-b border-slate-100 px-5 py-5 text-left transition hover:bg-slate-50 sm:px-6 cursor-pointer"
+        className={`group w-full border-b border-slate-100 px-5 py-5 text-left transition sm:px-6 ${
+          isLocked ? 'cursor-not-allowed opacity-60 bg-slate-50' : 'cursor-pointer hover:bg-slate-50'
+        }`}
       >
         <div className="flex gap-4">
           {/* Thumbnail */}
@@ -2356,13 +2357,24 @@ function LectureCard({ lecture, isCompleted, onClick, course, module, setSelecte
               </div>
             )}
             
-            {/* Play Button */}
-            <button
-              onClick={handlePlay}
-              className="absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-red-600 text-white shadow-lg hover:bg-red-700 transition group-hover:scale-110"
-            >
-              <Play size={17} fill="currentColor" className="ml-0.5" />
-            </button>
+            {/* Lock overlay on thumbnail */}
+            {isLocked && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg">
+                  <Lock size={18} className="text-slate-600" />
+                </div>
+              </div>
+            )}
+
+            {/* Play Button - only if not locked */}
+            {!isLocked && (
+              <button
+                onClick={handlePlay}
+                className="absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-red-600 text-white shadow-lg hover:bg-red-700 transition group-hover:scale-110"
+              >
+                <Play size={17} fill="currentColor" className="ml-0.5" />
+              </button>
+            )}
           </div>
 
           {/* Content */}
@@ -2377,15 +2389,17 @@ function LectureCard({ lecture, isCompleted, onClick, course, module, setSelecte
                   </>
                 )}
               </p>
-              {/* Completion Badge */}
+              {/* Completion Badge / Lock Badge */}
               <div
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
                   isCompleted
                     ? 'border-green-500 bg-green-500 text-white'
+                    : isLocked
+                    ? 'border-slate-300 bg-slate-100 text-slate-400'
                     : 'border-slate-300 bg-white text-transparent'
                 }`}
               >
-                <Check size={14} strokeWidth={3} />
+                {isCompleted ? <Check size={14} strokeWidth={3} /> : isLocked ? <Lock size={11} /> : <Check size={14} strokeWidth={3} />}
               </div>
             </div>
 
@@ -2397,30 +2411,52 @@ function LectureCard({ lecture, isCompleted, onClick, course, module, setSelecte
               <p className="mt-1 line-clamp-1 text-[12px] text-slate-500">{lecture.description}</p>
             )}
 
+            {/* Progress bar - only show if in progress (not 0, not completed) */}
+            {!isLocked && !isCompleted && watchedPercentage > 0 && (
+              <div className="mt-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-slate-400">Progress</span>
+                  <span className="text-[10px] font-bold text-indigo-600">{watchedPercentage}%</span>
+                </div>
+                <div className="h-1 w-full rounded-full bg-slate-200">
+                  <div className="h-1 rounded-full bg-indigo-500 transition-all duration-300" style={{ width: `${watchedPercentage}%` }} />
+                </div>
+              </div>
+            )}
+
+            {/* Locked message */}
+            {isLocked && (
+              <p className="mt-2 text-[11px] text-amber-600 font-semibold flex items-center gap-1">
+                <Lock size={10} /> Complete previous lecture to unlock
+              </p>
+            )}
+
             {/* Action Buttons */}
             <div className="mt-3 flex flex-wrap gap-2">
-              <span className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3.5 py-2 text-[11px] font-bold text-slate-700">
-                {isYouTubeUrl(lecture.url) ? <Youtube size={12} /> : <Play size={12} fill="currentColor" />}
-                {isYouTubeUrl(lecture.url) ? 'Watch' : 'View'}
+              <span className={`flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[11px] font-bold ${isLocked ? 'bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700'}`}>
+                {isLocked ? <Lock size={12} /> : isYouTubeUrl(lecture.url) ? <Youtube size={12} /> : <Play size={12} fill="currentColor" />}
+                {isLocked ? 'Locked' : isYouTubeUrl(lecture.url) ? 'Watch' : 'View'}
               </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedLecture(lecture);
-                  setShowQuizModal(true);
-                }}
-                className="flex items-center gap-1.5 rounded-lg bg-indigo-100 px-3.5 py-2 text-[11px] font-bold text-indigo-700 hover:bg-indigo-200 transition"
-              >
-                <Award size={12} />
-                Quiz
-              </button>
-              {lecture.notesUrl && (
+              {!isLocked && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedLecture(lecture);
+                    setShowQuizModal(true);
+                  }}
+                  className="flex items-center gap-1.5 rounded-lg bg-indigo-100 px-3.5 py-2 text-[11px] font-bold text-indigo-700 hover:bg-indigo-200 transition"
+                >
+                  <Award size={12} />
+                  Quiz
+                </button>
+              )}
+              {lecture.notesUrl && !isLocked && (
                 <span className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3.5 py-2 text-[11px] font-bold text-slate-700">
                   <FileText size={12} />
                   Notes
                 </span>
               )}
-              {lecture.downloadUrl && (
+              {lecture.downloadUrl && !isLocked && (
                 <span className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3.5 py-2 text-[11px] font-bold text-slate-700">
                   <Download size={12} />
                   Download
@@ -2457,6 +2493,7 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
   const [selectedLecture, setSelectedLecture] = useState(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showQuizModal, setShowQuizModal] = useState(false);
+  const [lectureProgress, setLectureProgress] = useState({}); // { lectureId: { isCompleted, watchedPercentage } }
 
   useEffect(() => {
     fetchLectures();
@@ -2472,6 +2509,19 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
       if (fetchedLectures.length > 0 && !selectedLecture) {
         setSelectedLecture(fetchedLectures[0]);
       }
+
+      // Fetch progress for all lectures in this module
+      const progressMap = {};
+      await Promise.all(fetchedLectures.map(async (lec) => {
+        try {
+          const pRes = await courseAPI.getLectureProgress(lec._id);
+          progressMap[lec._id] = pRes.data?.data?.progress || { isCompleted: false, watchedPercentage: 0 };
+        } catch {
+          progressMap[lec._id] = { isCompleted: false, watchedPercentage: 0 };
+        }
+      }));
+      setLectureProgress(progressMap);
+
     } catch (error) {
       console.error('Failed to fetch lectures:', error);
     } finally {
@@ -2479,10 +2529,17 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
     }
   };
 
+  // Check if a lecture is accessible (first lecture is always free, rest need previous completed)
+  const isLectureAccessible = (lectureIndex) => {
+    if (lectureIndex === 0) return true; // First lecture always accessible
+    const prevLecture = lectures[lectureIndex - 1];
+    if (!prevLecture) return false;
+    return lectureProgress[prevLecture._id]?.isCompleted === true;
+  };
+
   const handleMarkComplete = async (lectureId) => {
     try {
       await courseAPI.markComplete(course._id, lectureId);
-      // Update local state to reflect completion
       setLectures(prev => prev.map(lecture => 
         lecture._id === lectureId 
           ? { ...lecture, completed: true }
@@ -2493,7 +2550,25 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
     }
   };
 
-  const handleLectureClick = (lecture) => {
+  // Called when video progress updates — refresh progress state
+  const handleProgressUpdate = (lectureId, progressData) => {
+    setLectureProgress(prev => ({
+      ...prev,
+      [lectureId]: progressData
+    }));
+  };
+
+  const handleLectureClick = (lecture, lectureIndex) => {
+    if (!isLectureAccessible(lectureIndex)) {
+      const prevLecture = lectures[lectureIndex - 1];
+      // Show locked message
+      if (window.showToast) {
+        window.showToast(`Complete "${prevLecture?.title || 'previous lecture'}" first to unlock this lecture`, 'warning');
+      } else {
+        alert(`⚠️ Complete the previous lecture first to unlock this one.`);
+      }
+      return;
+    }
     setSelectedLecture(lecture);
     handleMarkComplete(lecture._id);
   };
@@ -2572,14 +2647,16 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
                       </p>
                     </div>
                   ) : (
-                    lectures.map((lecture) => (
+                    lectures.map((lecture, index) => (
                       <LectureCard
                         key={lecture._id}
                         lecture={lecture}
                         course={course}
                         module={module}
-                        isCompleted={lecture.completed || false}
-                        onClick={() => handleLectureClick(lecture)}
+                        isCompleted={lectureProgress[lecture._id]?.isCompleted || lecture.completed || false}
+                        isLocked={!isLectureAccessible(index)}
+                        watchedPercentage={lectureProgress[lecture._id]?.watchedPercentage || 0}
+                        onClick={() => handleLectureClick(lecture, index)}
                         setSelectedLecture={setSelectedLecture}
                         setShowQuizModal={setShowQuizModal}
                       />
@@ -2726,11 +2803,20 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
             description: selectedLecture.description,
             courseId: course._id,
             moduleId: module._id,
-            // URL will be fetched securely by the modal
             uploadedBy: { name: 'A5x' },
             topic: selectedLecture.topic || 'Course Lecture'
           }}
-          onClose={() => setShowVideoModal(false)} 
+          onClose={async () => {
+            setShowVideoModal(false);
+            // Refresh progress after video closed so next lecture unlocks if completed
+            try {
+              const pRes = await courseAPI.getLectureProgress(selectedLecture._id);
+              const prog = pRes.data?.data?.progress;
+              if (prog) {
+                setLectureProgress(prev => ({ ...prev, [selectedLecture._id]: prog }));
+              }
+            } catch {}
+          }} 
         />
       )}
 
