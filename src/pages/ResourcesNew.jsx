@@ -86,7 +86,7 @@ function isYouTubeUrl(url) {
    VIDEO PLAYER MODAL
 ========================================================= */
 
-function VideoPlayerModal({ resource, onClose}) {
+function VideoPlayerModal({ resource, onClose, onProgressUpdate }) {
   const [videoId, setVideoId] = useState(null);
   const [tokenError, setTokenError] = useState('');
   const [isLandscape, setIsLandscape] = useState(false);
@@ -235,8 +235,13 @@ function VideoPlayerModal({ resource, onClose}) {
                       courseId: resource.courseId,
                       moduleId: resource.moduleId
                     }).then(res => {
-                      console.log('✅ Progress updated:', percentage + '%', res.data?.data?.progress);
-                      if (res.data?.data?.progress?.isCompleted) {
+                      const prog = res.data?.data?.progress;
+                      console.log('✅ Progress updated:', percentage + '%', prog);
+                      // 🔥 Real-time update parent LectureView immediately
+                      if (prog && onProgressUpdate) {
+                        onProgressUpdate(resource._id, prog);
+                      }
+                      if (prog?.isCompleted) {
                         console.log('🎉 Lecture completed! Quiz unlocked!');
                       }
                     }).catch(err => {
@@ -256,8 +261,13 @@ function VideoPlayerModal({ resource, onClose}) {
                 totalDuration: duration,
                 courseId: resource.courseId,
                 moduleId: resource.moduleId
-              }).then(() => {
+              }).then(res => {
                 setWatchProgress({ percentage: 100, isCompleted: true });
+                // 🔥 Real-time update parent on video end
+                const prog = res.data?.data?.progress;
+                if (prog && onProgressUpdate) {
+                  onProgressUpdate(resource._id, prog);
+                }
                 console.log('🎉 Video finished - marked complete!');
               });
             }
@@ -2823,6 +2833,10 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
                 setLectureProgress(prev => ({ ...prev, [selectedLecture._id]: prog }));
               }
             } catch {}
+          }}
+          onProgressUpdate={(lectureId, prog) => {
+            // 🔥 Real-time: update progress bar without refresh
+            setLectureProgress(prev => ({ ...prev, [lectureId]: prog }));
           }} 
         />
       )}
