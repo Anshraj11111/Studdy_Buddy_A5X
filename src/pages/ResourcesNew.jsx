@@ -2411,15 +2411,22 @@ function LectureCard({ lecture, isCompleted, isLocked, watchedPercentage, onClic
               <p className="mt-1 line-clamp-1 text-[12px] text-slate-500">{lecture.description}</p>
             )}
 
-            {/* Progress bar - only show if in progress (not 0, not completed) */}
-            {!isLocked && !isCompleted && watchedPercentage > 0 && (
+            {/* Progress bar - always show for unlocked lectures */}
+            {!isLocked && (
               <div className="mt-2">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] text-slate-400">Progress</span>
-                  <span className="text-[10px] font-bold text-indigo-600">{watchedPercentage}%</span>
+                  <span className="text-[10px] text-slate-400">
+                    {isCompleted ? 'Completed' : watchedPercentage > 0 ? 'In Progress' : 'Not Started'}
+                  </span>
+                  <span className={`text-[10px] font-bold ${isCompleted ? 'text-green-600' : watchedPercentage > 0 ? 'text-indigo-600' : 'text-slate-400'}`}>
+                    {isCompleted ? '100%' : `${watchedPercentage}%`}
+                  </span>
                 </div>
-                <div className="h-1 w-full rounded-full bg-slate-200">
-                  <div className="h-1 rounded-full bg-indigo-500 transition-all duration-300" style={{ width: `${watchedPercentage}%` }} />
+                <div className="h-1.5 w-full rounded-full bg-slate-200">
+                  <div
+                    className={`h-1.5 rounded-full transition-all duration-300 ${isCompleted ? 'bg-green-500' : 'bg-indigo-500'}`}
+                    style={{ width: `${isCompleted ? 100 : watchedPercentage}%` }}
+                  />
                 </div>
               </div>
             )}
