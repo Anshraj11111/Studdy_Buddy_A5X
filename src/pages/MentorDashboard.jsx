@@ -73,6 +73,7 @@ export default function MentorDashboard() {
   const [stats, setStats] = useState({ totalDoubts: 0, pendingReplies: 0, activeChats: 0 })
   const [expandedDoubts, setExpandedDoubts] = useState({})
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [doubtFilter, setDoubtFilter] = useState("all") // "all", "pending", "chats"
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -249,10 +250,25 @@ export default function MentorDashboard() {
   }
 
   const STAT_CARDS = [
-    { label: "Total Doubts", value: stats.totalDoubts, icon: MessageSquare, color: "#6366f1", glow: "rgba(99,102,241,0.4)" },
-    { label: "Pending", value: stats.pendingReplies, icon: Users, color: "#fbbf24", glow: "rgba(251,191,36,0.4)" },
-    { label: "Chats", value: stats.activeChats, icon: CheckCircle, color: "#34d399", glow: "rgba(52,211,153,0.4)" },
+    { key: "all", label: "Total Doubts", value: stats.totalDoubts, icon: MessageSquare, color: "#6366f1", glow: "rgba(99,102,241,0.4)" },
+    { key: "pending", label: "Pending", value: stats.pendingReplies, icon: Users, color: "#fbbf24", glow: "rgba(251,191,36,0.4)" },
+    { key: "chats", label: "Chats", value: stats.activeChats, icon: CheckCircle, color: "#34d399", glow: "rgba(52,211,153,0.4)" },
   ]
+
+  const handleStatCardClick = (cardKey) => {
+    if (cardKey === "chats") {
+      setActiveTab("chats")
+      setDoubtFilter("all")
+    } else {
+      setActiveTab("doubts")
+      setDoubtFilter(cardKey)
+    }
+  }
+
+  // Filter doubts based on selected filter
+  const filteredDoubts = doubtFilter === "pending" 
+    ? doubts.filter(d => !d.replies || d.replies.length === 0)
+    : doubts
 
   return (
     <div className="flex flex-col min-h-screen" style={{ position: "relative" }}>
@@ -296,16 +312,25 @@ export default function MentorDashboard() {
           <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
             {STAT_CARDS.map((s, i) => {
               const Icon = s.icon
+              const isActive = (s.key === "chats" && activeTab === "chats") || 
+                               (activeTab === "doubts" && doubtFilter === s.key)
+              
               return (
                 <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.08, type: "spring", stiffness: 200 }}
                   whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                  className="rounded-2xl p-4 relative overflow-hidden"
-                  style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                  onClick={() => handleStatCardClick(s.key)}
+                  className="rounded-2xl p-4 relative overflow-hidden cursor-pointer"
+                  style={{ 
+                    background: "var(--bg-tertiary)", 
+                    border: isActive ? `2px solid ${s.color}` : "1px solid var(--border-secondary)", 
+                    backdropFilter: "blur(20px)",
+                    boxShadow: isActive ? `0 0 20px ${s.glow}` : "none"
+                  }}>
                   <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(ellipse at top right,${s.color},transparent 70%)` }} />
                   <div className="relative z-10">
                     <div className="flex items-center justify-between mb-2">
-                      <p style={{ color: "var(--text-secondary)", fontSize: "0.7rem", fontFamily: "monospace" }}>{s.label}</p>
+                      <p style={{ color: isActive ? s.color : "var(--text-secondary)", fontSize: "0.7rem", fontFamily: "monospace", fontWeight: isActive ? "600" : "400" }}>{s.label}</p>
                       <div className="w-8 h-8 rounded-xl flex items-center justify-center"
                         style={{ background: `${s.color}20`, border: `1px solid ${s.color}30` }}>
                         <Icon size={14} style={{ color: s.color }} />
@@ -328,10 +353,13 @@ export default function MentorDashboard() {
           <div className="flex gap-1 p-1 rounded-2xl mb-5"
             style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
             {[
-              { key: "doubts", label: "Student Doubts", icon: MessageSquare },
+              { key: "doubts", label: doubtFilter === "pending" ? "Pending Doubts" : doubtFilter === "all" ? "Student Doubts" : "Student Doubts", icon: MessageSquare },
               { key: "chats", label: `Chats (${rooms.length})`, icon: MessageCircle },
             ].map(({ key, label, icon: Icon }) => (
-              <button key={key} onClick={() => setActiveTab(key)}
+              <button key={key} onClick={() => {
+                setActiveTab(key)
+                if (key === "doubts") setDoubtFilter("all")
+              }}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-all"
                 style={{
                   background: activeTab === key ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
@@ -354,9 +382,9 @@ export default function MentorDashboard() {
                     </motion.div>
                     <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", fontFamily: "monospace" }}>Loading doubts...</p>
                   </div>
-                ) : doubts.length > 0 ? (
+                ) : filteredDoubts.length > 0 ? (
                   <div className="space-y-3">
-                    {doubts.map((doubt, i) => (
+                    {filteredDoubts.map((doubt, i) => (
                       <motion.div key={doubt._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: Math.min(i * 0.04, 0.3) }}
                         className="rounded-2xl overflow-hidden"
@@ -557,7 +585,9 @@ export default function MentorDashboard() {
                   <div className="text-center py-20 rounded-2xl"
                     style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
                     <MessageSquare size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)" }} />
-                    <p style={{ color: "var(--text-secondary)" }}>No student doubts yet.</p>
+                    <p style={{ color: "var(--text-secondary)" }}>
+                      {doubtFilter === "pending" ? "No pending doubts! All doubts have been replied to. 🎉" : "No student doubts yet."}
+                    </p>
                   </div>
                 )}
               </motion.div>
