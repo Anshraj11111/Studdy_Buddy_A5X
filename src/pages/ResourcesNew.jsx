@@ -92,7 +92,64 @@ function VideoPlayerModal({ resource, onClose, onProgressUpdate }) {
   const [isLandscape, setIsLandscape] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const containerRef = useRef(null);
+  const playerRef = useRef(null); // Store YouTube player reference
   const [watchProgress, setWatchProgress] = useState({ percentage: 0, isCompleted: false });
+  
+  // Function to save current progress immediately
+  const saveCurrentProgress = async () => {
+    const player = playerRef.current;
+    console.log('🔍 saveCurrentProgress called, player exists:', !!player);
+    
+    if (player && typeof player.getCurrentTime === 'function' && typeof player.getDuration === 'function') {
+      try {
+        const currentTime = player.getCurrentTime();
+        const duration = player.getDuration();
+        
+        console.log('📊 Current video state:', { currentTime, duration, percentage: Math.floor((currentTime / duration) * 100) });
+        
+        if (duration > 0 && currentTime > 0) {
+          console.log('💾 Saving progress before close:', Math.floor((currentTime / duration) * 100) + '%');
+          
+          const res = await courseAPI.updateLectureProgress(resource._id, {
+            watchedDuration: currentTime,
+            totalDuration: duration,
+            courseId: resource.courseId,
+            moduleId: resource.moduleId
+          });
+          
+          const prog = res.data?.data?.progress;
+          if (prog && onProgressUpdate) {
+            onProgressUpdate(resource._id, prog);
+            console.log('✅ Final progress saved on close:', prog);
+          }
+          return prog;
+        } else {
+          console.warn('⚠️ Invalid video state, not saving');
+        }
+      } catch (err) {
+        console.error('❌ Failed to save progress on close:', err);
+      }
+    } else {
+      console.warn('⚠️ Player not ready or methods not available');
+    }
+  };
+  
+  // Handle close with progress save
+  const handleClose = async () => {
+    console.log('🚪 handleClose called');
+    await saveCurrentProgress();
+    onClose();
+  };
+  
+  // Save progress on unmount (when component is destroyed)
+  useEffect(() => {
+    return () => {
+      console.log('🧹 Component unmounting, saving final progress');
+      if (playerRef.current) {
+        saveCurrentProgress();
+      }
+    };
+  }, []);
 
   // Anti-inspect protection: Detect DevTools
   useEffect(() => {
@@ -208,6 +265,8 @@ function VideoPlayerModal({ resource, onClose, onProgressUpdate }) {
         events: {
           onReady: (event) => {
             console.log('✅ YouTube player ready');
+            playerRef.current = player; // Store player for later access
+            playerRef.current = player; // Store player reference
             
             // Start tracking progress every 5 seconds
             progressInterval = setInterval(() => {
@@ -241,8 +300,10 @@ function VideoPlayerModal({ resource, onClose, onProgressUpdate }) {
                       if (prog && onProgressUpdate) {
                         onProgressUpdate(resource._id, prog);
                       }
+                      // 🎉 If completed (95%+), log it clearly
                       if (prog?.isCompleted) {
-                        console.log('🎉 Lecture completed! Quiz unlocked!');
+                        console.log('🎉 Lecture AUTO-COMPLETED at', percentage + '%! Quiz unlocked!');
+                        console.log('📊 Progress object:', prog);
                       }
                     }).catch(err => {
                       console.error('❌ Failed to update progress:', err);
@@ -393,7 +454,7 @@ function VideoPlayerModal({ resource, onClose, onProgressUpdate }) {
           background: '#000',
           overflow: 'hidden',
         }} 
-        onClick={onClose}
+        onClick={handleClose}
       >
       <div
         ref={containerRef}
@@ -456,7 +517,7 @@ function VideoPlayerModal({ resource, onClose, onProgressUpdate }) {
                 </>
               )}
               <button 
-                onClick={onClose} 
+                onClick={handleClose} 
                 className="p-2 rounded-lg transition text-slate-500 hover:text-slate-700 hover:bg-slate-100"
               >
                 <X size={18} />
@@ -512,7 +573,7 @@ function VideoPlayerModal({ resource, onClose, onProgressUpdate }) {
                 <Minimize size={18} />
               </button>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 style={{
                   background: 'rgba(0,0,0,0.6)',
                   border: 'none',
@@ -911,7 +972,7 @@ function UploadResourceModal({ onClose, onUploaded }) {
         animate={{ opacity: 1 }} 
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-40 bg-black/50" 
-        onClick={onClose} 
+        onClick={handleClose} 
       />
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -927,7 +988,7 @@ function UploadResourceModal({ onClose, onUploaded }) {
             Upload Resource
           </h2>
           <button 
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 rounded-lg hover:bg-slate-100 transition"
           >
             <X size={18} className="text-slate-400" />
@@ -2429,13 +2490,13 @@ function LectureCard({ lecture, isCompleted, isLocked, watchedPercentage, onClic
                     {isCompleted ? 'Completed' : watchedPercentage > 0 ? 'In Progress' : 'Not Started'}
                   </span>
                   <span className={`text-[10px] font-bold ${isCompleted ? 'text-green-600' : watchedPercentage > 0 ? 'text-indigo-600' : 'text-slate-400'}`}>
-                    {isCompleted ? '100%' : `${watchedPercentage}%`}
+                    {watchedPercentage}%
                   </span>
                 </div>
                 <div className="h-1.5 w-full rounded-full bg-slate-200">
                   <div
                     className={`h-1.5 rounded-full transition-all duration-300 ${isCompleted ? 'bg-green-500' : 'bg-indigo-500'}`}
-                    style={{ width: `${isCompleted ? 100 : watchedPercentage}%` }}
+                    style={{ width: `${watchedPercentage}%` }}
                   />
                 </div>
               </div>
@@ -2532,12 +2593,15 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
       await Promise.all(fetchedLectures.map(async (lec) => {
         try {
           const pRes = await courseAPI.getLectureProgress(lec._id);
-          progressMap[lec._id] = pRes.data?.data?.progress || { isCompleted: false, watchedPercentage: 0 };
+          const progress = pRes.data?.data?.progress || { isCompleted: false, watchedPercentage: 0 };
+          progressMap[lec._id] = progress;
+          console.log(`📊 Initial progress for "${lec.title}":`, progress);
         } catch {
           progressMap[lec._id] = { isCompleted: false, watchedPercentage: 0 };
         }
       }));
       setLectureProgress(progressMap);
+      console.log('📚 All lecture progress loaded:', progressMap);
 
     } catch (error) {
       console.error('Failed to fetch lectures:', error);
@@ -2548,10 +2612,42 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
 
   // Check if a lecture is accessible (first lecture is always free, rest need previous completed)
   const isLectureAccessible = (lectureIndex) => {
-    if (lectureIndex === 0) return true; // First lecture always accessible
+    if (lectureIndex === 0) {
+      console.log(`✅ Lecture 0 (first) - Always accessible`);
+      return true; // First lecture always accessible
+    }
+    
     const prevLecture = lectures[lectureIndex - 1];
-    if (!prevLecture) return false;
-    return lectureProgress[prevLecture._id]?.isCompleted === true;
+    if (!prevLecture) {
+      console.log(`❌ Lecture ${lectureIndex} - No previous lecture found`);
+      return false;
+    }
+    
+    const prevProgress = lectureProgress[prevLecture._id];
+    
+    // Check both root level and nested progress (API returns nested)
+    const isCompleted = prevProgress?.isCompleted === true || 
+                        prevProgress?.progress?.isCompleted === true;
+    
+    // DETAILED Debug logging
+    console.log(`🔍 Accessibility Check for Lecture ${lectureIndex}:`, {
+      currentLecture: lectures[lectureIndex]?.title,
+      prevLecture: {
+        index: lectureIndex - 1,
+        id: prevLecture._id,
+        title: prevLecture.title,
+      },
+      prevProgress: prevProgress,
+      checks: {
+        rootIsCompleted: prevProgress?.isCompleted,
+        nestedIsCompleted: prevProgress?.progress?.isCompleted,
+        finalDecision: isCompleted
+      },
+      result: isCompleted ? '✅ UNLOCKED' : '🔒 LOCKED',
+      allProgressKeys: Object.keys(lectureProgress)
+    });
+    
+    return isCompleted;
   };
 
   const handleMarkComplete = async (lectureId) => {
@@ -2823,20 +2919,35 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
             uploadedBy: { name: 'A5x' },
             topic: selectedLecture.topic || 'Course Lecture'
           }}
-          onClose={async () => {
+          onClose={() => {
             setShowVideoModal(false);
-            // Refresh progress after video closed so next lecture unlocks if completed
-            try {
-              const pRes = await courseAPI.getLectureProgress(selectedLecture._id);
-              const prog = pRes.data?.data?.progress;
-              if (prog) {
-                setLectureProgress(prev => ({ ...prev, [selectedLecture._id]: prog }));
-              }
-            } catch {}
+            // Progress is already updated via onProgressUpdate in real-time
+            // No need to refetch, just close modal
+            console.log('✅ Video modal closed, progress already updated via onProgressUpdate');
           }}
           onProgressUpdate={(lectureId, prog) => {
             // 🔥 Real-time: update progress bar without refresh
-            setLectureProgress(prev => ({ ...prev, [lectureId]: prog }));
+            console.log('🔄 onProgressUpdate called:', {
+              lectureId,
+              prog: JSON.stringify(prog, null, 2),
+              beforeUpdate: JSON.stringify(lectureProgress[lectureId], null, 2)
+            });
+            
+            setLectureProgress(prev => {
+              const updated = { ...prev, [lectureId]: prog };
+              console.log('✅ lectureProgress state updated:', JSON.stringify(updated, null, 2));
+              return updated;
+            });
+            
+            // Also update lectures array if completed
+            if (prog?.isCompleted) {
+              setLectures(prev => prev.map(lec => 
+                lec._id === lectureId 
+                  ? { ...lec, completed: true }
+                  : lec
+              ));
+              console.log('✅ Lecture marked as completed in lectures array');
+            }
           }} 
         />
       )}
