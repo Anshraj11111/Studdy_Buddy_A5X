@@ -3060,8 +3060,18 @@ export default function Communities() {
   const [feedPosts, setFeedPosts] = useState([]) // Track feed posts for debugging
   const [useLatestSort, setUseLatestSort] = useState(false) // Use latest sort when coming from notification
 
+  // DEBUG: Log on every render
+  console.log('🔵 [COMMUNITIES] Component rendered', {
+    hasPostParam: !!searchParams.get('post'),
+    hasPostIdParam: !!searchParams.get('postId'),
+    postValue: searchParams.get('post'),
+    postIdValue: searchParams.get('postId'),
+    currentTab: tab
+  })
+
   // Check for postId or post in URL params (from notifications or shared links)
   useEffect(() => {
+    console.log('🟢 [DEEP LINK useEffect] Running...')
     try {
       const postIdFromUrl = searchParams.get('postId') || searchParams.get('post')
       
@@ -3075,6 +3085,8 @@ export default function Communities() {
         setUseLatestSort(true)
         
         console.log('✅ [DEEP LINK] Navigation set - tab: feed, scrollTo:', postIdFromUrl)
+      } else {
+        console.log('ℹ️ [DEEP LINK] No post parameter found')
       }
     } catch (err) {
       console.error('❌ [DEEP LINK] Error:', err)
