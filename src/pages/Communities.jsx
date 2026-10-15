@@ -3064,28 +3064,20 @@ export default function Communities() {
   useEffect(() => {
     try {
       const postIdFromUrl = searchParams.get('postId') || searchParams.get('post')
-      console.log('🔍 [Deep Link] URL params:', postIdFromUrl)
       
       if (postIdFromUrl) {
-        console.log('📬 [Deep Link] Found post ID:', postIdFromUrl)
+        console.log('🔍 [DEEP LINK] Post ID from URL:', postIdFromUrl)
         
-        // Fetch the specific post from backend to ensure it exists
-        feedAPI.getPostById(postIdFromUrl)
-          .then(res => {
-            console.log('✅ [Deep Link] Post exists, navigating...')
-            setTab('feed')
-            setScrollToPostId(postIdFromUrl)
-            setFilterUserId(null)
-            setUseLatestSort(true)
-          })
-          .catch(err => {
-            console.error('❌ [Deep Link] Failed to load post:', err)
-            // Don't show alert, just navigate to feed normally
-            setTab('feed')
-          })
+        // Immediately navigate to feed and set scroll target
+        setTab('feed')
+        setScrollToPostId(postIdFromUrl)
+        setFilterUserId(null)
+        setUseLatestSort(true)
+        
+        console.log('✅ [DEEP LINK] Navigation set - tab: feed, scrollTo:', postIdFromUrl)
       }
     } catch (err) {
-      console.error('❌ [Deep Link] Error in useEffect:', err)
+      console.error('❌ [DEEP LINK] Error:', err)
     }
   }, [searchParams])
 
