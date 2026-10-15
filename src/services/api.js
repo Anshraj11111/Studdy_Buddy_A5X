@@ -273,6 +273,7 @@ export const communityAPI = {
 export const feedAPI = {
   getPosts: (category = 'All', page = 1, search = '', hashtag = '', sort = 'random') =>
     api.get(`/feed?category=${category}&page=${page}&limit=20&search=${encodeURIComponent(search)}&hashtag=${encodeURIComponent(hashtag)}&sort=${sort}`),
+  getPostById: (postId) => api.get(`/feed/${postId}`),
   getPostsByUser: (userId, page = 1) => 
     api.get(`/feed?userId=${userId}&page=${page}&limit=20&sort=latest`),
   getLikedPosts: (page = 1, limit = 20) => 

@@ -3063,12 +3063,32 @@ export default function Communities() {
   // Check for postId or post in URL params (from notifications or shared links)
   useEffect(() => {
     const postIdFromUrl = searchParams.get('postId') || searchParams.get('post')
+    console.log('🔍 [Deep Link] Checking URL params:', {
+      postId: searchParams.get('postId'),
+      post: searchParams.get('post'),
+      resolved: postIdFromUrl,
+      allParams: Object.fromEntries(searchParams)
+    })
+    
     if (postIdFromUrl) {
-      console.log('📬 Deep link - navigating to post:', postIdFromUrl)
-      setTab('feed')
-      setScrollToPostId(postIdFromUrl)
-      setFilterUserId(null) // Clear user filter to show all posts
-      setUseLatestSort(true) // Use latest sort to ensure post is in feed
+      console.log('📬 [Deep Link] Navigating to post:', postIdFromUrl)
+      console.log('📬 [Deep Link] Setting tab to feed, clearing filters, enabling latest sort')
+      
+      // Fetch the specific post from backend to ensure it exists
+      feedAPI.getPostById(postIdFromUrl)
+        .then(res => {
+          console.log('✅ [Deep Link] Post found:', res.data.data.post)
+          setTab('feed')
+          setScrollToPostId(postIdFromUrl)
+          setFilterUserId(null) // Clear user filter to show all posts
+          setUseLatestSort(true) // Use latest sort to ensure post is in feed
+        })
+        .catch(err => {
+          console.error('❌ [Deep Link] Post not found:', err)
+          alert('This post no longer exists or was deleted.')
+        })
+    } else {
+      console.log('ℹ️ [Deep Link] No post parameter found in URL')
     }
   }, [searchParams])
 
