@@ -23,6 +23,7 @@ const PostDoubt         = lazy(() => import('./pages/PostDoubt'))
 const EditDoubt         = lazy(() => import('./pages/EditDoubt'))
 const Resources         = lazy(() => import('./pages/ResourcesNew'))
 const Communities       = lazy(() => import('./pages/Communities'))
+const PostRedirect      = lazy(() => import('./pages/PostRedirect'))
 const Profile           = lazy(() => import('./pages/Profile'))
 const Chats             = lazy(() => import('./pages/Chats'))
 const Chat              = lazy(() => import('./pages/Chat'))
@@ -150,6 +151,7 @@ function AppShell() {
           <Route path="/chat/:roomId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
           <Route path="/video-call/:roomId" element={<ProtectedRoute><VideoCall /></ProtectedRoute>} />
           <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
+          <Route path="/community" element={<ProtectedRoute><PostRedirect /></ProtectedRoute>} />
           <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
