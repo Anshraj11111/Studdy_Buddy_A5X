@@ -3060,11 +3060,11 @@ export default function Communities() {
   const [feedPosts, setFeedPosts] = useState([]) // Track feed posts for debugging
   const [useLatestSort, setUseLatestSort] = useState(false) // Use latest sort when coming from notification
 
-  // Check for postId in URL params (from notifications)
+  // Check for postId or post in URL params (from notifications or shared links)
   useEffect(() => {
-    const postIdFromUrl = searchParams.get('postId')
+    const postIdFromUrl = searchParams.get('postId') || searchParams.get('post')
     if (postIdFromUrl) {
-      console.log('📬 Notification clicked - navigating to post:', postIdFromUrl)
+      console.log('📬 Deep link - navigating to post:', postIdFromUrl)
       setTab('feed')
       setScrollToPostId(postIdFromUrl)
       setFilterUserId(null) // Clear user filter to show all posts
