@@ -3062,33 +3062,30 @@ export default function Communities() {
 
   // Check for postId or post in URL params (from notifications or shared links)
   useEffect(() => {
-    const postIdFromUrl = searchParams.get('postId') || searchParams.get('post')
-    console.log('🔍 [Deep Link] Checking URL params:', {
-      postId: searchParams.get('postId'),
-      post: searchParams.get('post'),
-      resolved: postIdFromUrl,
-      allParams: Object.fromEntries(searchParams)
-    })
-    
-    if (postIdFromUrl) {
-      console.log('📬 [Deep Link] Navigating to post:', postIdFromUrl)
-      console.log('📬 [Deep Link] Setting tab to feed, clearing filters, enabling latest sort')
+    try {
+      const postIdFromUrl = searchParams.get('postId') || searchParams.get('post')
+      console.log('🔍 [Deep Link] URL params:', postIdFromUrl)
       
-      // Fetch the specific post from backend to ensure it exists
-      feedAPI.getPostById(postIdFromUrl)
-        .then(res => {
-          console.log('✅ [Deep Link] Post found:', res.data.data.post)
-          setTab('feed')
-          setScrollToPostId(postIdFromUrl)
-          setFilterUserId(null) // Clear user filter to show all posts
-          setUseLatestSort(true) // Use latest sort to ensure post is in feed
-        })
-        .catch(err => {
-          console.error('❌ [Deep Link] Post not found:', err)
-          alert('This post no longer exists or was deleted.')
-        })
-    } else {
-      console.log('ℹ️ [Deep Link] No post parameter found in URL')
+      if (postIdFromUrl) {
+        console.log('📬 [Deep Link] Found post ID:', postIdFromUrl)
+        
+        // Fetch the specific post from backend to ensure it exists
+        feedAPI.getPostById(postIdFromUrl)
+          .then(res => {
+            console.log('✅ [Deep Link] Post exists, navigating...')
+            setTab('feed')
+            setScrollToPostId(postIdFromUrl)
+            setFilterUserId(null)
+            setUseLatestSort(true)
+          })
+          .catch(err => {
+            console.error('❌ [Deep Link] Failed to load post:', err)
+            // Don't show alert, just navigate to feed normally
+            setTab('feed')
+          })
+      }
+    } catch (err) {
+      console.error('❌ [Deep Link] Error in useEffect:', err)
     }
   }, [searchParams])
 
