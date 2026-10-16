@@ -1,23 +1,33 @@
 import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
+console.log('📍 [POST REDIRECT] Component file loaded')
+
 /**
  * PostRedirect - Handle deep links to community posts
  * Redirects /community?post=ID to /communities with proper state
  */
 export default function PostRedirect() {
+  console.log('📍 [POST REDIRECT] Component function called')
+  
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   
   useEffect(() => {
     const postId = searchParams.get('post') || searchParams.get('postId')
     
-    console.log('🔄 [POST REDIRECT] Handling deep link:', postId)
+    console.log('🔄 [POST REDIRECT] Starting redirect...')
+    console.log('🔄 [POST REDIRECT] URL search params:', window.location.search)
+    console.log('🔄 [POST REDIRECT] Post ID detected:', postId)
+    console.log('🔄 [POST REDIRECT] All params:', Object.fromEntries(searchParams.entries()))
     
     if (postId) {
-      // Navigate to communities with postId parameter
-      navigate(`/communities?postId=${postId}`, { replace: true })
+      const targetUrl = `/communities?post=${postId}`
+      console.log('🔄 [POST REDIRECT] Navigating to:', targetUrl)
+      // Navigate to communities with post parameter (not postId)
+      navigate(targetUrl, { replace: true })
     } else {
+      console.log('🔄 [POST REDIRECT] No post ID found, redirecting to /communities')
       // No post ID, just go to communities
       navigate('/communities', { replace: true })
     }

@@ -1452,6 +1452,8 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
 
   const postUrl = `${window.location.origin}/community?post=${post._id}`
   const shareText = `${post.userId?.name} posted on Studdy Buddy: ${post.content?.slice(0, 100) || ''}...`
+  
+  // console.log('🔗 [SHARE] Generating share URL for post:', post._id, '| URL:', postUrl)
 
   const shareOptions = [
     {
@@ -1849,9 +1851,9 @@ function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate,
 }
 
 // ─── FEED TAB ─────────────────────────────────────────────────────────────────
-function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange, useLatestSort }) {
-  const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(true)
+function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange, useLatestSort, initialPosts = [], isDeepLink = false }) {
+  const [posts, setPosts] = useState(initialPosts)
+  const [loading, setLoading] = useState(!isDeepLink)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(1)
@@ -1869,6 +1871,15 @@ function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange, u
       onPostsChange(posts)
     }
   }, [posts, onPostsChange])
+  
+  // Sync with external initial posts (e.g., from deep links)
+  useEffect(() => {
+    if (isDeepLink && initialPosts && initialPosts.length > 0) {
+      console.log('📌 [FEED TAB] Deep link mode - setting posts to:', initialPosts.length)
+      setPosts(initialPosts)
+      setLoading(false)
+    }
+  }, [initialPosts, isDeepLink])
 
   // Fetch who I follow once — used to correctly init follow buttons on posts
   useEffect(() => {
@@ -1942,6 +1953,12 @@ function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange, u
 
   // Infinite scroll observer
   useEffect(() => {
+    // Skip infinite scroll in deep link mode
+    if (isDeepLink) {
+      console.log('⏭️ [FEED TAB] Deep link mode - disabling infinite scroll')
+      return
+    }
+    
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
@@ -1959,19 +1976,22 @@ function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange, u
     return () => {
       if (currentTarget) observer.unobserve(currentTarget)
     }
-  }, [hasMore, loading, loadingMore, page, filterCat, activeSearch, fetchPosts])
+  }, [hasMore, loading, loadingMore, page, filterCat, activeSearch, fetchPosts, isDeepLink])
 
   useEffect(() => { 
-    // Only fetch all posts if no user filter is active
-    if (!filterUserId) {
+    // Only fetch all posts if no user filter is active AND not a deep link
+    if (!filterUserId && !isDeepLink) {
+      console.log('📥 [FEED TAB] Initial fetch triggered')
       const timer = setTimeout(() => {
         setPage(1)
         setHasMore(true)
         fetchPosts('All', '', 1, false)
       }, 200)
       return () => clearTimeout(timer)
+    } else if (isDeepLink) {
+      console.log('⏭️ [FEED TAB] Deep link mode - skipping normal fetch')
     }
-  }, [fetchPosts, filterUserId])
+  }, [fetchPosts, filterUserId, isDeepLink])
 
   // Watch for filterUserId changes - load posts by specific user
   useEffect(() => {
@@ -3059,6 +3079,7 @@ export default function Communities() {
   const [filterUserId, setFilterUserId] = useState(null) // Filter feed by specific user
   const [feedPosts, setFeedPosts] = useState([]) // Track feed posts for debugging
   const [useLatestSort, setUseLatestSort] = useState(false) // Use latest sort when coming from notification
+  const [isDeepLink, setIsDeepLink] = useState(false) // Track if we're loading from a deep link
 
   // DEBUG: Log on every render
   console.log('🔵 [COMMUNITIES] Component rendered', {
@@ -3072,24 +3093,57 @@ export default function Communities() {
   // Check for postId or post in URL params (from notifications or shared links)
   useEffect(() => {
     console.log('🟢 [DEEP LINK useEffect] Running...')
-    try {
-      const postIdFromUrl = searchParams.get('postId') || searchParams.get('post')
+    console.log('🟢 [DEEP LINK] Current URL:', window.location.href)
+    console.log('🟢 [DEEP LINK] Search params:', window.location.search)
+    console.log('🟢 [DEEP LINK] All searchParams:', Object.fromEntries(searchParams.entries()))
+    
+    const postIdFromUrl = searchParams.get('postId') || searchParams.get('post')
+    console.log('🟢 [DEEP LINK] Extracted postId:', postIdFromUrl)
+    
+    if (postIdFromUrl) {
+      console.log('🔍 [DEEP LINK] Post ID from URL:', postIdFromUrl)
       
-      if (postIdFromUrl) {
-        console.log('🔍 [DEEP LINK] Post ID from URL:', postIdFromUrl)
-        
-        // Immediately navigate to feed and set scroll target
-        setTab('feed')
-        setScrollToPostId(postIdFromUrl)
-        setFilterUserId(null)
-        setUseLatestSort(true)
-        
-        console.log('✅ [DEEP LINK] Navigation set - tab: feed, scrollTo:', postIdFromUrl)
-      } else {
-        console.log('ℹ️ [DEEP LINK] No post parameter found')
+      // Mark that we're loading from a deep link
+      setIsDeepLink(true)
+      
+      // IMPORTANT: Clear previous scroll target first
+      setScrollToPostId(null)
+      
+      // Fetch the specific post and add it to feed if not present
+      const fetchAndDisplayPost = async () => {
+        try {
+          console.log('📥 [DEEP LINK] Fetching post from API...')
+          const response = await feedAPI.getPostById(postIdFromUrl)
+          
+          if (response.data.success && response.data.data.post) {
+            const fetchedPost = response.data.data.post
+            console.log('✅ [DEEP LINK] Post fetched successfully:', fetchedPost._id)
+            
+            // Navigate to feed and set scroll target
+            setTab('feed')
+            setFilterUserId(null)
+            setUseLatestSort(false)
+            
+            // Set ONLY the fetched post - don't merge with other posts
+            setFeedPosts([fetchedPost])
+            
+            // Set scroll target after state updates - increased delay for deep link
+            setTimeout(() => {
+              setScrollToPostId(postIdFromUrl)
+              console.log('✅ [DEEP LINK] Navigation set - tab: feed, scrollTo:', postIdFromUrl)
+            }, 800)
+          }
+        } catch (err) {
+          console.error('❌ [DEEP LINK] Error fetching post:', err)
+          // Still try to navigate to feed
+          setIsDeepLink(false)
+          setTab('feed')
+        }
       }
-    } catch (err) {
-      console.error('❌ [DEEP LINK] Error:', err)
+      
+      fetchAndDisplayPost()
+    } else {
+      console.log('ℹ️ [DEEP LINK] No post parameter found')
     }
   }, [searchParams])
 
@@ -3100,7 +3154,7 @@ export default function Communities() {
       console.log('🔎 Current posts in feed:', feedPosts.map(p => p._id))
       
       let attempts = 0
-      const maxAttempts = 10 // Retry up to 10 times
+      const maxAttempts = 15 // Retry up to 15 times (increased for better reliability)
       let scrolled = false // Flag to prevent multiple scrolls
       
       const scrollAndHighlight = () => {
@@ -3111,28 +3165,41 @@ export default function Communities() {
         
         if (postElement) {
           scrolled = true // Mark as scrolled
-          // Scroll to post
-          postElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          // Add highlight animation
-          postElement.style.animation = 'highlight-pulse 1.5s ease-in-out'
-          // Clear state after animation
-          setTimeout(() => setScrollToPostId(null), 1500)
-          console.log('✅ Scrolled to post:', scrollToPostId)
+          
+          // Wait a bit for any ongoing animations to complete
+          setTimeout(() => {
+            // Scroll to post with offset for better visibility
+            const yOffset = -100 // Offset from top
+            const y = postElement.getBoundingClientRect().top + window.pageYOffset + yOffset
+            window.scrollTo({ top: y, behavior: 'smooth' })
+            
+            // Add highlight animation
+            postElement.style.animation = 'highlight-pulse 2s ease-in-out'
+            postElement.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.3)'
+            
+            // Clear highlight after animation
+            setTimeout(() => {
+              postElement.style.boxShadow = ''
+              setScrollToPostId(null)
+            }, 2000)
+            
+            console.log('✅ Scrolled to post:', scrollToPostId)
+          }, 100)
         } else {
           attempts++
           if (attempts < maxAttempts) {
             // Retry after delay if post not found (might still be loading)
             console.log(`⏳ Post not found, retrying... (${attempts}/${maxAttempts})`)
-            setTimeout(scrollAndHighlight, 500)
+            setTimeout(scrollAndHighlight, 400)
           } else {
             console.log('❌ Post not found after', maxAttempts, 'attempts:', scrollToPostId)
-            console.log('❌ Available posts:', feedPosts.map(p => ({ id: p._id, content: p.content.substring(0, 50) })))
+            console.log('❌ Available posts:', feedPosts.map(p => ({ id: p._id, content: p.content?.substring(0, 30) })))
             setScrollToPostId(null)
           }
         }
       }
-      // Wait for tab switch animation to complete
-      setTimeout(scrollAndHighlight, 300)
+      // Wait for tab switch animation and render to complete
+      setTimeout(scrollAndHighlight, 500)
     }
   }, [scrollToPostId, tab, feedPosts])
 
@@ -3206,6 +3273,8 @@ export default function Communities() {
                       filterUserId={filterUserId}
                       onPostsChange={setFeedPosts}
                       useLatestSort={useLatestSort}
+                      initialPosts={feedPosts}
+                      isDeepLink={isDeepLink}
                     />
                   </div>
                   <div className="hidden lg:block">
