@@ -101,19 +101,30 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  const urlToOpen = event.notification.data?.url || '/'
+  const notificationData = event.notification.data || {}
+  const targetUrl = notificationData.url || '/'
+  
+  // Build full URL - handle both relative and absolute paths
+  const fullUrl = targetUrl.startsWith('http') 
+    ? targetUrl 
+    : self.registration.scope.replace(/\/$/, '') + targetUrl
+
+  console.log('[SW] Notification clicked! Target URL:', fullUrl)
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if app is already open in a tab
-      for (const client of clientList) {
-        if (client.url.includes(urlToOpen) && 'focus' in client) {
-          return client.focus()
-        }
+      
+      // If app is already open in any tab - focus it and navigate
+      if (clientList.length > 0) {
+        const client = clientList[0]
+        // Navigate to the target URL
+        client.navigate(fullUrl)
+        return client.focus()
       }
-      // Open new tab if app is not open
+      
+      // App is not open - open new window with target URL
       if (clients.openWindow) {
-        return clients.openWindow(urlToOpen)
+        return clients.openWindow(fullUrl)
       }
     })
   )
