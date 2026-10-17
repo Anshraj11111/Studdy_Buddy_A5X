@@ -1,7 +1,7 @@
 import { Helmet } from 'react-helmet-async'
 
 const BASE_URL = 'https://studdybuddy.a5x.in'
-const DEFAULT_IMAGE = `${BASE_URL}/og-banner.png`
+const DEFAULT_IMAGE = `${BASE_URL}/studdybuddy-logo.png`
 
 /**
  * SEO component — sets unique title, description, canonical, OG tags per route
