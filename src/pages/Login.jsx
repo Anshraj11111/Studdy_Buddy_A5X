@@ -7,6 +7,8 @@ import { useThemeStore } from '../store/themeStore'
 import ThemeToggle from '../components/ThemeToggle'
 const a5xLogo = '/studdybuddy-logo.png'
 
+import SEO from '../components/SEO'
+
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
 
 export default function Login() {
@@ -120,6 +122,12 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
       style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%)' }}>
+      <SEO
+        title="Sign In"
+        description="Sign in to Studdy Buddy — access your Robotics, IoT and AI courses, mentors and student community by A5X Industries."
+        path="/login"
+        noindex={false}
+      />
 
       {/* Background Image - Drone */}
       <div className="absolute inset-0 pointer-events-none" style={{

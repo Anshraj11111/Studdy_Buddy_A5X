@@ -9,6 +9,8 @@ import { authAPI } from '../services/api'
 const a5xLogo = '/studdybuddy-logo.png'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
+import SEO from '../components/SEO'
+
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
 
 export default function Signup() {
@@ -107,6 +109,11 @@ export default function Signup() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8 relative overflow-hidden"
       style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%)' }}>
+      <SEO
+        title="Sign Up"
+        description="Join Studdy Buddy — create your account and start learning Robotics, IoT, AI/ML and Embedded Systems with expert mentors and a peer community."
+        path="/signup"
+      />
 
       {/* Background Image - Drone */}
       <div className="absolute inset-0 pointer-events-none" style={{

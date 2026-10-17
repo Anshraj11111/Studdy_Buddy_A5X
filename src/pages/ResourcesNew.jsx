@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import SEO from '../components/SEO';
 import { 
   ArrowLeft, Search, ChevronRight, Info, Hexagon, 
   BookOpen, Play, Check, Lock, Star, Users, Clock,
@@ -2978,6 +2979,11 @@ export default function ResourcesNew() {
   
   return (
     <div className="min-h-screen bg-[#f8f9fc]">
+      <SEO
+        title="Robotics, IoT & AI Courses"
+        description="Explore structured Robotics, IoT with ESP32, AI/ML on Edge, RTOS and Embedded C courses on Studdy Buddy — designed for school students by A5X Industries."
+        path="/resources"
+      />
       <Navbar />
       
       <div className="pt-16">

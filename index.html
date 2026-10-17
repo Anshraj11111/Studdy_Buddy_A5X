@@ -2,56 +2,333 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/studdybuddy-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="Studdy Buddy - Educational platform connecting students and mentors for collaborative learning. Access resources, ask doubts, join communities." />
-    <meta name="keywords" content="education, learning, students, mentors, robotics, programming, AI, IoT, electronics" />
-    <meta name="author" content="A5X Industries" />
-    
-    <!-- PWA Meta Tags -->
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/studdybuddy-logo.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
+
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://accounts.google.com" />
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="preconnect" href="https://studdybuddy-backend.onrender.com" />
+    <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- Default SEO (overridden per-page via    -->
+    <!-- react-helmet-async on each route)       -->
+    <!-- ═══════════════════════════════════════ -->
+    <title>Studdy Buddy – Robotics, IoT & AI Courses for Students</title>
+    <meta name="description" content="Studdy Buddy by A5X Industries — structured Robotics, IoT, AI/ML and Embedded Systems courses for school students, with expert mentors, doubt resolution and peer community." />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <link rel="canonical" href="https://studdybuddy.a5x.in/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Studdy Buddy — A5X Industries" />
+    <meta property="og:title" content="Studdy Buddy – Robotics, IoT & AI Courses for Students" />
+    <meta property="og:description" content="Structured Robotics, IoT, AI/ML and Embedded Systems courses for school students, with expert mentors, doubt resolution and peer community — by A5X Industries." />
+    <meta property="og:image" content="https://studdybuddy.a5x.in/og-banner.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Studdy Buddy — Robotics & IoT Learning Platform by A5X" />
+    <meta property="og:url" content="https://studdybuddy.a5x.in/" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- Twitter / X Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Studdy Buddy – Robotics, IoT & AI Courses for Students" />
+    <meta name="twitter:description" content="Structured Robotics, IoT, AI/ML and Embedded Systems courses for school students, with expert mentors and peer community — by A5X Industries." />
+    <meta name="twitter:image" content="https://studdybuddy.a5x.in/og-banner.png" />
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- AEO — Schema.org Structured Data        -->
+    <!-- ═══════════════════════════════════════ -->
+
+    <!-- Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "EducationalOrganization",
+      "name": "Studdy Buddy",
+      "alternateName": "A5X Studdy Buddy",
+      "url": "https://studdybuddy.a5x.in",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://studdybuddy.a5x.in/studdybuddy-logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "description": "Studdy Buddy is an EdTech platform by A5X Industries for school students to learn Robotics, IoT, AI/ML, and Embedded Systems through structured courses, expert mentorship, doubt resolution, and peer community.",
+      "foundingDate": "2024",
+      "parentOrganization": {
+        "@type": "Organization",
+        "name": "A5X Industries",
+        "url": "https://a5x.in"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "availableLanguage": ["English"]
+      },
+      "sameAs": ["https://a5x.in"]
+    }
+    </script>
+
+    <!-- Course Catalog — with proper Google fields -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "Robotics & Tech Courses — Studdy Buddy",
+      "url": "https://studdybuddy.a5x.in/resources",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "item": {
+            "@type": "Course",
+            "name": "Introduction to Robotics",
+            "description": "Master robotics fundamentals — servo motors, sensors, and Arduino programming through hands-on structured lessons.",
+            "provider": {
+              "@type": "Organization",
+              "name": "Studdy Buddy by A5X Industries",
+              "sameAs": "https://studdybuddy.a5x.in"
+            },
+            "hasCourseInstance": {
+              "@type": "CourseInstance",
+              "courseMode": "online",
+              "inLanguage": "en"
+            },
+            "offers": {
+              "@type": "Offer",
+              "category": "School-partnership access",
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "item": {
+            "@type": "Course",
+            "name": "IoT with ESP32",
+            "description": "Build real-world IoT solutions using ESP32 — connect sensors to the cloud and deploy smart devices.",
+            "provider": {
+              "@type": "Organization",
+              "name": "Studdy Buddy by A5X Industries",
+              "sameAs": "https://studdybuddy.a5x.in"
+            },
+            "hasCourseInstance": {
+              "@type": "CourseInstance",
+              "courseMode": "online",
+              "inLanguage": "en"
+            },
+            "offers": {
+              "@type": "Offer",
+              "category": "School-partnership access",
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "item": {
+            "@type": "Course",
+            "name": "AI/ML on Edge",
+            "description": "Deploy TensorFlow Lite AI models on microcontrollers for real-world intelligent applications.",
+            "provider": {
+              "@type": "Organization",
+              "name": "Studdy Buddy by A5X Industries",
+              "sameAs": "https://studdybuddy.a5x.in"
+            },
+            "hasCourseInstance": {
+              "@type": "CourseInstance",
+              "courseMode": "online",
+              "inLanguage": "en"
+            },
+            "offers": {
+              "@type": "Offer",
+              "category": "School-partnership access",
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 4,
+          "item": {
+            "@type": "Course",
+            "name": "RTOS Fundamentals",
+            "description": "Understand real-time operating systems, FreeRTOS task scheduling, and embedded software architecture.",
+            "provider": {
+              "@type": "Organization",
+              "name": "Studdy Buddy by A5X Industries",
+              "sameAs": "https://studdybuddy.a5x.in"
+            },
+            "hasCourseInstance": {
+              "@type": "CourseInstance",
+              "courseMode": "online",
+              "inLanguage": "en"
+            },
+            "offers": {
+              "@type": "Offer",
+              "category": "School-partnership access",
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 5,
+          "item": {
+            "@type": "Course",
+            "name": "Embedded C Programming",
+            "description": "Write efficient, memory-safe embedded C code for microcontrollers and robotics applications.",
+            "provider": {
+              "@type": "Organization",
+              "name": "Studdy Buddy by A5X Industries",
+              "sameAs": "https://studdybuddy.a5x.in"
+            },
+            "hasCourseInstance": {
+              "@type": "CourseInstance",
+              "courseMode": "online",
+              "inLanguage": "en"
+            },
+            "offers": {
+              "@type": "Offer",
+              "category": "School-partnership access",
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- FAQ — kept for AI engines, matches visible noscript content -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is Studdy Buddy?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Studdy Buddy is an EdTech platform by A5X Industries for school students to learn Robotics, IoT, AI/ML, and Embedded Systems through structured video courses, expert mentorship, doubt resolution, and a peer learning community."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What courses are available on Studdy Buddy?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Studdy Buddy offers structured courses in Introduction to Robotics, IoT with ESP32, AI/ML on Edge, RTOS Fundamentals, and Embedded C Programming — designed for school-level students in partnership with A5X Industries."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Studdy Buddy work for school students?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Students enroll via their school's A5X Industries partnership, access structured tech courses with video lectures and quizzes, earn XP points, ask doubts from expert mentors, and participate in a peer learning community — all through a single platform."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is A5X Industries?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A5X Industries is an Indian EdTech and Robotics company that partners with schools to deliver hands-on technology education in Robotics, IoT, AI, and Embedded Systems. Studdy Buddy is A5X's flagship student learning platform."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- PWA                                     -->
+    <!-- ═══════════════════════════════════════ -->
     <meta name="theme-color" content="#6366f1" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Studdy Buddy" />
-    
-    <!-- Permissions Policy for Video/Audio -->
-    <meta http-equiv="Permissions-Policy" content="camera=*, microphone=*, display-capture=*" />
-    
-    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" sizes="72x72" href="/icons/icon-72x72.png" />
-    <link rel="apple-touch-icon" sizes="96x96" href="/icons/icon-96x96.png" />
-    <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128x128.png" />
-    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
-    
-    <!-- Open Graph / Social Media -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Studdy Buddy - Learn Together" />
-    <meta property="og:description" content="Educational platform connecting students and mentors" />
-    <meta property="og:image" content="/icons/icon-512x512.png" />
-    <meta property="og:url" content="https://studdy-buddy-a5x.vercel.app" />
-    
-    <title>Studdy Buddy - Learn Together</title>
+
+    <!-- Google Sign-In -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-    <!-- Google Analytics 4 -->
+    <!-- Google Analytics 4 — loaded async, no blocking -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-Y3X8R6MWB0"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-Y3X8R6MWB0');
+      gtag('config', 'G-Y3X8R6MWB0', { anonymize_ip: true });
     </script>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- NOSCRIPT — visible content for crawlers that don't run JS       -->
+    <!-- Matches FAQ schema above (required by Google guidelines)        -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <noscript>
+      <main style="font-family:sans-serif;max-width:860px;margin:40px auto;padding:0 20px;color:#1a1a2e;">
+        <header>
+          <h1>Studdy Buddy — Robotics, IoT &amp; AI Courses for School Students</h1>
+          <p>Studdy Buddy is an EdTech platform by <strong>A5X Industries</strong> designed for school students to master Robotics, IoT, AI/ML, and Embedded Systems through structured courses, expert mentors, doubt resolution, and a peer learning community.</p>
+        </header>
+
+        <section>
+          <h2>Courses</h2>
+          <ul>
+            <li><strong>Introduction to Robotics</strong> — Servo motors, sensors, Arduino programming and real-world robot building.</li>
+            <li><strong>IoT with ESP32</strong> — Connect sensors to the cloud and deploy smart IoT devices.</li>
+            <li><strong>AI/ML on Edge</strong> — Deploy TensorFlow Lite AI models on microcontrollers.</li>
+            <li><strong>RTOS Fundamentals</strong> — FreeRTOS task scheduling and embedded software architecture.</li>
+            <li><strong>Embedded C Programming</strong> — Memory-efficient C code for microcontrollers and robotics.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Platform Features</h2>
+          <ul>
+            <li>Expert mentorship from Robotics and IoT professionals</li>
+            <li>Doubt resolution and Q&amp;A sessions</li>
+            <li>Peer community for tech discussions and project sharing</li>
+            <li>XP-based gamified learning with rewards</li>
+            <li>School-partnership model via A5X Industries</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Frequently Asked Questions</h2>
+          <h3>What is Studdy Buddy?</h3>
+          <p>Studdy Buddy is an EdTech platform by A5X Industries for school students to learn Robotics, IoT, AI/ML, and Embedded Systems through structured video courses, expert mentorship, and a peer learning community.</p>
+
+          <h3>What courses are available on Studdy Buddy?</h3>
+          <p>Studdy Buddy offers structured courses in Introduction to Robotics, IoT with ESP32, AI/ML on Edge, RTOS Fundamentals, and Embedded C Programming — designed for school-level students.</p>
+
+          <h3>How does Studdy Buddy work for school students?</h3>
+          <p>Students enroll via their school's A5X Industries partnership, access structured tech courses, earn XP points, ask doubts from mentors, and participate in a peer learning community.</p>
+
+          <h3>What is A5X Industries?</h3>
+          <p>A5X Industries is an Indian EdTech and Robotics company that partners with schools to deliver hands-on technology education. Studdy Buddy is A5X's flagship student learning platform.</p>
+        </section>
+
+        <footer>
+          <p>Visit <a href="https://studdybuddy.a5x.in">studdybuddy.a5x.in</a> | Powered by <a href="https://a5x.in">A5X Industries</a></p>
+        </footer>
+      </main>
+    </noscript>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

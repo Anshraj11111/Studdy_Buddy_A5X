@@ -5,6 +5,7 @@ import { Star, MessageCircle, Video, Loader2, AlertCircle, Search, UserCircle2, 
 import { mentorAPI, roomAPI } from '../services/api'
 import Navbar from '../components/Navbar'
 import { setupOnlineTracking, getSocket } from '../services/socket'
+import SEO from '../components/SEO'
 
 const TOPICS = [
   { id: 'all', label: 'All Topics', color: '#818cf8' },
@@ -87,6 +88,11 @@ export default function Mentors() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <SEO
+        title="Expert Mentors — Robotics & IoT"
+        description="Connect with expert Robotics, IoT and AI mentors on Studdy Buddy. Get guidance, resolve technical doubts and accelerate your learning with A5X Industries."
+        path="/mentors"
+      />
       <Navbar />
 
       {/* Main */}

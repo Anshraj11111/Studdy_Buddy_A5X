@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import SEO from '../components/SEO'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
@@ -3212,6 +3213,11 @@ export default function Communities() {
 
   return (
     <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <SEO
+        title="Student Community"
+        description="Join the Studdy Buddy student community — discuss Robotics, IoT, AI projects, share ideas and connect with fellow learners and mentors."
+        path="/communities"
+      />
       <Navbar />
       
       {/* User Profile Modal */}

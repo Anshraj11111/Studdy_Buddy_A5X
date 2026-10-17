@@ -1,0 +1,42 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /signup
+Allow: /resources
+Allow: /communities
+Allow: /mentors
+Allow: /privacy-policy
+Allow: /terms
+
+# Disallow authenticated/private pages
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /doubts
+Disallow: /chats
+Disallow: /profile
+Disallow: /rewards
+Disallow: /api/
+
+Sitemap: https://studdybuddy.a5x.in/sitemap.xml
+
+# AI Crawlers — explicitly allowed
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
