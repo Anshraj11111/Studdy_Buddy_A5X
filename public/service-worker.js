@@ -78,7 +78,8 @@ self.addEventListener('push', (event) => {
     const options = {
       body: data.body || 'You have a new notification',
       icon: data.icon || '/icons/icon-192x192.png',
-      badge: data.badge || '/icons/icon-192x192.png',
+      badge: '/Neon Study Buddy App Icon.png',
+      image: data.image || undefined,
       data: {
         url: data.url || '/',
         type: data.type || 'general',
