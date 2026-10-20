@@ -742,13 +742,13 @@ function VideoPlayerModal({ resource, onClose, onProgressUpdate }) {
               
               {/* Blocking overlays - separate container with high z-index */}
               <div className="absolute inset-0" style={{ zIndex: 50, pointerEvents: 'none' }}>
-                {/* Bottom LEFT bar - BLACK BAR to hide YouTube logo (excluding right corner) */}
+                {/* Bottom LEFT bar - hide YouTube logo (transparent) */}
                 <div
                   className="absolute left-0 bottom-0"
                   style={{ 
                     width: 'calc(100% - 0px)',
                     height: isLandscape ? '57px' : '57px',
-                    background: '#000',
+                    background: 'transparent',
                     pointerEvents: 'all',
                     cursor: 'default',
                     zIndex: 9998,
