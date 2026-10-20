@@ -12,6 +12,7 @@ export default function Chats() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [onlineUsers, setOnlineUsers] = useState(new Set())
+  const [unreadCounts, setUnreadCounts] = useState({}) // roomId → count
   const { user } = useAuthStore()
 
   useEffect(() => {
@@ -29,6 +30,15 @@ export default function Chats() {
           if (!seenPairs.has(key)) { seenPairs.add(key); uniqueRooms.push(room) }
         }
         setRooms(uniqueRooms)
+        // Initialize unread counts from room data
+        const counts = {}
+        uniqueRooms.forEach(r => {
+          if (r.unreadCount && user?._id) {
+            const count = r.unreadCount[user._id] || 0
+            if (count > 0) counts[r._id] = count
+          }
+        })
+        setUnreadCounts(counts)
       } catch (err) {
         console.error('Failed to fetch rooms:', err)
       } finally { setLoading(false) }
@@ -64,10 +74,58 @@ export default function Chats() {
       console.log('📊 Online users updated in Chats:', Array.from(updatedSet))
       setOnlineUsers(new Set(updatedSet))
     })
+
+    // Listen for unread count updates + reorder rooms
+    socket.on('unreadUpdate', ({ roomId, unreadCount, lastMessage }) => {
+      console.log('📨 [CHATS] unreadUpdate received:', { roomId, unreadCount, lastMessage })
+      setUnreadCounts(prev => ({ ...prev, [roomId]: unreadCount }))
+      // Update lastMessage AND move room to top
+      if (lastMessage) {
+        setRooms(prev => {
+          const updated = prev.map(r =>
+            r._id === roomId ? { ...r, lastMessage } : r
+          )
+          // Move the updated room to top
+          const idx = updated.findIndex(r => r._id === roomId)
+          if (idx > 0) {
+            const [room] = updated.splice(idx, 1)
+            updated.unshift(room)
+          }
+          return [...updated]
+        })
+      }
+    })
+
+    // Also listen for notification event to update chats
+    socket.on('notification', (data) => {
+      console.log('🔔 [CHATS] notification received:', data)
+      if (data.type === 'message' && data.roomId) {
+        // Move that room to top and show unread
+        setUnreadCounts(prev => ({ ...prev, [data.roomId]: (prev[data.roomId] || 0) + 1 }))
+        setRooms(prev => {
+          const idx = prev.findIndex(r => r._id === data.roomId)
+          if (idx > 0) {
+            const updated = [...prev]
+            const [room] = updated.splice(idx, 1)
+            // Add last message preview
+            room.lastMessage = { content: data.message?.replace('sent you a message: ', '')?.replace(/^"|"$/g, '') || '' }
+            updated.unshift(room)
+            return updated
+          } else if (idx === 0 && data.message) {
+            const updated = [...prev]
+            updated[0] = { ...updated[0], lastMessage: { content: data.message?.replace('sent you a message: ', '')?.replace(/^"|"$/g, '') || '' } }
+            return updated
+          }
+          return prev
+        })
+      }
+    })
     
     // Cleanup
     return () => {
       console.log('🧹 Cleaning up online tracking in Chats page')
+      socket.off('unreadUpdate')
+      socket.off('notification')
     }
   }, [])
 
@@ -130,7 +188,7 @@ export default function Chats() {
                   initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: Math.min(index * 0.06, 0.4), type: 'spring', stiffness: 200 }}
                   className="group relative rounded-xl overflow-hidden transition-all hover:shadow-md"
-                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
+                  style={{ background: 'var(--bg-secondary)', border: `1px solid ${unreadCounts[room._id] > 0 ? '#6366f1' : 'var(--border-primary)'}` }}>
 
                   <div className="flex items-center justify-between gap-4 p-4 relative">
                     <Link to={`/chat/${room._id}`} className="flex items-center gap-3.5 flex-1 min-w-0">
@@ -157,8 +215,23 @@ export default function Chats() {
                             }}>
                             {isOnline ? 'Online' : 'Offline'}
                           </span>
+                          {/* Unread Badge */}
+                          {unreadCounts[room._id] > 0 && (
+                            <span className="ml-auto flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                              style={{ background: '#6366f1', minWidth: '20px' }}>
+                              {unreadCounts[room._id] > 99 ? '99+' : unreadCounts[room._id]}
+                            </span>
+                          )}
                         </div>
-                        <p className="text-sm truncate text-theme-secondary">{other?.email || 'No email'}</p>
+                        {/* Last Message Preview */}
+                        {room.lastMessage?.content ? (
+                          <p className={`text-xs truncate ${unreadCounts[room._id] > 0 ? 'font-semibold' : ''}`}
+                            style={{ color: unreadCounts[room._id] > 0 ? '#6366f1' : 'var(--text-secondary)' }}>
+                            {room.lastMessage.content}
+                          </p>
+                        ) : (
+                          <p className="text-sm truncate text-theme-secondary">{other?.email || 'No email'}</p>
+                        )}
                         {room.topic && (
                           <p className="text-xs mt-1 truncate px-2 py-0.5 rounded-md inline-block"
                             style={{ background: '#e0e7ff', color: '#6366f1' }}>
