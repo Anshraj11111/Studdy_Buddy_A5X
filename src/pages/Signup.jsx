@@ -132,7 +132,7 @@ export default function Signup() {
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
         className="w-full max-w-md relative z-10">
 
-        <div className="rounded-3xl p-8 relative overflow-hidden"
+        <div className="rounded-3xl p-8 relative"
           style={{
             background: 'rgba(20,20,30,0.6)',
             border: '1px solid rgba(255,255,255,0.1)',
@@ -235,7 +235,7 @@ export default function Signup() {
             <AnimatePresence>
               {formData.role === 'student' && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden">
+                  exit={{ opacity: 0, height: 0 }} className="space-y-4">
                   <div className="p-3 rounded-xl mb-3" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
                     <p className="text-xs text-purple-300">
                       💡 <strong>Free Access:</strong> Enter school code & password for free access to all resources. 
@@ -269,13 +269,14 @@ export default function Signup() {
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -8 }}
                               transition={{ duration: 0.15 }}
-                              className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden"
+                              className="absolute z-50 w-full mt-1 rounded-xl"
                               style={{
                                 background: isDark ? '#1e1b2e' : '#ffffff',
                                 border: '1px solid rgba(99,102,241,0.4)',
                                 boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                                maxHeight: 220,
+                                maxHeight: '220px',
                                 overflowY: 'auto',
+                                overflowX: 'hidden',
                               }}
                             >
                               {schools.map(school => (
