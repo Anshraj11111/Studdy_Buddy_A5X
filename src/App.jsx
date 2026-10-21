@@ -38,6 +38,18 @@ const Broadcast         = lazy(() => import('./pages/Broadcast'))
 const BroadcastLive     = lazy(() => import('./pages/BroadcastLive'))
 const SchoolChannel     = lazy(() => import('./pages/SchoolChannel'))
 const SchoolChannelAdmin = lazy(() => import('./pages/SchoolChannelAdmin'))
+
+// Prefetch most-used pages so navigation is instant
+const prefetchPages = () => {
+  import('./pages/Doubts')
+  import('./pages/ResourcesNew')
+  import('./pages/Communities')
+  import('./pages/Chats')
+  import('./pages/Mentors')
+  import('./pages/Dashboard')
+  import('./pages/MentorDashboard')
+  import('./pages/Rewards')
+}
 const PrivacyPolicy     = lazy(() => import('./pages/PrivacyPolicy'))
 const TermsConditions   = lazy(() => import('./pages/TermsConditions'))
 
@@ -77,6 +89,8 @@ function AppShell() {
       onNotification((notif) => addNew(notif))
       // Setup background push notifications (WhatsApp-style)
       setupPushNotifications()
+      // Prefetch most-used pages after login for instant navigation
+      setTimeout(prefetchPages, 2000)
     } else {
       offNotification()
       disconnectSocket()
