@@ -86,7 +86,7 @@ export default function MentorDashboard() {
   const fetchAllDoubts = async () => {
     try {
       setLoading(true)
-      const res = await doubtAPI.list(1, 50) // Reduced from 100 to 50
+      const res = await doubtAPI.list(1, 200) // Fetch all doubts
       const all = res.data.data.doubts || []
       setDoubts(all)
       setStats(prev => ({ ...prev, totalDoubts: all.length, pendingReplies: all.filter(d => !d.replies || d.replies.length === 0).length }))
