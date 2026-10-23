@@ -1,62 +1,96 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 
   <!-- Public pages only — no auth-gated routes -->
 
   <url>
     <loc>https://studdybuddy.a5x.in/</loc>
-    <lastmod>2026-09-11</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://studdybuddy.a5x.in/dashboard-light.png</image:loc>
+      <image:title>Studdy Buddy Dashboard</image:title>
+      <image:caption>Online Robotics and IoT Learning Platform</image:caption>
+    </image:image>
   </url>
 
   <url>
     <loc>https://studdybuddy.a5x.in/login</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://studdybuddy.a5x.in/signup</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
     <loc>https://studdybuddy.a5x.in/resources</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.95</priority>
+    <image:image>
+      <image:loc>https://studdybuddy.a5x.in/dashboard1.png</image:loc>
+      <image:title>Studdy Buddy Courses</image:title>
+      <image:caption>Robotics IoT AI ML Embedded Systems Courses</image:caption>
+    </image:image>
   </url>
 
   <url>
     <loc>https://studdybuddy.a5x.in/mentors</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.85</priority>
   </url>
 
   <url>
     <loc>https://studdybuddy.a5x.in/communities</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.85</priority>
   </url>
 
   <url>
     <loc>https://studdybuddy.a5x.in/privacy-policy</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
   </url>
 
   <url>
     <loc>https://studdybuddy.a5x.in/terms</loc>
-    <lastmod>2026-09-11</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
+  </url>
+
+  <!-- Course-specific pages (if you have individual course routes) -->
+  <url>
+    <loc>https://studdybuddy.a5x.in/resources/robotics</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://studdybuddy.a5x.in/resources/iot</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://studdybuddy.a5x.in/resources/ai-ml</loc>
+    <lastmod>2026-10-23</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
 
 </urlset>

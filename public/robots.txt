@@ -3,10 +3,16 @@ Allow: /
 Allow: /login
 Allow: /signup
 Allow: /resources
+Allow: /resources/
 Allow: /communities
 Allow: /mentors
 Allow: /privacy-policy
 Allow: /terms
+Allow: /*.js$
+Allow: /*.css$
+Allow: /*.jpg$
+Allow: /*.png$
+Allow: /*.webp$
 
 # Disallow authenticated/private pages
 Disallow: /dashboard
@@ -16,27 +22,63 @@ Disallow: /chats
 Disallow: /profile
 Disallow: /rewards
 Disallow: /api/
+Disallow: /*?*sessionId=
+Disallow: /*?*token=
+Disallow: /*.pdf$
+
+# Crawl delay
+Crawl-delay: 1
 
 Sitemap: https://studdybuddy.a5x.in/sitemap.xml
 
-# AI Crawlers — explicitly allowed
+# AI Crawlers — explicitly allowed for AEO
 User-agent: GPTBot
 Allow: /
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /api/
 
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /dashboard
+Disallow: /settings
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /dashboard
+Disallow: /settings
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /dashboard
+Disallow: /settings
 
 User-agent: anthropic-ai
 Allow: /
+Disallow: /dashboard
+Disallow: /settings
 
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
 Allow: /
+
+User-agent: Googlebot-Image
+Allow: /
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.webp$
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /

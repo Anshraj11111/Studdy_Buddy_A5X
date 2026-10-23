@@ -1,0 +1,24 @@
+Contact: mailto:security@a5x.in
+Expires: 2027-10-23T23:59:59.000Z
+Preferred-Languages: en, hi
+Canonical: https://studdybuddy.a5x.in/.well-known/security.txt
+Policy: https://studdybuddy.a5x.in/security-policy
+Acknowledgments: https://studdybuddy.a5x.in/security-acknowledgments
+
+# Security Disclosure Policy
+# If you discover a security vulnerability in Studdy Buddy platform,
+# please report it to us at security@a5x.in
+# 
+# We appreciate responsible disclosure and will acknowledge your
+# contribution in our security acknowledgments page.
+#
+# Please include:
+# - Description of the vulnerability
+# - Steps to reproduce
+# - Potential impact
+# - Suggested fix (if any)
+#
+# Expected response time: 48 hours
+# Expected resolution time: 7-14 days (depending on severity)
+#
+# Thank you for helping keep Studdy Buddy secure!

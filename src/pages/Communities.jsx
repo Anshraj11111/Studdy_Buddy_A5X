@@ -3219,7 +3219,6 @@ export default function Communities() {
         path="/communities"
       />
       <Navbar />
-      
       {/* User Profile Modal */}
       {viewProfileId && (
         <UserProfileModal
@@ -3231,8 +3230,8 @@ export default function Communities() {
         />
       )}
 
-      <div className="flex-1 mt-16 max-w-7xl mx-auto w-full">
-        <div className="px-3 sm:px-4 py-5 pb-20">
+      <div className="mt-16 max-w-7xl mx-auto w-full flex-1">
+        <div className="px-3 sm:px-4 py-5 pb-20"  style={{ minHeight: 'calc(100vh - 4rem)' }}>
 
           {/* Header */}
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-5">
@@ -3268,11 +3267,15 @@ export default function Communities() {
             <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
               {tab === 'feed' ? (
-                <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr_200px] gap-4">
-                  <div className="hidden lg:block">
-                    <div className="sticky top-20"><ProfileSidebar user={user} /></div>
+                <div className="flex gap-4 items-start relative">
+                  {/* Left Sidebar - Fixed */}
+                  <div className="hidden lg:block w-[220px] flex-shrink-0">
+                    <div className="sticky top-[72px]">
+                      <ProfileSidebar user={user} />
+                    </div>
                   </div>
-                  <div className="min-w-0">
+                  {/* Middle Feed - Scrolls */}
+                  <div className="flex-1 min-w-0">
                     <FeedTab 
                       user={user} 
                       setFollowChangeCallback={setOnFollowChangeCallback}
@@ -3283,8 +3286,11 @@ export default function Communities() {
                       isDeepLink={isDeepLink}
                     />
                   </div>
-                  <div className="hidden lg:block">
-                    <div className="sticky top-20"><TrendingSidebar /></div>
+                  {/* Right Sidebar - Fixed */}
+                  <div className="hidden lg:block w-[220px] flex-shrink-0">
+                    <div className="sticky top-[72px]">
+                      <TrendingSidebar />
+                    </div>
                   </div>
                 </div>
               ) : (
