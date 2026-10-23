@@ -89,7 +89,18 @@ export default function MentorDashboard() {
       const res = await doubtAPI.list(1, 200) // Fetch all doubts
       const all = res.data.data.doubts || []
       setDoubts(all)
-      setStats(prev => ({ ...prev, totalDoubts: all.length, pendingReplies: all.filter(d => !d.replies || d.replies.length === 0).length }))
+      
+      // Calculate stats based on actual status
+      const totalDoubts = all.length
+      const openDoubts = all.filter(d => d.status === 'open').length
+      const matchedDoubts = all.filter(d => d.status === 'matched').length
+      
+      // Pending = matched doubts (doubts that are matched with another doubt in a room)
+      setStats(prev => ({ 
+        ...prev, 
+        totalDoubts: totalDoubts, 
+        pendingReplies: matchedDoubts // Matched doubts are "pending" mentor attention
+      }))
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -98,8 +109,23 @@ export default function MentorDashboard() {
     try {
       const res = await roomAPI.list()
       const r = res.data.data?.rooms || []
-      setRooms(r)
-      setStats(prev => ({ ...prev, activeChats: r.length }))
+      
+      // For mentors, show only rooms where doubt status is "matched" (active mentoring needed)
+      // OR rooms where mentor has already replied (has mentor messages)
+      const relevantRooms = r.filter(room => {
+        // Include room if it's a matched doubt room (needs mentor attention)
+        if (room.doubt1?.status === 'matched' || room.doubt2?.status === 'matched') {
+          return true
+        }
+        // Or if room has messages (already active conversation)
+        if (room.lastMessage) {
+          return true
+        }
+        return false
+      })
+      
+      setRooms(relevantRooms)
+      setStats(prev => ({ ...prev, activeChats: relevantRooms.length }))
     } catch (err) { console.error(err) }
   }
 
