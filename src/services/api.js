@@ -358,7 +358,6 @@ export default api;
 // server-side against ADMIN_SECRET stored only in the backend environment.
 export const adminAPI = {
   getStats: () => api.get('/admin/stats'),
-  getOnlineUsers: () => api.get('/admin/online-users'),
   getUsers: (params = {}) => api.get('/admin/users', { params }),
   toggleUser: (id) => api.put(`/admin/users/${id}/toggle`),
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
