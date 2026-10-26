@@ -287,10 +287,10 @@ export default function Doubts() {
         ) : doubts.length > 0 ? (
           <div className="space-y-3">
             {doubts.map((doubt, i) => (
-              <motion.div key={doubt._id}
+              <motion.div key={doubt._id} className="fade-in-delay-1"
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.05, 0.3), type: "spring", stiffness: 200 }}
-                className="group rounded-xl p-3 sm:p-4 transition-all hover:shadow-md"
+                className="group rounded-xl p-3 sm:p-4 transition-all hover:shadow-md card-hover container-glow border-glow"
                 style={{ 
                   background: "var(--bg-secondary)", 
                   border: "1px solid var(--border-primary)"

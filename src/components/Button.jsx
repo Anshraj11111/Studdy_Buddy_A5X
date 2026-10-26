@@ -6,7 +6,7 @@ export default function Button({
   className = '',
   ...props
 }) {
-  const base = 'font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden'
+  const base = 'font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden btn-smooth ripple-effect'
 
   const variants = {
     primary:   'btn-primary',

@@ -128,7 +128,7 @@ export default function Login() {
     }
   }
 
-  const inputClass = `w-full pl-11 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-white/[0.05] border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white/[0.08]`
+  const inputClass = `w-full pl-11 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-white/[0.05] border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white/[0.08] input-smooth`
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
@@ -155,9 +155,9 @@ export default function Login() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
-        className="w-full max-w-md relative z-10">
+        className="w-full max-w-md relative z-10 fade-in">
 
-        <div className="rounded-3xl p-8 relative overflow-hidden"
+        <div className="rounded-3xl p-8 relative overflow-hidden card-hover"
           style={{
             background: 'rgba(20,20,30,0.6)',
             border: '1px solid rgba(255,255,255,0.1)',
@@ -279,7 +279,7 @@ export default function Login() {
 
             <motion.button type="submit" disabled={loading}
               whileHover={{ scale: loading ? 1 : 1.01 }} whileTap={{ scale: loading ? 1 : 0.99 }}
-              className="w-full py-3 text-white font-semibold rounded-xl flex items-center justify-center gap-2 mt-5 disabled:opacity-50 transition-all"
+              className="w-full py-3 text-white font-semibold rounded-xl flex items-center justify-center gap-2 mt-5 disabled:opacity-50 transition-all btn-smooth ripple-effect"
               style={{ 
                 background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%)', 
                 boxShadow: '0 4px 15px rgba(99,102,241,0.4)' 
@@ -318,7 +318,7 @@ export default function Login() {
                 }
               }}
               disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 py-3 rounded-xl font-semibold text-sm transition disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-3 py-3 rounded-xl font-semibold text-sm transition disabled:opacity-60 btn-smooth"
               style={{
                 background: isDark ? 'rgba(255,255,255,0.06)' : '#ffffff',
                 border: isDark ? '1px solid rgba(255,255,255,0.15)' : '1px solid #dadce0',
