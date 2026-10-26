@@ -5,6 +5,7 @@ import { LogIn, Mail, Lock, UserCircle, Loader2, AlertCircle, Eye, EyeOff } from
 import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import ThemeToggle from '../components/ThemeToggle'
+import { hapticSuccess, hapticError, hapticLight, hapticMedium } from '../utils/haptics'
 const a5xLogo = '/studdybuddy-logo.png'
 
 import SEO from '../components/SEO'
@@ -85,7 +86,14 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setErrors({})
     const errs = validate()
-    if (Object.keys(errs).length) { setErrors(errs); return }
+    if (Object.keys(errs).length) { 
+      hapticError(); // Vibrate on validation error
+      setErrors(errs); 
+      return 
+    }
+    
+    hapticMedium(); // Vibrate on form submit
+    
     try {
       // Pass schoolPassword to backend for alternative authentication
       const { user } = await login(
@@ -95,8 +103,11 @@ export default function Login() {
         formData.mentorCode,
         formData.schoolPassword || '' // Empty string if not provided
       )
+      
+      hapticSuccess(); // Success vibration on login
       navigate(user.role === 'mentor' ? '/mentor-dashboard' : '/dashboard', { replace: true })
     } catch (err) {
+      hapticError(); // Error vibration on login failure
       // Better error messages for users
       let errorMsg = err.message || 'Login failed';
       
@@ -194,7 +205,7 @@ export default function Login() {
                 <input type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••"
                   value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
                   className={inputClass + ' pr-11'} />
-                <button type="button" onClick={() => setShowPassword(v => !v)}
+                <button type="button" onClick={() => { hapticLight(); setShowPassword(v => !v); }}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -236,7 +247,7 @@ export default function Login() {
                   <input type={showSchoolPassword ? 'text' : 'password'} name="schoolPassword" placeholder="Enter your school password"
                     value={formData.schoolPassword} onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
                     className={inputClass.replace('pl-11', 'pl-4') + ' pr-11'} />
-                  <button type="button" onClick={() => setShowSchoolPassword(v => !v)}
+                  <button type="button" onClick={() => { hapticLight(); setShowSchoolPassword(v => !v); }}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
                     {showSchoolPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -297,6 +308,7 @@ export default function Login() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
+                hapticMedium(); // Vibrate on Google sign in
                 // Click the hidden Google rendered button
                 const hiddenBtn = document.querySelector('#google-btn-hidden-login div[role="button"]')
                 if (hiddenBtn) {

@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore'
 import { useThemeStore } from '../store/themeStore'
 import ThemeToggle from '../components/ThemeToggle'
 import { authAPI } from '../services/api'
+import { hapticSuccess, hapticError, hapticLight, hapticMedium, hapticSelection } from '../utils/haptics'
 const a5xLogo = '/studdybuddy-logo.png'
 
 const SKILLS = ['Robotics', 'Programming', 'AI/ML', 'IoT', 'Electronics', 'Embedded Systems']
@@ -89,16 +90,30 @@ export default function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setErrors({})
     const errs = validate()
-    if (Object.keys(errs).length) { setErrors(errs); return }
+    if (Object.keys(errs).length) { 
+      hapticError(); // Vibrate on validation error
+      setErrors(errs); 
+      return 
+    }
+    
+    hapticMedium(); // Vibrate on form submit
+    
     try {
       await register(formData.email, formData.password, formData.name, formData.role, formData.mentorCode, formData.skills, formData.schoolName, formData.schoolPassword, formData.city)
+      hapticSuccess(); // Success vibration on signup
       navigate(formData.role === 'mentor' ? '/mentor-dashboard' : '/dashboard', { replace: true })
-    } catch (err) { setErrors({ submit: err.message || 'Registration failed' }) }
+    } catch (err) { 
+      hapticError(); // Error vibration on signup failure
+      setErrors({ submit: err.message || 'Registration failed' }) 
+    }
   }
 
-  const toggleSkill = (skill) => setFormData(p => ({
-    ...p, skills: p.skills.includes(skill) ? p.skills.filter(s => s !== skill) : [...p.skills, skill]
-  }))
+  const toggleSkill = (skill) => {
+    hapticSelection(); // Vibrate on skill selection
+    setFormData(p => ({
+      ...p, skills: p.skills.includes(skill) ? p.skills.filter(s => s !== skill) : [...p.skills, skill]
+    }))
+  }
 
   const inputClass = `w-full pl-11 pr-4 py-2.5 rounded-xl text-sm transition-all outline-none bg-white/[0.05] border border-white/10 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:bg-white/[0.08]`
 
@@ -188,7 +203,7 @@ export default function Signup() {
                 <input type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••"
                   value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
                   className={inputClass + ' pr-10'} />
-                <button type="button" onClick={() => setShowPassword(v => !v)}
+                <button type="button" onClick={() => { hapticLight(); setShowPassword(v => !v); }}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -204,7 +219,7 @@ export default function Signup() {
                 <input type={showConfirm ? 'text' : 'password'} name="confirmPassword" placeholder="••••••••"
                   value={formData.confirmPassword} onChange={e => setFormData(p => ({ ...p, confirmPassword: e.target.value }))}
                   className={inputClass + ' pr-10'} />
-                <button type="button" onClick={() => setShowConfirm(v => !v)}
+                <button type="button" onClick={() => { hapticLight(); setShowConfirm(v => !v); }}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
                   {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -249,7 +264,7 @@ export default function Signup() {
                         {/* Trigger button */}
                         <button
                           type="button"
-                          onClick={() => setSchoolDropOpen(v => !v)}
+                          onClick={() => { hapticLight(); setSchoolDropOpen(v => !v); }}
                           className={inputClass.replace('pl-11', 'pl-4') + ' flex items-center justify-between text-left w-full'}
                           style={{ cursor: 'pointer' }}
                         >
@@ -283,7 +298,7 @@ export default function Signup() {
                                 <li key={school}>
                                   <button
                                     type="button"
-                                    onClick={() => { setFormData(p => ({ ...p, schoolName: school })); setSchoolDropOpen(false) }}
+                                    onClick={() => { hapticSelection(); setFormData(p => ({ ...p, schoolName: school })); setSchoolDropOpen(false); }}
                                     className="w-full text-left px-4 py-2.5 text-sm font-medium transition-colors"
                                     style={{
                                       color: formData.schoolName === school
@@ -331,7 +346,7 @@ export default function Signup() {
                       />
                       <button
                         type="button"
-                        onClick={() => setShowSchoolPass(v => !v)}
+                        onClick={() => { hapticLight(); setShowSchoolPass(v => !v); }}
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 transition-opacity hover:opacity-100 opacity-60"
                         tabIndex={-1}
                       >
@@ -426,6 +441,7 @@ export default function Signup() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
+                hapticMedium(); // Vibrate on Google sign up
                 const hiddenBtn = document.querySelector('#google-btn-hidden-signup div[role="button"]')
                 if (hiddenBtn) {
                   hiddenBtn.click()
