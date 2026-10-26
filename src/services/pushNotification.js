@@ -48,17 +48,31 @@ export async function setupPushNotifications() {
     const registration = await navigator.serviceWorker.ready
     console.log('[Push] ✅ Service worker ready')
 
-    // 3. Check existing subscription — avoid re-subscribing if already done
+    // 3. Check existing subscription and its age
     const existing = await registration.pushManager.getSubscription()
     if (existing) {
-      // Already subscribed — just make sure backend has it saved (idempotent)
-      console.log('[Push] Found existing subscription, refreshing backend...')
-      await saveSubscriptionToBackend(existing)
-      console.log('[Push] ✅ Already subscribed, subscription refreshed on backend')
-      _setupDone = true
-      return true
+      console.log('[Push] Found existing subscription, checking age...')
+      
+      // Check subscription age from backend
+      const isStale = await isSubscriptionStale(existing)
+      
+      if (isStale) {
+        console.log('[Push] ⚠️ Subscription is stale (>30 days), forcing refresh...')
+        // Unsubscribe old subscription
+        await existing.unsubscribe()
+        console.log('[Push] Old subscription unsubscribed, will create new one')
+        // Continue to step 4 to create fresh subscription
+      } else {
+        // Subscription is fresh — just refresh backend record
+        console.log('[Push] Subscription is fresh, refreshing backend...')
+        await saveSubscriptionToBackend(existing)
+        console.log('[Push] ✅ Already subscribed, subscription refreshed on backend')
+        _setupDone = true
+        return true
+      }
+    } else {
+      console.log('[Push] No existing subscription found')
     }
-    console.log('[Push] No existing subscription found')
 
     // 4. Request notification permission
     console.log('[Push] Checking notification permission...')
@@ -106,6 +120,32 @@ export async function setupPushNotifications() {
     return false
   } finally {
     _setupInProgress = false
+  }
+}
+
+/**
+ * Check if a subscription is stale (>30 days old).
+ * Queries backend for subscription creation date.
+ * @param {PushSubscription} subscription
+ * @returns {Promise<boolean>} true if subscription is >30 days old
+ */
+async function isSubscriptionStale(subscription) {
+  try {
+    const subJson = subscription.toJSON()
+    const response = await api.post('/push/check-subscription-age', {
+      endpoint: subJson.endpoint,
+    })
+    
+    const { ageInDays, createdAt } = response.data.data || {}
+    console.log('[Push] Subscription age:', ageInDays, 'days (created:', createdAt, ')')
+    
+    // Consider stale if >30 days old
+    const STALE_THRESHOLD_DAYS = 30
+    return ageInDays > STALE_THRESHOLD_DAYS
+  } catch (err) {
+    console.warn('[Push] Failed to check subscription age, assuming fresh:', err.message)
+    // If backend check fails, assume subscription is fine (fail-open)
+    return false
   }
 }
 
