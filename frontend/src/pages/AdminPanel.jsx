@@ -1,0 +1,2303 @@
+import { useState, useEffect, useCallback } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { adminAPI, adminPaymentAPI } from "../services/api"
+import api from "../services/api"
+import { Users, GraduationCap, BookOpen, FileText, Search, RefreshCw, Shield, Loader2, Trash2, ToggleLeft, ToggleRight, LogOut, TrendingUp, Settings, School, MapPin, MessageSquare, Filter, Calendar, Eye, Radio, Plus, UserPlus, Mail, User, Phone, KeyRound, Edit2, Save, X, Download, DollarSign, CheckCircle, XCircle, Clock, Trophy } from "lucide-react"
+import PaymentManagement from '../components/PaymentManagement'
+import CourseManagement from '../components/CourseManagement'
+import CourseAccessManagement from '../components/CourseAccessManagement'
+import QuizManagement from '../components/QuizManagement'
+import QuizResults from '../components/QuizResults'
+
+// ── Pre-Registered Students Component ──────────────────────────────────────
+function PreRegisteredStudents({ showToast }) {
+  const [students, setStudents] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newStudent, setNewStudent] = useState({ name: '', email: '', phone: '', schoolName: '', schoolPassword: '' })
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [updating, setUpdating] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [schoolFilter, setSchoolFilter] = useState('all')
+  const [schoolCodes, setSchoolCodes] = useState([])
+  const [totalCount, setTotalCount] = useState(0) // Track total from API
+
+  // Fetch available school codes
+  const fetchSchoolCodes = async () => {
+    try {
+      const res = await api.get('/admin/school-codes')
+      setSchoolCodes(res.data.data.schoolCodes || [])
+    } catch (err) {
+      console.error('Error fetching school codes:', err)
+    }
+  }
+
+  const fetchStudents = async () => {
+    setLoading(true)
+    try {
+      const params = { status: statusFilter }
+      if (searchQuery.trim()) params.search = searchQuery.trim()
+      if (schoolFilter !== 'all') params.schoolName = schoolFilter
+      
+      const res = await api.get('/admin/pre-registered', { params })
+      setStudents(res.data.data.students || [])
+      setTotalCount(res.data.data.total || 0) // Store total count
+    } catch (err) {
+      console.error('Error fetching pre-registered students:', err)
+      showToast(err.response?.data?.error?.message || 'Failed to load students', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchSchoolCodes()
+  }, [])
+
+  useEffect(() => {
+    fetchStudents()
+  }, [statusFilter, schoolFilter])
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    fetchStudents()
+  }
+
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    if (!newStudent.name.trim() || !newStudent.email.trim() || !newStudent.schoolPassword.trim()) {
+      showToast('Name, email, and school password are required', 'error')
+      return
+    }
+
+    setCreating(true)
+    try {
+      await api.post('/admin/pre-register', newStudent)
+      setNewStudent({ name: '', email: '', phone: '', schoolName: '', schoolPassword: '' })
+      fetchStudents()
+      showToast('Student pre-registered successfully!', 'success')
+    } catch (err) {
+      console.error('Error pre-registering student:', err)
+      showToast(err?.response?.data?.error?.message || 'Failed to pre-register student', 'error')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Delete pre-registration for "${name}"?`)) return
+    try {
+      await api.delete(`/admin/pre-registered/${id}`)
+      setStudents(prev => prev.filter(s => s._id !== id))
+      showToast('Pre-registration deleted', 'success')
+    } catch (err) {
+      console.error('Error deleting pre-registration:', err)
+      const errorMsg = err?.response?.data?.error?.message || err?.message || 'Failed to delete pre-registration'
+      showToast(errorMsg, 'error')
+    }
+  }
+
+  const handleEdit = (student) => {
+    setEditingId(student._id)
+    setEditForm({
+      name: student.name,
+      email: student.email,
+      phone: student.phone || '',
+      schoolName: student.schoolName || '',
+      schoolPassword: student.schoolPassword
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditForm({})
+  }
+
+  const handleUpdate = async (id) => {
+    if (!editForm.name.trim() || !editForm.email.trim() || !editForm.schoolPassword.trim()) {
+      showToast('Name, email, and school password are required', 'error')
+      return
+    }
+
+    setUpdating(true)
+    try {
+      await api.put(`/admin/pre-registered/${id}`, editForm)
+      setStudents(prev => prev.map(s => s._id === id ? { ...s, ...editForm } : s))
+      setEditingId(null)
+      setEditForm({})
+      showToast('Student details updated successfully!', 'success')
+    } catch (err) {
+      console.error('Error updating pre-registration:', err)
+      showToast(err?.response?.data?.error?.message || 'Failed to update student', 'error')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    let password = ''
+    for (let i = 0; i < 8; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    setNewStudent(prev => ({ ...prev, schoolPassword: password }))
+  }
+
+  const exportToCSV = () => {
+    if (students.length === 0) {
+      showToast('No students to export', 'error')
+      return
+    }
+
+    // CSV headers
+    const headers = ['SR NO', 'NAME', 'EMAIL', 'PHONE', 'SCHOOL CODE', 'PASSWORD', 'STATUS']
+    
+    // CSV rows
+    const rows = students.map((student, index) => [
+      index + 1,
+      student.name,
+      student.email,
+      student.phone || '',
+      student.schoolName || 'Bardsley',
+      student.schoolPassword,
+      student.isUsed ? 'USED' : 'PENDING'
+    ])
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    
+    link.setAttribute('href', url)
+    link.setAttribute('download', `pre-registered-students-${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    showToast(`Exported ${students.length} students successfully!`, 'success')
+  }
+
+  return (
+    <div>
+      <div style={{ borderRadius: 18, background: 'var(--bg-tertiary)', border: '1px solid var(--border-secondary)', backdropFilter: 'blur(20px)', overflow: 'hidden', marginBottom: 24 }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#10b981,#059669,transparent)' }} />
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Plus size={18} color="#10b981" />
+          <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>Pre-Register Student</span>
+        </div>
+        <form onSubmit={handleCreate} style={{ padding: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>Student Name *</label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input type="text" placeholder="Enter student name" value={newStudent.name} onChange={e => setNewStudent(p => ({ ...p, name: e.target.value }))} style={{ width: '100%', padding: '10px 14px 10px 38px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>Email *</label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input type="email" placeholder="student@email.com" value={newStudent.email} onChange={e => setNewStudent(p => ({ ...p, email: e.target.value }))} style={{ width: '100%', padding: '10px 14px 10px 38px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>Phone (Optional)</label>
+              <div style={{ position: 'relative' }}>
+                <Phone size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input type="text" placeholder="Phone number" value={newStudent.phone} onChange={e => setNewStudent(p => ({ ...p, phone: e.target.value }))} style={{ width: '100%', padding: '10px 14px 10px 38px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>School Code (Optional)</label>
+              <div style={{ position: 'relative' }}>
+                <User size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input type="text" placeholder="School code" value={newStudent.schoolName} onChange={e => setNewStudent(p => ({ ...p, schoolName: e.target.value }))} style={{ width: '100%', padding: '10px 14px 10px 38px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>School Password *</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <KeyRound size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input type="text" placeholder="School password" value={newStudent.schoolPassword} onChange={e => setNewStudent(p => ({ ...p, schoolPassword: e.target.value }))} style={{ width: '100%', padding: '10px 14px 10px 38px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 14, outline: 'none' }} />
+                </div>
+                <button type="button" onClick={generateRandomPassword} style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.1)', color: '#10b981', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>Generate</button>
+              </div>
+            </div>
+          </div>
+          <motion.button type="submit" disabled={creating} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: 'var(--text-primary)', cursor: creating ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, opacity: creating ? 0.6 : 1 }}>
+            {creating ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />Creating...</> : <><Plus size={16} />Pre-Register Student</>}
+          </motion.button>
+        </form>
+      </div>
+      <div style={{ borderRadius: 18, background: 'var(--bg-tertiary)', border: '1px solid var(--border-secondary)', backdropFilter: 'blur(20px)', overflow: 'hidden' }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(99,102,241,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Users size={18} color="#818cf8" />
+              <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 15 }}>Pre-Registered Students</span>
+              {totalCount > 0 && <span style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', borderRadius: 99, padding: '2px 10px', fontSize: 11, fontWeight: 700 }}>{totalCount}</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <select value={schoolFilter} onChange={e => setSchoolFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', border: '1px solid var(--border-primary)', color: '#e0e7ff', fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
+                <option value="all" style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>All Schools</option>
+                {schoolCodes.map(code => (
+                  <option key={code} value={code} style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>{code}</option>
+                ))}
+              </select>
+              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: '6px 12px', borderRadius: 8, background: 'rgba(99,102,241,0.15)', border: '1px solid var(--border-primary)', color: '#e0e7ff', fontSize: 13, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
+                <option value="all" style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>All Status</option>
+                <option value="unused" style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>Unused</option>
+                <option value="used" style={{ background: '#1e293b', color: '#e0e7ff', fontWeight: 600 }}>Used</option>
+              </select>
+              <button onClick={exportToCSV} style={{ background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, color: '#22c55e', cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600 }} title="Export to CSV"><Download size={14} /> Export</button>
+              <button onClick={fetchStudents} style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid var(--border-primary)', borderRadius: 8, color: '#a5b4fc', cursor: 'pointer', padding: '6px 10px', display: 'flex', alignItems: 'center' }}><RefreshCw size={14} /></button>
+            </div>
+          </div>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8 }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{ width: '100%', padding: '8px 14px 8px 38px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}
+              />
+            </div>
+            <button type="submit" style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(99,102,241,0.3)', background: 'rgba(99,102,241,0.15)', color: '#818cf8', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>Search</button>
+            {searchQuery && (
+              <button type="button" onClick={() => { setSearchQuery(''); fetchStudents(); }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(148,163,184,0.1)', color: '#94a3b8', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Clear</button>
+            )}
+          </form>
+        </div>
+        <div style={{ padding: '16px', maxHeight: 600, overflowY: 'auto', overflowX: 'auto' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40 }}><Loader2 size={28} style={{ color: '#818cf8', animation: 'spin 1s linear infinite' }} /><p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 12 }}>Loading students...</p></div>
+          ) : students.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40 }}><Users size={48} style={{ color: 'rgba(148,163,184,0.3)', marginBottom: 12 }} /><p style={{ color: 'var(--text-muted)', fontSize: 14 }}>No pre-registered students</p><p style={{ color: 'var(--text-tertiary)', fontSize: 12, marginTop: 4 }}>Create a pre-registration above to get started</p></div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+              <thead>
+                <tr style={{ background: 'rgba(99,102,241,0.1)', borderRadius: 8 }}>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(99,102,241,0.9)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }}>Student Name</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(99,102,241,0.9)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(99,102,241,0.9)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(99,102,241,0.9)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>School Code</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(99,102,241,0.9)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Password</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', color: 'rgba(99,102,241,0.9)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', color: 'rgba(99,102,241,0.9)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', borderTopRightRadius: 8, borderBottomRightRadius: 8 }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((student, i) => (
+                  <motion.tr key={student._id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }} style={{ background: student.isUsed ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.03)', border: student.isUsed ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(99,102,241,0.1)' }}>
+                    {editingId === student._id ? (
+                      <>
+                        <td style={{ padding: '14px 16px', borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }}>
+                          <input type="text" value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <input type="text" value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <input type="text" value={editForm.schoolName} onChange={e => setEditForm(p => ({ ...p, schoolName: e.target.value }))} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <input type="text" value={editForm.schoolPassword} onChange={e => setEditForm(p => ({ ...p, schoolPassword: e.target.value }))} style={{ width: '100%', padding: '8px 12px', borderRadius: 6, background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)', fontSize: 12, outline: 'none' }} />
+                        </td>
+                        <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                          {student.isUsed ? <span style={{ background: 'rgba(34,197,94,0.2)', color: '#22c55e', padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 700, display: 'inline-block' }}>✓ USED</span> : <span style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 700, display: 'inline-block' }}>PENDING</span>}
+                        </td>
+                        <td style={{ padding: '14px 16px', textAlign: 'center', borderTopRightRadius: 8, borderBottomRightRadius: 8 }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                            <button onClick={() => handleUpdate(student._id)} disabled={updating} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)', color: '#22c55e', cursor: updating ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, opacity: updating ? 0.6 : 1 }}>
+                              {updating ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={12} />}
+                            </button>
+                            <button onClick={handleCancelEdit} disabled={updating} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(148,163,184,0.4)', background: 'rgba(148,163,184,0.12)', color: '#94a3b8', cursor: updating ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, opacity: updating ? 0.6 : 1 }}><X size={12} /></button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td style={{ padding: '14px 16px', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, borderTopLeftRadius: 8, borderBottomLeftRadius: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{student.name[0]?.toUpperCase()}</div>
+                            <span>{student.name}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{student.email}</td>
+                        <td style={{ padding: '14px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{student.phone || '—'}</td>
+                        <td style={{ padding: '14px 16px', color: 'var(--text-secondary)', fontSize: 12 }}>{student.schoolName || '—'}</td>
+                        <td style={{ padding: '14px 16px' }}><span style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, fontFamily: 'monospace', border: '1px solid rgba(245,158,11,0.3)', display: 'inline-block' }}>{student.schoolPassword}</span></td>
+                        <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                          {student.isUsed ? <span style={{ background: 'rgba(34,197,94,0.2)', color: '#22c55e', padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 700, display: 'inline-block' }}>✓ USED</span> : <span style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8', padding: '4px 10px', borderRadius: 6, fontSize: 10, fontWeight: 700, display: 'inline-block' }}>PENDING</span>}
+                        </td>
+                        <td style={{ padding: '14px 16px', textAlign: 'center', borderTopRightRadius: 8, borderBottomRightRadius: 8 }}>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                            <button onClick={() => handleEdit(student)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.12)', color: '#818cf8', cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><Edit2 size={12} /></button>
+                            <button onClick={() => handleDelete(student._id, student.name)} style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.12)', color: '#f87171', cursor: 'pointer', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><Trash2 size={12} /></button>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+// â”€â”€ School Channel Management Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function SchoolChannelManagement({ showToast }) {
+  const [channels, setChannels] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newChannel, setNewChannel] = useState({ schoolName: '', city: '', description: '' })
+  const [expandedChannel, setExpandedChannel] = useState(null)
+  const [channelMembers, setChannelMembers] = useState({})
+  const [loadingMembers, setLoadingMembers] = useState({})
+  
+  // Broadcast message state
+  const [showBroadcast, setShowBroadcast] = useState(false)
+  const [broadcastMessage, setBroadcastMessage] = useState('')
+  const [selectedChannels, setSelectedChannels] = useState([])
+  const [broadcasting, setBroadcasting] = useState(false)
+
+  const fetchChannels = async () => {
+    setLoading(true)
+    try {
+      console.log('Fetching channels from: /school-channel/admin/all')
+      const res = await api.get('/school-channel/admin/all')
+      console.log('Channels response:', res.data)
+      setChannels(res.data.channels || [])
+    } catch (err) {
+      console.error('Error fetching channels:', err)
+      console.error('Error response:', err.response?.data)
+      showToast(err.response?.data?.error?.message || 'Failed to load channels', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchChannelMembers = async (channelId) => {
+    if (channelMembers[channelId]) {
+      // Already loaded
+      setExpandedChannel(expandedChannel === channelId ? null : channelId)
+      return
+    }
+
+    setLoadingMembers(prev => ({ ...prev, [channelId]: true }))
+    try {
+      const res = await api.get(`/school-channel/admin/${channelId}/members`)
+      setChannelMembers(prev => ({ ...prev, [channelId]: res.data.members || [] }))
+      setExpandedChannel(channelId)
+    } catch (err) {
+      console.error('Error fetching members:', err)
+      showToast('Failed to load members', 'error')
+    } finally {
+      setLoadingMembers(prev => ({ ...prev, [channelId]: false }))
+    }
+  }
+
+  useEffect(() => {
+    fetchChannels()
+  }, [])
+
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    if (!newChannel.schoolName.trim() || !newChannel.city.trim()) {
+      showToast('School name and city are required', 'error')
+      return
+    }
+
+    setCreating(true)
+    try {
+      await api.post('/school-channel/admin/create', newChannel)
+      setNewChannel({ schoolName: '', city: '', description: '' })
+      fetchChannels()
+      showToast('School channel created!', 'success')
+    } catch (err) {
+      console.error('Error creating channel:', err)
+      showToast(err?.response?.data?.error?.message || 'Failed to create channel', 'error')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleDelete = async (id, schoolName) => {
+    if (!window.confirm(`Delete channel "${schoolName}"? All students will lose access.`)) return
+    try {
+      await api.delete(`/school-channel/admin/${id}`)
+      setChannels(prev => prev.filter(c => c._id !== id))
+      showToast('Channel deleted', 'success')
+    } catch (err) {
+      console.error('Error deleting channel:', err)
+      showToast('Failed to delete channel', 'error')
+    }
+  }
+
+  const handleBroadcastMessage = async () => {
+    if (!broadcastMessage.trim()) {
+      showToast('Please enter a message', 'error')
+      return
+    }
+    if (selectedChannels.length === 0) {
+      showToast('Please select at least one school', 'error')
+      return
+    }
+
+    setBroadcasting(true)
+    try {
+      await api.post('/school-channel/admin/broadcast', {
+        message: broadcastMessage,
+        channelIds: selectedChannels
+      })
+      setBroadcastMessage('')
+      setSelectedChannels([])
+      setShowBroadcast(false)
+      showToast(`Message sent to ${selectedChannels.length} school(s)!`, 'success')
+    } catch (err) {
+      console.error('Error broadcasting:', err)
+      showToast('Failed to send broadcast message', 'error')
+    } finally {
+      setBroadcasting(false)
+    }
+  }
+
+  const toggleChannelSelection = (channelId) => {
+    setSelectedChannels(prev => 
+      prev.includes(channelId) 
+        ? prev.filter(id => id !== channelId)
+        : [...prev, channelId]
+    )
+  }
+
+  const selectAllChannels = () => {
+    setSelectedChannels(channels.map(c => c._id))
+  }
+
+  const deselectAllChannels = () => {
+    setSelectedChannels([])
+  }
+
+  return (
+    <div>
+      {/* Broadcast Message Section */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden',
+        marginBottom: 24
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#ec4899,#f43f5e,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: showBroadcast ? '1px solid rgba(236,72,153,0.1)' : 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: 'pointer'
+        }} onClick={() => setShowBroadcast(!showBroadcast)}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Radio size={18} color="#ec4899" />
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>Broadcast Message to Schools</span>
+          </div>
+          <motion.div
+            animate={{ rotate: showBroadcast ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4 6L8 10L12 6" stroke="#ec4899" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </motion.div>
+        </div>
+        
+        <AnimatePresence>
+          {showBroadcast && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{ overflow: 'hidden' }}
+            >
+              <div style={{ padding: '20px' }}>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                    Broadcast Message *
+                  </label>
+                  <textarea
+                    placeholder="Type your message to send to selected schools..."
+                    value={broadcastMessage}
+                    onChange={e => setBroadcastMessage(e.target.value)}
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      borderRadius: 10,
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--border-primary)',
+                      color: "var(--text-primary)",
+                      fontSize: 14,
+                      outline: 'none',
+                      resize: 'vertical',
+                      fontFamily: 'inherit'
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <label style={{ color: "var(--text-secondary)", fontSize: 12, fontWeight: 600 }}>
+                      Select Schools ({selectedChannels.length} selected)
+                    </label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" onClick={selectAllChannels} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(236,72,153,0.3)', background: 'rgba(236,72,153,0.1)', color: '#ec4899', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        Select All
+                      </button>
+                      <button type="button" onClick={deselectAllChannels} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(148,163,184,0.3)', background: 'rgba(148,163,184,0.1)', color: '#94a3b8', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ maxHeight: 200, overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: 10, padding: 8 }}>
+                    {channels.length === 0 ? (
+                      <p style={{ color: "var(--text-muted)", fontSize: 13, textAlign: 'center', padding: 20 }}>
+                        No channels available. Create channels first.
+                      </p>
+                    ) : (
+                      channels.map(channel => (
+                        <label key={channel._id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer', background: selectedChannels.includes(channel._id) ? 'rgba(236,72,153,0.15)' : 'transparent', marginBottom: 4, transition: 'background 0.2s' }}>
+                          <input type="checkbox" checked={selectedChannels.includes(channel._id)} onChange={() => toggleChannelSelection(channel._id)} style={{ cursor: 'pointer', width: 16, height: 16 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ color: "var(--text-primary)", fontSize: 13, fontWeight: 600 }}>{channel.schoolName}</div>
+                            <div style={{ color: "var(--text-secondary)", fontSize: 11 }}>{channel.city} â€¢ {channel.memberCount || 0} students</div>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <motion.button type="button" onClick={handleBroadcastMessage} disabled={broadcasting || !broadcastMessage.trim() || selectedChannels.length === 0} whileHover={{ scale: broadcasting ? 1 : 1.02 }} whileTap={{ scale: broadcasting ? 1 : 0.98 }} style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: broadcasting || !broadcastMessage.trim() || selectedChannels.length === 0 ? 'rgba(148,163,184,0.3)' : 'linear-gradient(135deg,#ec4899,#f43f5e)', color: "var(--text-primary)", cursor: broadcasting || !broadcastMessage.trim() || selectedChannels.length === 0 ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, opacity: broadcasting || !broadcastMessage.trim() || selectedChannels.length === 0 ? 0.5 : 1 }}>
+                  {broadcasting ? (<><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />Sending...</>) : (<><Radio size={16} />Send Broadcast Message</>)}
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Create New Channel Form */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden',
+        marginBottom: 24
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#10b981,#059669,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(16,185,129,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
+        }}>
+          <Plus size={18} color="#10b981" />
+          <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>Create New School Channel</span>
+        </div>
+        <form onSubmit={handleCreate} style={{ padding: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                School Name *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Delhi Public School"
+                value={newChannel.schoolName}
+                onChange={e => setNewChannel(p => ({ ...p, schoolName: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid var(--border-primary)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                City *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Delhi"
+                value={newChannel.city}
+                onChange={e => setNewChannel(p => ({ ...p, city: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid var(--border-primary)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none'
+                }}
+              />
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+              Description (Optional)
+            </label>
+            <textarea
+              placeholder="Add a description for this school channel..."
+              value={newChannel.description}
+              onChange={e => setNewChannel(p => ({ ...p, description: e.target.value }))}
+              rows={3}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid var(--border-primary)',
+                color: "var(--text-primary)",
+                fontSize: 14,
+                outline: 'none',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+            />
+          </div>
+          <motion.button
+            type="submit"
+            disabled={creating}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            style={{
+              padding: '12px 24px',
+              borderRadius: 10,
+              border: 'none',
+              background: 'linear-gradient(135deg,#10b981,#059669)',
+              color: "var(--text-primary)",
+              cursor: creating ? 'not-allowed' : 'pointer',
+              fontSize: 14,
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              opacity: creating ? 0.6 : 1
+            }}
+          >
+            {creating ? (
+              <>
+                <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Plus size={16} />
+                Create Channel
+              </>
+            )}
+          </motion.button>
+        </form>
+      </div>
+
+      {/* Existing Channels List */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden'
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(99,102,241,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <School size={18} color="#818cf8" />
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>Active School Channels</span>
+            {channels.length > 0 && (
+              <span style={{
+                background: 'rgba(99,102,241,0.2)',
+                color: '#818cf8',
+                borderRadius: 99,
+                padding: '2px 10px',
+                fontSize: 11,
+                fontWeight: 700
+              }}>
+                {channels.length}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={fetchChannels}
+            style={{
+              background: 'rgba(99,102,241,0.15)',
+              border: "1px solid var(--border-primary)",
+              borderRadius: 8,
+              color: '#a5b4fc',
+              cursor: 'pointer',
+              padding: '6px 10px',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <RefreshCw size={14} />
+          </button>
+        </div>
+        <div style={{ padding: '16px', maxHeight: 500, overflowY: 'auto' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Loader2 size={28} style={{ color: '#818cf8', animation: 'spin 1s linear infinite' }} />
+              <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 12 }}>Loading channels...</p>
+            </div>
+          ) : channels.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <School size={48} style={{ color: 'rgba(148,163,184,0.3)', marginBottom: 12 }} />
+              <p style={{ color: "var(--text-muted)", fontSize: 14 }}>No school channels created yet</p>
+              <p style={{ color: "var(--text-tertiary)", fontSize: 12, marginTop: 4 }}>
+                Create a channel above to get started
+              </p>
+            </div>
+          ) : (
+            channels.map((channel, i) => (
+              <motion.div
+                key={channel._id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+              >
+                <div
+                  onClick={() => fetchChannelMembers(channel._id)}
+                  style={{
+                    padding: '16px',
+                    borderRadius: 14,
+                    marginBottom: 12,
+                    background: expandedChannel === channel._id ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.04)',
+                    border: expandedChannel === channel._id ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(99,102,241,0.15)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+                    <div style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: 'linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.25))',
+                      border: '1px solid rgba(99,102,241,0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      flexShrink: 0
+                    }}>
+                      <School size={28} color="#818cf8" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 style={{
+                        color: "var(--text-primary)",
+                        fontSize: 16,
+                        fontWeight: 700,
+                        margin: 0,
+                        marginBottom: 4
+                      }}>
+                        {channel.schoolName}
+                      </h3>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        marginBottom: 8,
+                        flexWrap: 'wrap'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                          <MapPin size={14} color="#60a5fa" />
+                          <span style={{ color: "var(--text-secondary)" }}>{channel.city}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                          <Users size={14} color="#34d399" />
+                          <span style={{ color: "var(--text-secondary)" }}>
+                            {channel.memberCount || 0} {channel.memberCount === 1 ? 'student' : 'students'}
+                          </span>
+                        </div>
+                      </div>
+                      {channel.description && (
+                        <p style={{
+                          color: "var(--text-tertiary)",
+                          fontSize: 12,
+                          margin: '8px 0',
+                          lineHeight: 1.5
+                        }}>
+                          {channel.description}
+                        </p>
+                      )}
+                      <div style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: 'monospace', marginTop: 8 }}>
+                        Created {new Date(channel.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(channel._id, channel.schoolName)
+                      }}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 8,
+                        border: '1px solid rgba(239,68,68,0.4)',
+                        background: 'rgba(239,68,68,0.12)',
+                        color: '#f87171',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        flexShrink: 0
+                      }}
+                    >
+                      <Trash2 size={13} />
+                      Delete
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Expanded Members List */}
+                <AnimatePresence>
+                  {expandedChannel === channel._id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      style={{
+                        overflow: 'hidden',
+                        marginTop: -8,
+                        marginBottom: 12,
+                        marginLeft: 60,
+                        marginRight: 12
+                      }}
+                    >
+                      <div style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(99,102,241,0.1)',
+                        borderRadius: 12,
+                        padding: 16,
+                        marginTop: 8
+                      }}>
+                        <h4 style={{
+                          color: "var(--text-primary)",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          marginBottom: 12,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}>
+                          <Users size={16} color="#818cf8" />
+                          Channel Members ({channelMembers[channel._id]?.length || 0})
+                        </h4>
+
+                        {loadingMembers[channel._id] ? (
+                          <div style={{ textAlign: 'center', padding: 20 }}>
+                            <Loader2 size={20} style={{ color: '#818cf8', animation: 'spin 1s linear infinite' }} />
+                          </div>
+                        ) : channelMembers[channel._id]?.length === 0 ? (
+                          <p style={{ color: "var(--text-muted)", fontSize: 13, textAlign: 'center', padding: 20 }}>
+                            No students have joined yet
+                          </p>
+                        ) : (
+                          <div style={{ display: 'grid', gap: 10, maxHeight: 300, overflowY: 'auto' }}>
+                            {channelMembers[channel._id]?.map((member) => (
+                              <div key={member._id} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: 12,
+                                background: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(99,102,241,0.1)',
+                                borderRadius: 10
+                              }}>
+                                {member.profileImage ? (
+                                  <img
+                                    src={member.profileImage}
+                                    alt={member.name}
+                                    style={{
+                                      width: 40,
+                                      height: 40,
+                                      borderRadius: 10,
+                                      objectFit: 'cover',
+                                      border: '2px solid rgba(99,102,241,0.3)'
+                                    }}
+                                  />
+                                ) : (
+                                  <div style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 10,
+                                    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: 16,
+                                    fontWeight: 700,
+                                    color: '#fff'
+                                  }}>
+                                    {member.name[0]?.toUpperCase()}
+                                  </div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                                    <span style={{ color: "var(--text-primary)", fontSize: 14, fontWeight: 600 }}>
+                                      {member.name}
+                                    </span>
+                                    {member.role === 'mentor' && (
+                                      <span style={{
+                                        background: 'rgba(139,92,246,0.2)',
+                                        color: '#c4b5fd',
+                                        padding: '2px 8px',
+                                        borderRadius: 6,
+                                        fontSize: 10,
+                                        fontWeight: 700
+                                      }}>
+                                        ADMIN
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>
+                                    {member.email}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: 11, color: "var(--text-tertiary)" }}>
+                                    <span>XP: {member.xp || 0}</span>
+                                    <span>•</span>
+                                    <span>Joined {new Date(member.createdAt).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// â”€â”€ Message Monitoring Dashboard Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+// -- Post Moderation Dashboard Component ------------------------------------------
+function PostModerationDashboard({ showToast }) {
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [deleting, setDeleting] = useState(null)
+
+  const fetchPosts = async (p = 1, s = '') => {
+    setLoading(true)
+    try {
+      const res = await adminAPI.getAllPosts({ page: p, limit: 20, search: s })
+      if (res.data?.success) {
+        setPosts(res.data.data.posts)
+        setTotal(res.data.data.total)
+        setTotalPages(res.data.data.totalPages)
+      }
+    } catch (err) {
+      showToast('Failed to fetch posts', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { fetchPosts(page, search) }, [page])
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    setPage(1)
+    fetchPosts(1, search)
+  }
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this post? This action cannot be undone.')) return
+    setDeleting(id)
+    try {
+      await adminAPI.deletePost(id)
+      setPosts(prev => prev.filter(p => p._id !== id))
+      setTotal(prev => prev - 1)
+      showToast('Post deleted successfully')
+    } catch (err) {
+      showToast('Failed to delete post', 'error')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  const timeAgo = (date) => {
+    const diff = Date.now() - new Date(date).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
+  }
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10,8,30,0.7)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+      <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-5 py-4" style={{ borderBottom: "1px solid rgba(99,102,241,0.15)" }}>
+        <div>
+          <h2 className="text-base font-bold text-theme-primary flex items-center gap-2">
+            <MessageSquare size={16} style={{ color: '#6366f1' }} /> Post Moderation
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: "var(--text-tertiary)" }}>{total} total posts</p>
+        </div>
+        <form onSubmit={handleSearch} className="flex gap-2">
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search posts..."
+            className="px-3 py-1.5 rounded-lg text-xs outline-none"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--text-primary)", width: 200 }}
+          />
+          <button type="submit" className="px-3 py-1.5 rounded-lg text-xs font-semibold transition" style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white" }}>
+            Search
+          </button>
+        </form>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={28} className="animate-spin" style={{ color: '#6366f1' }} />
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-2">
+          <MessageSquare size={40} style={{ color: "rgba(148,163,184,0.3)" }} />
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>No posts found</p>
+        </div>
+      ) : (
+        <div className="divide-y" style={{ borderColor: "rgba(99,102,241,0.1)" }}>
+          {posts.map(post => (
+            <div key={post._id} className="px-5 py-4 hover:bg-white/[0.02] transition">
+              <div className="flex items-start justify-between gap-3">
+                {/* User info */}
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-white text-sm font-bold"
+                    style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                    {post.userId?.profileImage
+                      ? <img src={post.userId.profileImage} alt="" className="w-full h-full object-cover" />
+                      : post.userId?.name?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                        {post.userId?.name || 'Deleted User'}
+                      </span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                        style={{ background: post.userId?.role === 'mentor' ? 'rgba(251,191,36,0.15)' : 'rgba(99,102,241,0.15)', color: post.userId?.role === 'mentor' ? '#fbbf24' : '#818cf8' }}>
+                        {post.userId?.role || 'user'}
+                      </span>
+                      <span className="text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                        {timeAgo(post.createdAt)}
+                      </span>
+                      {post.category && post.category !== 'All' && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: "rgba(16,185,129,0.15)", color: "#34d399" }}>
+                          {post.category}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm mt-1.5 leading-relaxed" style={{ color: "var(--text-secondary)", wordBreak: "break-word" }}>
+                      {post.content}
+                    </p>
+                    {post.mediaUrl && (
+                      <div className="mt-2">
+                        {post.mediaType === 'image'
+                          ? <img src={post.mediaUrl} alt="media" className="rounded-lg max-h-40 object-cover" />
+                          : <video src={post.mediaUrl} className="rounded-lg max-h-40" controls />
+                        }
+                      </div>
+                    )}
+                    <div className="flex items-center gap-4 mt-2 text-[11px]" style={{ color: "var(--text-tertiary)" }}>
+                      <span>?? {post.likes?.length || 0} likes</span>
+                      <span>?? {post.comments?.length || 0} comments</span>
+                      <span className="font-mono text-[10px] opacity-50">{post._id}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delete button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                  onClick={() => handleDelete(post._id)}
+                  disabled={deleting === post._id}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-50"
+                  style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+                  {deleting === post._id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  Delete
+                </motion.button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: "1px solid rgba(99,102,241,0.1)" }}>
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>Page {page} of {totalPages} ({total} posts)</p>
+          <div className="flex gap-2">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-30"
+              style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "#818cf8" }}>
+              Prev
+            </button>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition disabled:opacity-30"
+              style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", color: "#818cf8" }}>
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+function MessageMonitoringDashboard({ showToast }) {
+  const [messages, setMessages] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [channels, setChannels] = useState([])
+  const [filters, setFilters] = useState({
+    channelId: '',
+    search: '',
+    dateFrom: '',
+    dateTo: '',
+  })
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [deleting, setDeleting] = useState(null)
+  const [expandedMessage, setExpandedMessage] = useState(null)
+
+  const fetchChannels = async () => {
+    try {
+      const res = await api.get('/school-channel/admin/all')
+      setChannels(res.data.channels || [])
+    } catch (err) {
+      console.error('Error fetching channels:', err)
+    }
+  }
+
+  const fetchMessages = async (reset = false) => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        limit: '50',
+        skip: reset ? '0' : String(page * 50),
+        ...(filters.channelId && { channelId: filters.channelId }),
+        ...(filters.search && { search: filters.search }),
+        ...(filters.dateFrom && { dateFrom: filters.dateFrom }),
+        ...(filters.dateTo && { dateTo: filters.dateTo }),
+      })
+
+      const res = await api.get(`/school-channel/admin/messages/all?${params}`)
+
+      const data = res.data.data
+      setMessages(reset ? data.messages : [...messages, ...data.messages])
+      setHasMore(data.hasMore)
+      if (reset) setPage(0)
+    } catch (err) {
+      console.error('Error fetching messages:', err)
+      showToast('Failed to load messages', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchChannels()
+  }, [])
+
+  useEffect(() => {
+    fetchMessages(true)
+  }, [filters])
+
+  const handleDeleteMessage = async (messageId, channelName) => {
+    if (!window.confirm(`Delete this message from ${channelName}? This cannot be undone.`)) return
+
+    setDeleting(messageId)
+    try {
+      await api.delete(`/school-channel/admin/messages/${messageId}`)
+      setMessages(prev => prev.filter(m => m._id !== messageId))
+      showToast('Message deleted successfully', 'success')
+    } catch (err) {
+      console.error('Error deleting message:', err)
+      showToast('Failed to delete message', 'error')
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  const loadMore = () => {
+    setPage(p => p + 1)
+    fetchMessages(false)
+  }
+
+  const resetFilters = () => {
+    setFilters({
+      channelId: '',
+      search: '',
+      dateFrom: '',
+      dateTo: '',
+    })
+  }
+
+  return (
+    <div>
+      {/* Filters Section */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden',
+        marginBottom: 24
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#f59e0b,#d97706,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(245,158,11,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Filter size={18} color="#fbbf24" />
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>Filter Messages</span>
+          </div>
+          <button
+            onClick={resetFilters}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 8,
+              border: '1px solid rgba(148,163,184,0.3)',
+              background: 'rgba(148,163,184,0.1)',
+              color: '#94a3b8',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Clear Filters
+          </button>
+        </div>
+        <div style={{ padding: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                Filter by School Channel
+              </label>
+              <select
+                value={filters.channelId}
+                onChange={e => setFilters(p => ({ ...p, channelId: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(15,10,40,0.6)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="" style={{ background: '#1a1625', color: "var(--text-primary)" }}>All Channels</option>
+                {channels.map(ch => (
+                  <option key={ch._id} value={ch._id} style={{ background: '#1a1625', color: "var(--text-primary)" }}>
+                    {ch.schoolName} - {ch.city}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                Search Messages
+              </label>
+              <input
+                type="text"
+                placeholder="Search message content..."
+                value={filters.search}
+                onChange={e => setFilters(p => ({ ...p, search: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(15,10,40,0.6)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+                onFocus={e => e.target.style.borderColor = 'rgba(245,158,11,0.6)'}
+                onBlur={e => e.target.style.borderColor = 'rgba(245,158,11,0.3)'}
+              />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                From Date
+              </label>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={e => setFilters(p => ({ ...p, dateFrom: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(15,10,40,0.6)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  colorScheme: 'dark'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: "var(--text-secondary)", fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                To Date
+              </label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={e => setFilters(p => ({ ...p, dateTo: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(15,10,40,0.6)',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  color: "var(--text-primary)",
+                  fontSize: 14,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  colorScheme: 'dark'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages List */}
+      <div style={{
+        borderRadius: 18,
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border-secondary)",
+        backdropFilter: 'blur(20px)',
+        overflow: 'hidden'
+      }}>
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#ef4444,#dc2626,transparent)' }} />
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid rgba(239,68,68,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <MessageSquare size={18} color="#f87171" />
+            <span style={{ color: "var(--text-primary)", fontWeight: 700, fontSize: 15 }}>All Messages</span>
+            {messages.length > 0 && (
+              <span style={{
+                background: 'rgba(239,68,68,0.2)',
+                color: '#f87171',
+                borderRadius: 99,
+                padding: '2px 10px',
+                fontSize: 11,
+                fontWeight: 700
+              }}>
+                {messages.length}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => fetchMessages(true)}
+            style={{
+              background: 'rgba(239,68,68,0.15)',
+              border: "1px solid var(--border-primary)",
+              borderRadius: 8,
+              color: '#fca5a5',
+              cursor: 'pointer',
+              padding: '6px 10px',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+          >
+            <RefreshCw size={14} />
+          </button>
+        </div>
+        <div style={{ padding: '16px', maxHeight: 600, overflowY: 'auto' }}>
+          {loading && messages.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Loader2 size={28} style={{ color: '#f87171', animation: 'spin 1s linear infinite' }} />
+              <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 12 }}>Loading messages...</p>
+            </div>
+          ) : messages.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <MessageSquare size={48} style={{ color: 'rgba(148,163,184,0.3)', marginBottom: 12 }} />
+              <p style={{ color: "var(--text-muted)", fontSize: 14 }}>No messages found</p>
+              <p style={{ color: "var(--text-tertiary)", fontSize: 12, marginTop: 4 }}>
+                Try adjusting your filters
+              </p>
+            </div>
+          ) : (
+            <>
+              {messages.map((message, i) => (
+                <motion.div
+                  key={message._id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  style={{
+                    padding: '16px',
+                    borderRadius: 14,
+                    marginBottom: 12,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(239,68,68,0.15)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+                    {/* Sender Avatar */}
+                    {message.sender?.profileImage ? (
+                      <img
+                        src={message.sender.profileImage}
+                        alt={message.sender.name}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 10,
+                          objectFit: 'cover',
+                          border: '2px solid rgba(239,68,68,0.3)',
+                          flexShrink: 0
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: '#fff',
+                        flexShrink: 0
+                      }}>
+                        {message.sender?.name?.[0]?.toUpperCase() || '?'}
+                      </div>
+                    )}
+
+                    {/* Message Content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Sender + Channel Info */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                        <span style={{ color: "var(--text-primary)", fontSize: 14, fontWeight: 700 }}>
+                          {message.sender?.name || 'Unknown'}
+                        </span>
+                        {message.sender?.role === 'mentor' && (
+                          <span style={{
+                            background: 'rgba(139,92,246,0.2)',
+                            color: '#c4b5fd',
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            fontSize: 10,
+                            fontWeight: 700
+                          }}>
+                            ADMIN
+                          </span>
+                        )}
+                        <span style={{ color: "var(--text-tertiary)", fontSize: 12 }}>â†’</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <School size={12} color="#60a5fa" />
+                          <span style={{ color: "var(--text-secondary)", fontSize: 12 }}>
+                            {message.channel?.schoolName} ({message.channel?.city})
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Message Text */}
+                      <p style={{
+                        color: "var(--text-primary)",
+                        fontSize: 13,
+                        lineHeight: 1.6,
+                        marginBottom: 8,
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                      }}>
+                        {message.content}
+                      </p>
+
+                      {/* Metadata */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, color: "var(--text-tertiary)" }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Calendar size={11} />
+                          {new Date(message.createdAt).toLocaleString()}
+                        </div>
+                        {message.reactions && message.reactions.length > 0 && (
+                          <span>â€¢ {message.reactions.length} reactions</span>
+                        )}
+                        {message.isPinned && (
+                          <span style={{ color: '#fbbf24' }}>â€¢ ðŸ“Œ Pinned</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Delete Button */}
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleDeleteMessage(message._id, `${message.channel?.schoolName} (${message.channel?.city})`)}
+                      disabled={deleting === message._id}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: 8,
+                        border: '1px solid rgba(239,68,68,0.4)',
+                        background: 'rgba(239,68,68,0.12)',
+                        color: '#f87171',
+                        cursor: deleting === message._id ? 'not-allowed' : 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        flexShrink: 0,
+                        opacity: deleting === message._id ? 0.5 : 1
+                      }}
+                    >
+                      {deleting === message._id ? (
+                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                      ) : (
+                        <Trash2 size={13} />
+                      )}
+                      Delete
+                    </motion.button>
+                  </div>
+                </motion.div>
+              ))}
+
+              {/* Load More Button */}
+              {hasMore && (
+                <div style={{ textAlign: 'center', marginTop: 16 }}>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={loadMore}
+                    disabled={loading}
+                    style={{
+                      padding: '10px 24px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(239,68,68,0.3)',
+                      background: 'rgba(239,68,68,0.12)',
+                      color: '#f87171',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      opacity: loading ? 0.5 : 1
+                    }}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Eye size={14} />
+                        Load More Messages
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function AdminPanel() {
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem("admin_auth") === "true")
+  const [pw, setPw] = useState("")
+  const [pwErr, setPwErr] = useState("")
+  const [stats, setStats] = useState(null)
+  const [users, setUsers] = useState([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [tab, setTab] = useState("all")
+  const [search, setSearch] = useState("")
+  const [page, setPage] = useState(1)
+  const [actionLoading, setActionLoading] = useState(null)
+  const [toast, setToast] = useState(null)
+  const [mainTab, setMainTab] = useState("users")
+  const [editingUser, setEditingUser] = useState(null)   // user object being edited
+  const [editForm, setEditForm]     = useState({})       // form state for edit modal
+  const [editSaving, setEditSaving] = useState(false)
+
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    if (!pw.trim()) return
+    // Store password in sessionStorage so the api interceptor sends it as x-admin-secret.
+    // Then make a test request — if the backend accepts it, we're in.
+    sessionStorage.setItem("admin_secret", pw.trim())
+    try {
+      await adminAPI.getStats()
+      // Backend accepted the secret → grant access
+      sessionStorage.setItem("admin_auth", "true")
+      setAuthed(true)
+    } catch (err) {
+      // Backend rejected → clear stored secret, show error
+      sessionStorage.removeItem("admin_secret")
+      sessionStorage.removeItem("admin_auth")
+      const status = err?.response?.status
+      setPwErr(status === 401 || status === 403 ? "Wrong password" : "Server error, try again")
+    }
+  }
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    try {
+      const role = tab === "all" ? undefined : tab
+      const [statsRes, usersRes] = await Promise.all([
+        adminAPI.getStats(),
+        adminAPI.getUsers({ role, search, page, limit: 20 }),
+      ])
+      setStats(statsRes.data.data)
+      setUsers(usersRes.data.data.users)
+      setTotal(usersRes.data.data.total)
+    } catch (err) {
+      const status = err?.response?.status
+      const msg = err?.response?.data?.error?.message || err.message
+      showToast(status === 401 ? "Invalid admin credentials" : `Failed: ${msg}`, "error")
+    } finally {
+      setLoading(false)
+    }
+  }, [tab, search, page])
+
+  useEffect(() => {
+    if (authed) fetchData()
+  }, [authed, fetchData])
+
+  const handleToggle = async (id) => {
+    setActionLoading(id + "_toggle")
+    try {
+      const res = await adminAPI.toggleUser(id)
+      const updated = res.data.data.user
+      setUsers(prev => prev.map(u => u._id === id ? { ...u, isActive: updated.isActive } : u))
+      showToast(`User ${updated.isActive ? "activated" : "deactivated"}`)
+    } catch { showToast("Action failed", "error") }
+    finally { setActionLoading(null) }
+  }
+
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Delete user "${name}"? This cannot be undone.`)) return
+    setActionLoading(id + "_delete")
+    try {
+      await adminAPI.deleteUser(id)
+      setUsers(prev => prev.filter(u => u._id !== id))
+      setTotal(t => t - 1)
+      showToast("User deleted")
+    } catch { showToast("Delete failed", "error") }
+    finally { setActionLoading(null) }
+  }
+
+  const handleEditOpen = (u) => {
+    setEditingUser(u)
+    setEditForm({
+      name:           u.name           || '',
+      schoolName:     u.schoolName     || '',
+      schoolPassword: u.schoolPasswordPlain || '', // Use PLAIN password for editing
+      city:           u.city           || '',
+    })
+  }
+
+  const handleEditSave = async () => {
+    if (!editForm.name.trim()) { showToast("Name cannot be empty", "error"); return }
+    setEditSaving(true)
+    try {
+      const payload = {
+        name:           editForm.name.trim(),
+        schoolName:     editForm.schoolName.trim(),
+        schoolPassword: editForm.schoolPassword.trim(), // blank = remove password
+        city:           editForm.city.trim(),
+      }
+
+      const res = await adminAPI.updateUser(editingUser._id, payload)
+      const updated = res.data.data.user
+      // Merge updated fields including schoolPassword so next Edit shows correct value
+      setUsers(prev => prev.map(u => u._id === updated._id
+        ? { ...u, ...updated }
+        : u
+      ))
+      setEditingUser(null)
+      
+      // Show message about re-login requirement
+      const message = res.data.message || "User updated successfully"
+      showToast(message)
+    } catch (err) {
+      showToast(err?.response?.data?.error?.message || "Update failed", "error")
+    } finally { setEditSaving(false) }
+  }
+
+  // -- LOGIN SCREEN ----------------------------------------------
+  if (!authed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ position: "relative" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/image.png)", backgroundSize: "cover", backgroundPosition: "center" }} />
+        <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "var(--bg-overlay)" }} />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-sm relative" style={{ zIndex: 10 }}>
+          <div className="rounded-2xl overflow-hidden" style={{ background: "var(--bg-card)", border: "1px solid rgba(99,102,241,0.3)", backdropFilter: "blur(24px)" }}>
+            <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
+            <div className="p-8">
+              <div className="text-center mb-6">
+                <motion.div animate={{ boxShadow: ["0 0 0px rgba(99,102,241,0)", "0 0 24px rgba(99,102,241,0.6)", "0 0 0px rgba(99,102,241,0)"] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1))", border: "1px solid rgba(99,102,241,0.4)" }}>
+                  <img src="/studdybuddy-logo.png" alt="Studdy Buddy" className="w-14 h-14 object-contain" />
+                </motion.div>
+                <h1 className="text-2xl font-bold text-theme-primary">Admin Panel</h1>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", fontFamily: "monospace" }}>Studdy Buddy Control Center</p>
+              </div>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <input type="password" placeholder="Enter admin password" value={pw}
+                  onChange={e => { setPw(e.target.value); setPwErr("") }} autoFocus
+                  className="w-full text-theme-primary placeholder-gray-500 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid var(--border-primary)" }} />
+                {pwErr && <p className="text-red-400 text-sm">{pwErr}</p>}
+                <motion.button type="submit" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  className="w-full py-3 text-theme-primary font-semibold rounded-xl"
+                  style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 4px 16px rgba(99,102,241,0.4)" }}>
+                  Login
+                </motion.button>
+              </form>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    )
+  }
+
+  // -- MAIN PANEL ------------------------------------------------
+  const STAT_CARDS = [
+    { label: "Total Users", value: stats?.totalUsers, icon: Users, color: "#818cf8" },
+    { label: "Students", value: stats?.totalStudents, icon: GraduationCap, color: "#60a5fa" },
+    { label: "Mentors", value: stats?.totalMentors, icon: Shield, color: "#c4b5fd" },
+    { label: "Course Access", value: stats?.studentsWithAccess, icon: CheckCircle, color: "#34d399" },
+    { label: "Resources", value: stats?.totalResources, icon: FileText, color: "#fbbf24" },
+  ]
+
+  return (
+    <div className="min-h-screen" style={{ position: "relative" }}>
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, backgroundImage: "url(/image.png)", backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: "var(--bg-overlay)" }} />
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 z-[9999] px-5 py-3 rounded-xl text-sm font-semibold shadow-xl flex items-center gap-2"
+            style={{ background: toast.type === "error" ? "rgba(239,68,68,0.95)" : "rgba(52,211,153,0.95)", backdropFilter: "blur(12px)", color: 'white', minWidth: 250 }}>
+            {toast.type === "error" ? "❌" : "✅"} {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Edit User Modal ──────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {editingUser && (
+          <>
+            {/* Backdrop */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setEditingUser(null)}
+              className="fixed inset-0 z-[9998]"
+              style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="w-full max-w-md rounded-2xl overflow-hidden"
+                style={{ background: 'var(--bg-card)', border: '1px solid rgba(99,102,241,0.3)', boxShadow: '0 32px 80px rgba(0,0,0,0.6)' }}>
+                {/* Header */}
+                <div className="h-0.5" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+                <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                  <div>
+                    <h3 className="font-bold text-theme-primary text-base flex items-center gap-2">
+                      <Edit2 size={15} style={{ color: '#818cf8' }} /> Edit User
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                      {editingUser.email}
+                    </p>
+                  </div>
+                  <button onClick={() => setEditingUser(null)}
+                    className="p-2 rounded-lg transition hover:bg-white/10"
+                    style={{ color: 'var(--text-tertiary)' }}>
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Form */}
+                <div className="px-6 py-5 space-y-4">
+                  {/* Name */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>Name</label>
+                    <input
+                      type="text" value={editForm.name}
+                      onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* School Name */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                      School Code <span style={{ color: '#818cf8' }}>(for free access)</span>
+                    </label>
+                    <input
+                      type="text" value={editForm.schoolName}
+                      onChange={e => setEditForm(p => ({ ...p, schoolName: e.target.value }))}
+                      placeholder="e.g. Bardsley"
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* School Password */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                      School Password <span style={{ color: 'var(--text-tertiary)', fontWeight: 400 }}>(edit to change)</span>
+                    </label>
+                    <input
+                      type="text" value={editForm.schoolPassword}
+                      onChange={e => setEditForm(p => ({ ...p, schoolPassword: e.target.value }))}
+                      placeholder="Leave blank to remove password"
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition font-mono"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* City */}
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5" style={{ color: 'var(--text-secondary)' }}>City</label>
+                    <input
+                      type="text" value={editForm.city}
+                      onChange={e => setEditForm(p => ({ ...p, city: e.target.value }))}
+                      placeholder="e.g. Katni"
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition"
+                      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  {/* Info note */}
+                  <div className="flex items-start gap-2 p-3 rounded-xl text-xs"
+                    style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', color: '#c7d2fe' }}>
+                    💡 Setting school code + password gives the student <strong>free access</strong> to all courses instantly.
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="flex gap-3 px-6 pb-6">
+                  <button onClick={() => setEditingUser(null)}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-primary)', color: 'var(--text-secondary)' }}>
+                    Cancel
+                  </button>
+                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                    onClick={handleEditSave} disabled={editSaving}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                    {editSaving ? <><Loader2 size={14} className="animate-spin" /> Saving...</> : <><Save size={14} /> Save Changes</>}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Header */}
+      <div className="sticky top-0" style={{ zIndex: 50, background: "var(--bg-overlay)", borderBottom: "1px solid var(--border-primary)", backdropFilter: "blur(24px)" }}>
+        <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <motion.div animate={{ boxShadow: ["0 0 0px rgba(99,102,241,0)", "0 0 16px rgba(99,102,241,0.5)", "0 0 0px rgba(99,102,241,0)"] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.1),rgba(139,92,246,0.1))", border: "1px solid rgba(99,102,241,0.4)" }}>
+              <img src="/studdybuddy-logo.png" alt="Studdy Buddy" className="w-7 h-7 object-contain" />
+            </motion.div>
+            <div>
+              <h1 className="font-bold text-theme-primary text-sm">Admin Panel</h1>
+              <p style={{ color: "var(--text-tertiary)", fontSize: "0.65rem", fontFamily: "monospace" }}>Studdy Buddy Control Center</p>
+            </div>
+          </div>
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={() => { sessionStorage.removeItem("admin_auth"); setAuthed(false) }}
+            className="flex items-center gap-2 px-3 py-2 text-xs font-semibold rounded-xl transition"
+            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+            <LogOut size={13} /> Logout
+          </motion.button>
+        </div>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6" style={{ zIndex: 5 }}>
+
+        {/* Main tab switcher */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+          {[
+            { id: 'users', label: 'User Management', icon: <Users size={14} /> },
+            { id: 'schools', label: 'School Channels', icon: <School size={14} /> },
+            { id: 'prereg', label: 'Pre-Register Students', icon: <UserPlus size={14} /> },
+            { id: 'access', label: 'Course Access', icon: <CheckCircle size={14} /> },
+            { id: 'courses', label: 'Courses', icon: <BookOpen size={14} /> },
+            { id: 'quizzes', label: 'Quiz Management', icon: <Trophy size={14} /> },
+            { id: 'quiz-results', label: 'Quiz Results', icon: <TrendingUp size={14} /> },
+            { id: 'payments', label: 'Payment Verification', icon: <DollarSign size={14} /> },
+            { id: 'posts', label: 'Post Moderation', icon: <FileText size={14} /> },
+            { id: 'messages', label: 'Message Monitor', icon: <Radio size={14} /> },
+          ].map(t => (
+            <button key={t.id} onClick={() => setMainTab(t.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '9px 18px', borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                background: mainTab === t.id ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.05)',
+                border: mainTab === t.id ? 'none' : '1px solid rgba(99,102,241,0.2)',
+                color: mainTab === t.id ? 'white' : 'rgba(148,163,184,0.7)',
+                boxShadow: mainTab === t.id ? '0 2px 12px rgba(99,102,241,0.35)' : 'none',
+              }}>
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* â”€â”€ USERS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {mainTab === 'users' && <>
+        {/* Stats */}
+        {stats && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
+            {STAT_CARDS.map((s, i) => {
+              const Icon = s.icon
+              return (
+                <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.07, type: "spring", stiffness: 200 }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  className="rounded-2xl p-4 relative overflow-hidden"
+                  style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                  <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(ellipse at top right,${s.color},transparent 70%)` }} />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-2">
+                      <p style={{ color: "var(--text-secondary)", fontSize: "0.65rem", fontFamily: "monospace" }}>{s.label}</p>
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                        style={{ background: `${s.color}20`, border: `1px solid ${s.color}30` }}>
+                        <Icon size={13} style={{ color: s.color }} />
+                      </div>
+                    </div>
+                    <p className="text-2xl font-bold text-theme-primary">{s.value ?? "-"}</p>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: `linear-gradient(90deg,transparent,${s.color},transparent)` }} />
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Filters */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          className="flex flex-col sm:flex-row gap-3 mb-4 p-4 rounded-2xl"
+          style={{ background: "rgba(10,8,30,0.7)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+          {/* Tab buttons */}
+          <div className="flex gap-1.5 flex-wrap">
+            {["all", "student", "mentor"].map(t => (
+              <button key={t} onClick={() => { setTab(t); setPage(1) }}
+                className="px-4 py-2 rounded-xl text-xs font-semibold capitalize transition"
+                style={{
+                  background: tab === t ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "rgba(255,255,255,0.05)",
+                  border: `1px solid ${tab === t ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.1)"}`,
+                  color: tab === t ? "white" : "rgba(148,163,184,0.7)",
+                  boxShadow: tab === t ? "0 2px 10px rgba(99,102,241,0.35)" : "none",
+                }}>
+                {t}
+              </button>
+            ))}
+          </div>
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--text-tertiary)" }} />
+            <input type="text" placeholder="Search by name or email..." value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1) }}
+              className="w-full pl-9 pr-3 py-2 text-sm text-theme-primary placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-primary)" }} />
+          </div>
+          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            onClick={fetchData}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-theme-primary rounded-xl transition"
+            style={{ background: "rgba(99,102,241,0.2)", border: "1px solid rgba(99,102,241,0.35)" }}>
+            <RefreshCw size={13} /> Refresh
+          </motion.button>
+        </motion.div>
+
+        {/* Table */}
+        <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(10,8,30,0.7)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+          <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
+          {loading ? (
+            <div className="flex flex-col items-center py-20 gap-3">
+              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                <Loader2 size={36} style={{ color: "#818cf8" }} />
+              </motion.div>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", fontFamily: "monospace" }}>Loading users...</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border-secondary)" }}>
+                    {["User", "Role", "XP", "Status", "Joined", "Actions"].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider"
+                        style={{ color: "rgba(99,102,241,0.7)", fontFamily: "monospace" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.length === 0 ? (
+                    <tr><td colSpan={6} className="text-center py-12" style={{ color: "var(--text-tertiary)" }}>No users found</td></tr>
+                  ) : users.map((u, i) => (
+                    <motion.tr key={u._id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: Math.min(i * 0.03, 0.3) }}
+                      className="group transition-all"
+                      style={{ borderBottom: "1px solid rgba(99,102,241,0.08)" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(99,102,241,0.06)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {u.profileImage ? (
+                            <img src={u.profileImage} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                              style={{ boxShadow: "0 0 8px rgba(99,102,241,0.4)" }} />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-theme-primary text-xs font-bold flex-shrink-0"
+                              style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)" }}>
+                              {u.name?.[0]?.toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-semibold text-theme-primary text-sm">{u.name}</div>
+                            <div className="text-xs" style={{ color: "var(--text-tertiary)" }}>{u.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                          style={u.role === "mentor" ? { background: "rgba(196,181,253,0.15)", border: "1px solid rgba(196,181,253,0.3)", color: "#c4b5fd" }
+                            : { background: "rgba(96,165,250,0.15)", border: "1px solid rgba(96,165,250,0.3)", color: "#93c5fd" }}>
+                          {u.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1 text-sm font-bold" style={{ color: "#fbbf24" }}>
+                          <TrendingUp size={12} /> {u.xp ?? 0}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold"
+                          style={u.isActive !== false ? { background: "rgba(52,211,153,0.15)", border: "1px solid rgba(52,211,153,0.35)", color: "#34d399" }
+                            : { background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.35)", color: "#f87171" }}>
+                          {u.isActive !== false ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs" style={{ color: "var(--text-tertiary)", fontFamily: "monospace" }}>
+                        {new Date(u.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                            onClick={() => handleToggle(u._id)}
+                            disabled={actionLoading === u._id + "_toggle"}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-50"
+                            style={u.isActive !== false
+                              ? { background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", color: "#fbbf24" }
+                              : { background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" }}>
+                            {actionLoading === u._id + "_toggle" ? <Loader2 size={11} className="animate-spin" /> :
+                              u.isActive !== false ? <ToggleLeft size={13} /> : <ToggleRight size={13} />}
+                            {u.isActive !== false ? "Deactivate" : "Activate"}
+                          </motion.button>
+                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                            onClick={() => handleEditOpen(u)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition"
+                            style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", color: "#818cf8" }}>
+                            <Edit2 size={11} /> Edit
+                          </motion.button>
+                          <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                            onClick={() => handleDelete(u._id, u.name)}
+                            disabled={actionLoading === u._id + "_delete"}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-50"
+                            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+                            {actionLoading === u._id + "_delete" ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                            Delete
+                          </motion.button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {total > 20 && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-xs" style={{ color: "var(--text-tertiary)", fontFamily: "monospace" }}>
+              Showing <span style={{ color: "#818cf8" }}>{Math.min((page - 1) * 20 + 1, total)}-{Math.min(page * 20, total)}</span> of {total}
+            </p>
+            <div className="flex gap-2">
+              <motion.button whileHover={{ scale: 1.05 }} onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-4 py-2 text-xs font-semibold text-theme-primary rounded-xl disabled:opacity-40"
+                style={{ background: "rgba(99,102,241,0.15)", border: "1px solid var(--border-primary)" }}>
+                Previous
+              </motion.button>
+              <motion.button whileHover={{ scale: 1.05 }} onClick={() => setPage(p => p + 1)}
+                disabled={page * 20 >= total}
+                className="px-4 py-2 text-xs font-semibold text-theme-primary rounded-xl disabled:opacity-40"
+                style={{ background: "rgba(99,102,241,0.15)", border: "1px solid var(--border-primary)" }}>
+                Next
+              </motion.button>
+            </div>
+          </div>
+        )}
+        </> /* end users tab */}
+
+        {/* â”€â”€ SCHOOL CHANNELS TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {mainTab === 'schools' && (
+          <SchoolChannelManagement showToast={showToast} />
+        )}
+
+        {/* PRE-REGISTER STUDENTS TAB */}
+        {mainTab === 'prereg' && (
+          <PreRegisteredStudents showToast={showToast} />
+        )}
+
+        {/* COURSES TAB */}
+        {mainTab === 'courses' && (
+          <CourseManagement showToast={showToast} />
+        )}
+
+        {/* COURSE ACCESS TAB */}
+        {mainTab === 'access' && (
+          <CourseAccessManagement showToast={showToast} />
+        )}
+
+        {/* QUIZ MANAGEMENT TAB */}
+        {mainTab === 'quizzes' && (
+          <QuizManagement showToast={showToast} />
+        )}
+
+        {/* QUIZ RESULTS TAB */}
+        {mainTab === 'quiz-results' && (
+          <QuizResults showToast={showToast} />
+        )}
+
+        {/* PAYMENT VERIFICATION TAB */}
+        {mainTab === 'payments' && (
+          <PaymentManagement showToast={showToast} />
+        )}
+
+        {/* POST MODERATION TAB */}
+        {mainTab === 'posts' && (
+          <PostModerationDashboard showToast={showToast} />
+        )}
+
+        {/* â”€â”€ MESSAGE MONITORING TAB â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {mainTab === 'messages' && (
+          <MessageMonitoringDashboard showToast={showToast} />
+        )}
+      </div>
+    </div>
+  )
+}

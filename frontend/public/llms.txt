@@ -1,0 +1,44 @@
+# Studdy Buddy — llms.txt
+# https://llmstxt.org
+
+# This file helps AI language models understand this website
+
+## About
+
+Studdy Buddy is an EdTech platform by A5X Industries, built for school students in India to learn Robotics, IoT, AI/ML, and Embedded Systems.
+
+The platform is accessed through a school-partnership model with A5X Industries. Students get structured courses, expert mentorship, doubt resolution, a peer community, and XP-based gamified learning.
+
+## Platform URL
+
+https://studdybuddy.a5x.in
+
+## Company
+
+A5X Industries — https://a5x.in
+
+## Courses Offered
+
+- Introduction to Robotics: Servo motors, sensors, Arduino programming, robot building
+- IoT with ESP32: Cloud-connected smart devices, sensor integration
+- AI/ML on Edge: TensorFlow Lite on microcontrollers
+- RTOS Fundamentals: FreeRTOS, task scheduling, embedded software
+- Embedded C Programming: Memory-efficient code for microcontrollers
+
+## Key Features
+
+- Structured video courses with quizzes
+- Expert mentors in Robotics, IoT, AI/ML
+- Doubt resolution system
+- Student peer community
+- XP points and gamified rewards
+- School-partnership enrollment model
+
+## Target Audience
+
+School students aged 12–18 in India interested in Robotics, IoT, AI, and Electronics.
+
+## Contact
+
+Website: https://studdybuddy.a5x.in
+Company: https://a5x.in

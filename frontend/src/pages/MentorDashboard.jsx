@@ -1,0 +1,692 @@
+import { useEffect, useState, useRef } from "react"
+import { Link } from "react-router-dom"
+import { motion, AnimatePresence } from "framer-motion"
+import { doubtAPI, roomAPI } from "../services/api"
+import { useAuthStore } from "../store/authStore"
+import { useThemeStore } from "../store/themeStore"
+import { MessageSquare, CheckCircle, Users, Edit2, Trash2, User, Video, MessageCircle, Loader2, Send, X, LayoutDashboard, Image as ImageIcon, ChevronDown, Smile } from "lucide-react"
+import Navbar from "../components/Navbar"
+import { uploadToCloudinary } from "../utils/cloudinary"
+
+// ─── EMOJI PICKER ─────────────────────────────────────────────────────────
+const EMOJIS = ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '⭐', '🌟', '✨', '⚡', '💥', '💫', '💦', '💨', '🚀', '🛸', '🔥', '💧', '🌊', '🎓', '📚', '📖', '✏️', '📝', '💻', '⌨️', '🖥️', '📱', '☎️', '📞', '📟', '📠', '🔋', '🔌', '💡', '🔦', '🕯️', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '🧾', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '💊', '💉', '🩸', '🩹', '🩺', '🌡️', '🧬', '🦠', '🧫', '🧪', '🧯', '🚽', '🚿', '🛁', '🛀', '🧴', '🧷', '🧹', '🧺', '🧻', '🧼', '🧽', '🧯'];
+
+function EmojiPicker({ onSelect, onClose }) {
+  const pickerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      ref={pickerRef}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="absolute bottom-full mb-2 right-0 rounded-xl shadow-2xl p-3 z-50"
+      style={{ 
+        background: 'var(--bg-secondary)', 
+        border: '1px solid var(--border-primary)',
+        maxWidth: '280px',
+        maxHeight: '200px',
+        overflowY: 'auto'
+      }}
+    >
+      <div className="grid grid-cols-8 gap-1">
+        {EMOJIS.map((emoji, idx) => (
+          <button
+            key={idx}
+            onClick={() => {
+              onSelect(emoji);
+              onClose();
+            }}
+            className="text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1 transition"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+export default function MentorDashboard() {
+  const { user } = useAuthStore()
+  const { theme } = useThemeStore()
+  const isDark = theme === 'dark'
+  const [activeTab, setActiveTab] = useState("doubts")
+  const [doubts, setDoubts] = useState([])
+  const [rooms, setRooms] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [replyingTo, setReplyingTo] = useState(null)
+  const [editingReply, setEditingReply] = useState(null)
+  const [replyText, setReplyText] = useState("")
+  const [replyImages, setReplyImages] = useState([])
+  const [uploadingImages, setUploadingImages] = useState(false)
+  const [stats, setStats] = useState({ totalDoubts: 0, pendingReplies: 0, activeChats: 0 })
+  const [expandedDoubts, setExpandedDoubts] = useState({})
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [doubtFilter, setDoubtFilter] = useState("all") // "all", "pending", "chats"
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchAllDoubts()
+      fetchRooms()
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const fetchAllDoubts = async () => {
+    try {
+      setLoading(true)
+      const res = await doubtAPI.list(1, 200) // Fetch all doubts
+      const all = res.data.data.doubts || []
+      setDoubts(all)
+      
+      // Calculate stats based on actual status
+      const totalDoubts = all.length
+      const openDoubts = all.filter(d => d.status === 'open').length
+      const matchedDoubts = all.filter(d => d.status === 'matched').length
+      
+      // Pending = matched doubts (doubts that are matched with another doubt in a room)
+      setStats(prev => ({ 
+        ...prev, 
+        totalDoubts: totalDoubts, 
+        pendingReplies: matchedDoubts // Matched doubts are "pending" mentor attention
+      }))
+    } catch (err) { console.error(err) }
+    finally { setLoading(false) }
+  }
+
+  const fetchRooms = async () => {
+    try {
+      const res = await roomAPI.list()
+      const r = res.data.data?.rooms || []
+      
+      // For mentors, show only rooms where doubt status is "matched" (active mentoring needed)
+      // OR rooms where mentor has already replied (has mentor messages)
+      const relevantRooms = r.filter(room => {
+        // Include room if it's a matched doubt room (needs mentor attention)
+        if (room.doubt1?.status === 'matched' || room.doubt2?.status === 'matched') {
+          return true
+        }
+        // Or if room has messages (already active conversation)
+        if (room.lastMessage) {
+          return true
+        }
+        return false
+      })
+      
+      setRooms(relevantRooms)
+      setStats(prev => ({ ...prev, activeChats: relevantRooms.length }))
+    } catch (err) { console.error(err) }
+  }
+
+  const handleImageSelect = async (e) => {
+    const files = Array.from(e.target.files)
+    if (files.length === 0) return
+
+    // Create preview blob URLs immediately
+    const previewUrls = files.map(file => URL.createObjectURL(file))
+    const tempPreviews = previewUrls.map((url, idx) => ({ url, file: files[idx], uploaded: false }))
+    
+    // Show previews immediately
+    setReplyImages(prev => [...prev, ...tempPreviews])
+    setUploadingImages(true)
+    
+    try {
+      // Upload to Cloudinary in background
+      const uploadPromises = files.map(file => uploadToCloudinary(file, 'doubts/replies'))
+      const uploadedUrls = await Promise.all(uploadPromises)
+      
+      // Replace blob URLs with Cloudinary URLs
+      setReplyImages(prev => {
+        const newImages = [...prev]
+        const startIndex = newImages.length - files.length
+        uploadedUrls.forEach((result, idx) => {
+          if (newImages[startIndex + idx]) {
+            // Revoke blob URL to free memory
+            URL.revokeObjectURL(newImages[startIndex + idx].url)
+            // Extract only URL string from {url, publicId} object
+            newImages[startIndex + idx] = { url: result.url, uploaded: true }
+          }
+        })
+        return newImages
+      })
+      
+      console.log('✅ Images uploaded:', uploadedUrls)
+    } catch (error) {
+      console.error('Image upload failed:', error)
+      alert('Failed to upload images. Please try again.')
+      // Remove failed previews
+      setReplyImages(prev => prev.slice(0, prev.length - files.length))
+    } finally {
+      setUploadingImages(false)
+    }
+  }
+
+  const removeReplyImage = (index) => {
+    setReplyImages(prev => {
+      const image = prev[index]
+      // Revoke blob URL if it exists
+      if (image.url.startsWith('blob:')) {
+        URL.revokeObjectURL(image.url)
+      }
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
+  const handleReply = async (doubtId) => {
+    if (!replyText.trim() && replyImages.length === 0) return
+    
+    // Extract only uploaded Cloudinary URLs
+    const cloudinaryUrls = replyImages
+      .filter(img => img.uploaded)
+      .map(img => img.url)
+    
+    if (replyImages.length > 0 && cloudinaryUrls.length === 0) {
+      alert('Please wait for images to finish uploading')
+      return
+    }
+    
+    // Optimistic UI update - add reply immediately
+    const tempReply = {
+      _id: 'temp-' + Date.now(),
+      user: { _id: user._id, name: user.name, profileImage: user.profileImage },
+      content: replyText,
+      images: cloudinaryUrls,
+      createdAt: new Date(),
+      sending: true // flag to show loading state
+    }
+    
+    setDoubts(prev => prev.map(d => 
+      d._id === doubtId 
+        ? { ...d, replies: [...(d.replies || []), tempReply] }
+        : d
+    ))
+    
+    // Clear form immediately
+    const savedReplyText = replyText
+    const savedImages = replyImages
+    setReplyText("")
+    setReplyImages([])
+    setReplyingTo(null)
+    
+    try {
+      if (editingReply) { 
+        const response = await doubtAPI.editReply(doubtId, editingReply, { content: savedReplyText, images: cloudinaryUrls })
+        setEditingReply(null)
+        // Update with server response
+        setDoubts(prev => prev.map(d => d._id === doubtId ? response.data.data.doubt : d))
+      }
+      else {
+        const response = await doubtAPI.addReply(doubtId, { content: savedReplyText, images: cloudinaryUrls })
+        // Replace temp reply with real one from server
+        setDoubts(prev => prev.map(d => d._id === doubtId ? response.data.data.doubt : d))
+      }
+      
+      // Cleanup blob URLs
+      savedImages.forEach(img => {
+        if (img.url.startsWith('blob:')) {
+          URL.revokeObjectURL(img.url)
+        }
+      })
+      
+    } catch (err) { 
+      console.error('Reply error:', err)
+      // Revert optimistic update on error
+      setDoubts(prev => prev.map(d => 
+        d._id === doubtId 
+          ? { ...d, replies: (d.replies || []).filter(r => r._id !== tempReply._id) }
+          : d
+      ))
+      // Restore form
+      setReplyText(savedReplyText)
+      setReplyImages(savedImages)
+      setReplyingTo(doubtId)
+      alert(err.response?.data?.error?.message || "Failed to save reply") 
+    }
+  }
+
+  const handleEditReply = (doubtId, reply) => { setReplyingTo(doubtId); setEditingReply(reply._id); setReplyText(reply.content) }
+
+  const handleDeleteReply = async (doubtId, replyId) => {
+    if (!window.confirm("Delete this reply?")) return
+    try { await doubtAPI.deleteReply(doubtId, replyId); fetchAllDoubts() }
+    catch (err) { alert(err.response?.data?.error?.message || "Failed to delete reply") }
+  }
+
+  const cancelReply = () => { 
+    setReplyingTo(null)
+    setEditingReply(null)
+    setReplyText("")
+    setReplyImages([])
+  }
+
+  const getOtherUser = (room) => {
+    if (!user || !room) return null
+    return String(user._id) === String(room.student1?._id || room.student1) ? room.student2 : room.student1
+  }
+
+  const STAT_CARDS = [
+    { key: "all", label: "Total Doubts", value: stats.totalDoubts, icon: MessageSquare, color: "#6366f1", glow: "rgba(99,102,241,0.4)" },
+    { key: "pending", label: "Pending", value: stats.pendingReplies, icon: Users, color: "#fbbf24", glow: "rgba(251,191,36,0.4)" },
+    { key: "chats", label: "Chats", value: stats.activeChats, icon: CheckCircle, color: "#34d399", glow: "rgba(52,211,153,0.4)" },
+  ]
+
+  const handleStatCardClick = (cardKey) => {
+    if (cardKey === "chats") {
+      setActiveTab("chats")
+      setDoubtFilter("all")
+    } else {
+      setActiveTab("doubts")
+      setDoubtFilter(cardKey)
+    }
+  }
+
+  // Filter doubts based on selected filter
+  const filteredDoubts = doubtFilter === "pending" 
+    ? doubts.filter(d => !d.replies || d.replies.length === 0)
+    : doubts
+
+  return (
+    <div className="flex flex-col min-h-screen" style={{ position: "relative" }}>
+      <Navbar />
+
+      {/* Background */}
+      <div style={{ 
+        position: "fixed", 
+        inset: 0, 
+        zIndex: 0, 
+        backgroundImage: isDark ? "url(/dashboard1.png)" : "url(/dashboard-light.png?v=1)", 
+        backgroundSize: "cover", 
+        backgroundPosition: "center", 
+        backgroundAttachment: "fixed" 
+      }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 1, background: isDark ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.2)" }} />
+
+      <div className="relative flex-1 mt-16 px-3 sm:px-5 py-5 overflow-x-hidden max-w-7xl mx-auto w-full" style={{ zIndex: 5 }}>
+        <div className="max-w-5xl mx-auto">
+
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-6">
+            <motion.div animate={{ boxShadow: ["0 0 0px rgba(99,102,241,0)", "0 0 24px rgba(99,102,241,0.5)", "0 0 0px rgba(99,102,241,0)"] }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.25),rgba(139,92,246,0.25))", border: "1px solid rgba(99,102,241,0.4)" }}>
+              <LayoutDashboard size={26} style={{ color: "#818cf8" }} />
+            </motion.div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold"
+                style={{ background: "linear-gradient(135deg,#a5b4fc,#818cf8,#c4b5fd)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                Mentor Dashboard
+              </h1>
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", fontFamily: "monospace" }}>
+                Welcome back, {user?.name?.split(" ")[0] || "Mentor"}
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+            {STAT_CARDS.map((s, i) => {
+              const Icon = s.icon
+              const isActive = (s.key === "chats" && activeTab === "chats") || 
+                               (activeTab === "doubts" && doubtFilter === s.key)
+              
+              return (
+                <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.08, type: "spring", stiffness: 200 }}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  onClick={() => handleStatCardClick(s.key)}
+                  className="rounded-2xl p-4 relative overflow-hidden cursor-pointer"
+                  style={{ 
+                    background: "var(--bg-tertiary)", 
+                    border: isActive ? `2px solid ${s.color}` : "1px solid var(--border-secondary)", 
+                    backdropFilter: "blur(20px)",
+                    boxShadow: isActive ? `0 0 20px ${s.glow}` : "none"
+                  }}>
+                  <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(ellipse at top right,${s.color},transparent 70%)` }} />
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-2">
+                      <p style={{ color: isActive ? s.color : "var(--text-secondary)", fontSize: "0.7rem", fontFamily: "monospace", fontWeight: isActive ? "600" : "400" }}>{s.label}</p>
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                        style={{ background: `${s.color}20`, border: `1px solid ${s.color}30` }}>
+                        <Icon size={14} style={{ color: s.color }} />
+                      </div>
+                    </div>
+                    <motion.p className="text-2xl sm:text-3xl font-bold text-theme-primary"
+                      initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 + i * 0.1, type: "spring" }}>
+                      {s.value}
+                    </motion.p>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-b-2xl"
+                    style={{ background: `linear-gradient(90deg,transparent,${s.color},transparent)` }} />
+                </motion.div>
+              )
+            })}
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 rounded-2xl mb-5"
+            style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+            {[
+              { key: "doubts", label: doubtFilter === "pending" ? "Pending Doubts" : doubtFilter === "all" ? "Student Doubts" : "Student Doubts", icon: MessageSquare },
+              { key: "chats", label: `Chats (${rooms.length})`, icon: MessageCircle },
+            ].map(({ key, label, icon: Icon }) => (
+              <button key={key} onClick={() => {
+                setActiveTab(key)
+                if (key === "doubts") setDoubtFilter("all")
+              }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-xl transition-all"
+                style={{
+                  background: activeTab === key ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "transparent",
+                  color: activeTab === key ? "white" : "var(--text-secondary)",
+                  boxShadow: activeTab === key ? "0 2px 12px rgba(99,102,241,0.35)" : "none",
+                }}>
+                <Icon size={14} /> {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Doubts Tab */}
+          <AnimatePresence mode="wait">
+            {activeTab === "doubts" && (
+              <motion.div key="doubts" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                {loading ? (
+                  <div className="flex flex-col items-center py-20 gap-3">
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                      <Loader2 size={36} style={{ color: "#818cf8" }} />
+                    </motion.div>
+                    <p style={{ color: "var(--text-secondary)", fontSize: "0.8rem", fontFamily: "monospace" }}>Loading doubts...</p>
+                  </div>
+                ) : filteredDoubts.length > 0 ? (
+                  <div className="space-y-3">
+                    {filteredDoubts.map((doubt, i) => (
+                      <motion.div key={doubt._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: Math.min(i * 0.04, 0.3) }}
+                        className="rounded-2xl overflow-hidden"
+                        style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                        <div className="h-0.5" style={{ background: "linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)" }} />
+                        <div className="p-3 sm:p-5">
+                          <div className="flex items-start gap-2 sm:gap-3 mb-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-theme-primary font-bold text-xs sm:text-sm flex-shrink-0"
+                              style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 0 12px rgba(99,102,241,0.4)" }}>
+                              {doubt.userId?.profileImage
+                                ? <img src={doubt.userId.profileImage} alt={doubt.userId.name} className="w-full h-full object-cover rounded-full" />
+                                : doubt.userId?.name?.charAt(0).toUpperCase() || "U"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col gap-2">
+                                <div className="w-full">
+                                  <h3 className="font-bold text-theme-primary text-sm sm:text-base break-words whitespace-pre-wrap overflow-wrap-anywhere">{doubt.title}</h3>
+                                  <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 flex-wrap text-xs">
+                                    <User size={10} style={{ color: "var(--text-tertiary)" }} />
+                                    <span className="truncate max-w-[120px] sm:max-w-none" style={{ color: "var(--text-secondary)" }}>{doubt.userId?.name || "Unknown"}</span>
+                                    <span style={{ color: "var(--text-tertiary)" }}>•</span>
+                                    <span className="text-xs whitespace-nowrap" style={{ color: "var(--text-tertiary)" }}>{new Date(doubt.createdAt).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1.5 flex-wrap">
+                                  <span className="text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap"
+                                    style={{ background: doubt.status === "resolved" ? "rgba(52,211,153,0.15)" : doubt.status === "matched" ? "rgba(251,191,36,0.15)" : "rgba(99,102,241,0.15)", border: `1px solid ${doubt.status === "resolved" ? "rgba(52,211,153,0.35)" : doubt.status === "matched" ? "rgba(251,191,36,0.35)" : "rgba(99,102,241,0.35)"}`, color: doubt.status === "resolved" ? "#34d399" : doubt.status === "matched" ? "#fbbf24" : "#a5b4fc" }}>
+                                    {doubt.status}
+                                  </span>
+                                  <span className="text-xs px-2 py-0.5 rounded-full break-words max-w-[150px]"
+                                    style={{ background: "rgba(139,92,246,0.15)", border: "1px solid rgba(139,92,246,0.3)", color: "#c4b5fd" }}>
+                                    {doubt.topic}
+                                  </span>
+                                </div>
+                              </div>
+                              <p className="text-xs sm:text-sm mt-2 break-words whitespace-pre-wrap overflow-wrap-anywhere" style={{ color: "var(--text-secondary)" }}>{doubt.description}</p>
+                            </div>
+                          </div>
+
+                          {/* Replies Section - Collapsible */}
+                          {doubt.replies?.length > 0 && (
+                            <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border-primary)" }}>
+                              <button 
+                                onClick={() => setExpandedDoubts(prev => ({ ...prev, [doubt._id]: !prev[doubt._id] }))}
+                                className="w-full flex items-center justify-between text-xs font-semibold mb-2 p-2 rounded-lg hover:bg-white/5 transition"
+                                style={{ color: "var(--text-accent)", fontFamily: "monospace" }}>
+                                <div className="flex items-center gap-1.5">
+                                  <MessageSquare size={12} /> Replies ({doubt.replies.length})
+                                </div>
+                                <ChevronDown 
+                                  size={14} 
+                                  style={{ 
+                                    transform: expandedDoubts[doubt._id] ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: 'transform 0.2s'
+                                  }} 
+                                />
+                              </button>
+                              
+                              {expandedDoubts[doubt._id] && (
+                                <div className="space-y-2">
+                                  {doubt.replies.map(reply => (
+                                    <div key={reply._id} className="rounded-xl p-2 sm:p-3" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)" }}>
+                                      <div className="flex justify-between items-start mb-1.5">
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-theme-primary font-bold text-xs flex-shrink-0"
+                                            style={{ background: "linear-gradient(135deg,#059669,#047857)" }}>
+                                            {reply.user?.profileImage
+                                              ? <img src={reply.user.profileImage} alt={reply.user.name} className="w-full h-full object-cover rounded-full" />
+                                              : reply.user?.name?.charAt(0).toUpperCase() || "M"}
+                                          </div>
+                                          <div className="min-w-0">
+                                            <p className="text-xs font-semibold text-theme-primary truncate">{reply.user?.name || "Mentor"}</p>
+                                            <p className="text-xs whitespace-nowrap" style={{ color: "var(--text-muted)" }}>{new Date(reply.createdAt).toLocaleDateString()}</p>
+                                          </div>
+                                        </div>
+                                        {user && reply.user?._id === user._id && (
+                                          <div className="flex gap-1 flex-shrink-0">
+                                            <button onClick={() => handleEditReply(doubt._id, reply)}
+                                              className="p-1.5 rounded-lg transition hover:bg-white/10" style={{ color: "#60a5fa" }}>
+                                              <Edit2 size={12} />
+                                            </button>
+                                            <button onClick={() => handleDeleteReply(doubt._id, reply._id)}
+                                              className="p-1.5 rounded-lg transition hover:bg-red-500/20" style={{ color: "#f87171" }}>
+                                              <Trash2 size={12} />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                      <p className="text-xs sm:text-sm break-words" style={{ color: "var(--text-primary)" }}>{reply.content}</p>
+                                      
+                                      {/* Reply Images */}
+                                      {reply.images && reply.images.length > 0 && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: reply.images.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(80px, 1fr))', gap: 6, marginTop: 8 }}>
+                                          {reply.images.map((img, imgIdx) => (
+                                            <img key={imgIdx} src={img} alt={`Reply image ${imgIdx + 1}`} 
+                                              style={{ width: '100%', height: reply.images.length === 1 ? 'auto' : 80, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-primary)', cursor: 'pointer' }}
+                                              onClick={() => window.open(img, '_blank')} />
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Reply Form */}
+                          {replyingTo === doubt._id ? (
+                            <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border-primary)" }}>
+                              <div className="relative">
+                                <textarea value={replyText} onChange={e => setReplyText(e.target.value)}
+                                  placeholder="Write your reply..."
+                                  rows={3}
+                                  className="w-full text-sm text-theme-primary placeholder-gray-500 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none mb-2"
+                                  style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-primary)" }} />
+                                
+                                {/* Emoji Picker Button - positioned at top right of textarea */}
+                                <button
+                                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                  className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                                  type="button"
+                                  style={{ zIndex: 10 }}
+                                >
+                                  <Smile size={18} />
+                                </button>
+
+                                {/* Emoji Picker Dropdown */}
+                                <AnimatePresence>
+                                  {showEmojiPicker && (
+                                    <EmojiPicker
+                                      onSelect={(emoji) => setReplyText(prev => prev + emoji)}
+                                      onClose={() => setShowEmojiPicker(false)}
+                                    />
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                              
+                              {/* Image Previews */}
+                              {replyImages.length > 0 && (
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                                  {replyImages.map((image, idx) => (
+                                    <div key={idx} style={{ position: 'relative', width: 80, height: 80 }}>
+                                      <img src={image.url} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-primary)', opacity: image.uploaded ? 1 : 0.6 }} />
+                                      {!image.uploaded && (
+                                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', borderRadius: 8 }}>
+                                          <Loader2 size={20} style={{ color: 'white', animation: 'spin 1s linear infinite' }} />
+                                        </div>
+                                      )}
+                                      <button onClick={() => removeReplyImage(idx)}
+                                        style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#ef4444', border: 'none', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                                        <X size={12} />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="flex gap-2 flex-wrap">
+                                {/* Image Upload Button */}
+                                <label style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.3)', color: '#c4b5fd', fontSize: 12, fontWeight: 600, cursor: uploadingImages ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: uploadingImages ? 0.5 : 1 }}>
+                                  <ImageIcon size={14} />
+                                  {uploadingImages ? 'Uploading...' : 'Add Images'}
+                                  <input type="file" accept="image/*" multiple onChange={handleImageSelect} disabled={uploadingImages} style={{ display: 'none' }} />
+                                </label>
+
+                                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                                  onClick={() => handleReply(doubt._id)}
+                                  disabled={uploadingImages}
+                                  className="flex items-center gap-1.5 px-4 py-2 text-theme-primary text-xs font-semibold rounded-xl"
+                                  style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 2px 10px rgba(99,102,241,0.35)", opacity: uploadingImages ? 0.5 : 1, cursor: uploadingImages ? 'not-allowed' : 'pointer' }}>
+                                  <Send size={12} /> {editingReply ? "Update" : "Send Reply"}
+                                </motion.button>
+
+                                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                                  onClick={cancelReply}
+                                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl"
+                                  style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border-secondary)", color: "var(--text-secondary)" }}>
+                                  <X size={12} /> Cancel
+                                </motion.button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-3">
+                              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                                onClick={() => setReplyingTo(doubt._id)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl"
+                                style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", color: "var(--text-accent)" }}>
+                                <MessageSquare size={12} /> Reply
+                              </motion.button>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 rounded-2xl"
+                    style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                    <MessageSquare size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)" }} />
+                    <p style={{ color: "var(--text-secondary)" }}>
+                      {doubtFilter === "pending" ? "No pending doubts! All doubts have been replied to. 🎉" : "No student doubts yet."}
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Chats Tab */}
+            {activeTab === "chats" && (
+              <motion.div key="chats" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                {rooms.length > 0 ? (
+                  <div className="space-y-3">
+                    {rooms.map((room, i) => {
+                      const other = getOtherUser(room)
+                      return (
+                        <motion.div key={room._id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: Math.min(i * 0.06, 0.4), type: "spring", stiffness: 200 }}
+                          whileHover={{ x: 4, transition: { duration: 0.15 } }}
+                          className="group relative rounded-2xl overflow-hidden"
+                          style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                          <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ background: "linear-gradient(to bottom,#6366f1,#8b5cf6)" }} />
+                          <div className="flex items-center justify-between gap-3 p-4 pl-5">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="relative flex-shrink-0">
+                                <div className="w-12 h-12 rounded-full flex items-center justify-center text-theme-primary font-bold text-lg"
+                                  style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 0 14px rgba(99,102,241,0.4)" }}>
+                                  {other?.profileImage
+                                    ? <img src={other.profileImage} alt={other.name} className="w-full h-full object-cover rounded-full" />
+                                    : other?.name?.charAt(0).toUpperCase() || "U"}
+                                </div>
+                                <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
+                                  style={{ background: "#34d399", borderColor: "var(--bg-primary)" }} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-bold text-theme-primary text-sm truncate">{other?.name || "Unknown User"}</h3>
+                                <p className="text-xs truncate" style={{ color: "var(--text-secondary)" }}>{other?.email}</p>
+                                {room.topic && (
+                                  <p className="text-xs mt-0.5" style={{ color: "var(--text-accent)", fontFamily: "monospace" }}># {room.topic}</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <Link to={`/chat/${room._id}`}>
+                                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                                  className="flex items-center gap-1.5 px-3 py-2 text-theme-primary text-xs font-semibold rounded-xl"
+                                  style={{ background: "linear-gradient(135deg,#6366f1,#4f46e5)", boxShadow: "0 2px 10px rgba(99,102,241,0.35)" }}>
+                                  <MessageCircle size={13} /><span className="hidden sm:inline">Chat</span>
+                                </motion.button>
+                              </Link>
+                              <Link to={`/video-call/${room._id}`}>
+                                <motion.button whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.92 }}
+                                  className="flex items-center gap-1.5 px-3 py-2 text-theme-primary text-xs font-semibold rounded-xl"
+                                  style={{ background: "linear-gradient(135deg,#059669,#047857)", boxShadow: "0 2px 10px rgba(5,150,105,0.35)" }}>
+                                  <Video size={13} /><span className="hidden sm:inline">Video</span>
+                                </motion.button>
+                              </Link>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 rounded-2xl"
+                    style={{ background: "var(--bg-card)", border: "1px solid var(--border-secondary)", backdropFilter: "blur(20px)" }}>
+                    <MessageCircle size={36} className="mx-auto mb-3" style={{ color: "var(--text-muted)" }} />
+                    <h3 className="font-bold text-theme-primary mb-1">No chats yet</h3>
+                    <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Students will appear here when they message you.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  )
+}

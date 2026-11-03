@@ -1,0 +1,103 @@
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Link, useLocation } from 'react-router-dom'
+import {
+  LayoutDashboard,
+  Activity,
+  Bookmark,
+  FolderOpen,
+  Star,
+  Settings,
+  Sparkles,
+  X
+} from 'lucide-react'
+
+export default function Sidebar({ isOpen = false, onClose }) {
+  const location = useLocation()
+  
+  const navItems = [
+    { icon: LayoutDashboard, label: 'Overview',     path: '/dashboard' },
+    { icon: Activity,        label: 'My Activity',  path: '/doubts' },
+    { icon: Bookmark,        label: 'Bookmarks',    path: '/resources' },
+    { icon: FolderOpen,      label: 'My Projects',  path: '/communities' },
+    { icon: Star,            label: 'XP & Rewards', path: '/rewards' },
+    { icon: Settings,        label: 'Settings',     path: '/settings' },
+  ]
+
+  const handleLinkClick = () => {
+    if (onClose) onClose()
+  }
+
+  // Desktop: always visible, Mobile: controlled by isOpen
+  const isVisible = typeof window !== 'undefined' && window.innerWidth >= 1024 ? true : isOpen
+
+  return (
+    <>
+      {/* Mobile Overlay */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/60 dark:bg-black/60 z-[55] lg:hidden"
+            style={{ top: '64px' }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar */}
+      <aside
+        style={{
+          background: 'var(--bg-primary)',
+          borderRight: '1px solid var(--border-primary)',
+          zIndex: 60,
+        }}
+        className={`fixed left-0 top-16 bottom-0 w-[240px] flex flex-col transition-transform duration-300 ease-out lg:translate-x-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Mobile Close Button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition z-10"
+          >
+            <X size={20} className="text-theme-tertiary" />
+          </button>
+        )}
+
+        {/* Navigation Section */}
+        <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
+          {navItems.map((item, i) => {
+            const Icon = item.icon
+            const active = location.pathname === item.path || 
+                          (item.path === '/dashboard' && location.pathname === '/dashboard')
+            
+            return (
+              <div key={item.label}>
+                <Link
+                  to={item.path}
+                  onClick={handleLinkClick}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    active 
+                      ? 'bg-[#e0e7ff] dark:bg-indigo-500/20 text-[#6366f1] dark:text-indigo-300' 
+                      : 'text-theme-secondary hover:bg-gray-100 dark:hover:bg-white/5'
+                  }`}
+                >
+                  <Icon
+                    size={18}
+                    className={active ? 'text-[#6366f1] dark:text-indigo-400' : 'text-theme-tertiary'}
+                  />
+                  <span className="text-sm">{item.label}</span>
+                </Link>
+              </div>
+            )
+          })}
+        </nav>
+
+      </aside>
+    </>
+  )
+}

@@ -1,0 +1,233 @@
+import { useEffect, lazy, Suspense } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useAuthStore } from './store/authStore'
+import { useThemeStore } from './store/themeStore'
+import { useNotificationStore } from './store/notificationStore'
+import { initSocket, disconnectSocket, onNotification, offNotification } from './services/socket'
+import { setupPushNotifications, teardownPushNotifications } from './services/pushNotification'
+import Navbar from './components/Navbar'
+import IncomingCallModal from './components/IncomingCallModal'
+import InstallPWA from './components/InstallPWA'
+
+// ── Lazy load all pages — only download when user navigates there ──────────
+// Auth pages (small — keep eager for instant login experience)
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import ForgotPassword from './pages/ForgotPassword'
+
+// All other pages — lazy loaded
+const Dashboard         = lazy(() => import('./pages/Dashboard'))
+const MentorDashboard   = lazy(() => import('./pages/MentorDashboard'))
+const Doubts            = lazy(() => import('./pages/Doubts'))
+const PostDoubt         = lazy(() => import('./pages/PostDoubt'))
+const EditDoubt         = lazy(() => import('./pages/EditDoubt'))
+const Resources         = lazy(() => import('./pages/ResourcesNew'))
+const Communities       = lazy(() => import('./pages/Communities'))
+const PostRedirect      = lazy(() => import('./pages/PostRedirect'))
+const Profile           = lazy(() => import('./pages/Profile'))
+const Chats             = lazy(() => import('./pages/Chats'))
+const Chat              = lazy(() => import('./pages/Chat'))
+const VideoCall         = lazy(() => import('./pages/VideoCall'))
+const Mentors           = lazy(() => import('./pages/Mentors'))
+const AIBot             = lazy(() => import('./pages/AIBot'))
+const Settings          = lazy(() => import('./pages/Settings'))
+const AdminPanel        = lazy(() => import('./pages/AdminPanel'))
+const Rewards           = lazy(() => import('./pages/Rewards'))
+const GeneralGroup      = lazy(() => import('./pages/GeneralGroup'))
+const Broadcast         = lazy(() => import('./pages/Broadcast'))
+const BroadcastLive     = lazy(() => import('./pages/BroadcastLive'))
+const SchoolChannel     = lazy(() => import('./pages/SchoolChannel'))
+const SchoolChannelAdmin = lazy(() => import('./pages/SchoolChannelAdmin'))
+
+// Prefetch most-used pages so navigation is instant
+const prefetchPages = () => {
+  import('./pages/Doubts')
+  import('./pages/ResourcesNew')
+  import('./pages/Communities')
+  import('./pages/Chats')
+  import('./pages/Mentors')
+  import('./pages/Dashboard')
+  import('./pages/MentorDashboard')
+  import('./pages/Rewards')
+}
+const PrivacyPolicy     = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsConditions   = lazy(() => import('./pages/TermsConditions'))
+
+// Page loader shown while lazy chunk downloads
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
+      <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [pathname])
+  return null
+}
+
+function AppShell() {
+  const { token, user, initAuth, isInitialized, isTokenValidated } = useAuthStore()
+  const { initTheme } = useThemeStore()
+  const { fetch: fetchNotifications, addNew } = useNotificationStore()
+  const { pathname } = useLocation()
+  const isAdminRoute = pathname === '/admin'
+
+  useEffect(() => {
+    initTheme()
+    initAuth()
+  }, [initAuth, initTheme])
+
+  useEffect(() => {
+    if (token && user && isTokenValidated) {
+      initSocket(token, user._id, user.name || '', user.profileImage || '', user.role || '')
+      fetchNotifications()
+      onNotification((notif) => addNew(notif))
+      // Setup background push notifications (WhatsApp-style)
+      setupPushNotifications()
+      // Prefetch most-used pages after login for instant navigation
+      setTimeout(prefetchPages, 2000)
+    } else {
+      offNotification()
+      disconnectSocket()
+      // Only teardown push on explicit logout (token gone AND app was initialized)
+      // NOT on page load / token validation in progress
+      if (!token && isInitialized) {
+        teardownPushNotifications()
+      }
+    }
+    return () => offNotification()
+  }, [token, user, isTokenValidated])
+
+  // Poll notifications every 30s + refresh on tab focus (catches missed socket events)
+  useEffect(() => {
+    if (!token || !user || !isTokenValidated) return
+
+    // Refresh when user comes back to the tab (phone unlock, tab switch, etc.)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchNotifications()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Also poll every 30 seconds as a safety net
+    const interval = setInterval(() => {
+      fetchNotifications()
+    }, 30000)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      clearInterval(interval)
+    }
+  }, [token, user, isTokenValidated])
+
+  if (!isInitialized && !isAdminRoute) {
+    return (
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-14 h-14 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen" style={{ position: 'relative', background: 'var(--bg-primary)' }}>
+      {token && !isAdminRoute && <Navbar />}
+      {token && !isAdminRoute && <IncomingCallModal />}
+      {token && !isAdminRoute && <InstallPWA />}
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {/* Public */}
+          <Route path="/login" element={token ? <Navigate to="/communities" replace /> : <Login />} />
+          <Route path="/signup" element={token ? <Navigate to="/communities" replace /> : <Signup />} />
+          <Route path="/forgot-password" element={token ? <Navigate to="/communities" replace /> : <ForgotPassword />} />
+
+          {/* Student */}
+          <Route path="/dashboard" element={<StudentRoute><Dashboard /></StudentRoute>} />
+          <Route path="/doubts" element={<StudentRoute><Doubts /></StudentRoute>} />
+          <Route path="/doubts/new" element={<StudentRoute><PostDoubt /></StudentRoute>} />
+          <Route path="/doubts/:id/edit" element={<StudentRoute><EditDoubt /></StudentRoute>} />
+          <Route path="/mentors" element={<StudentRoute><Mentors /></StudentRoute>} />
+          <Route path="/ai-bot" element={<StudentRoute><AIBot /></StudentRoute>} />
+
+          {/* Mentor */}
+          <Route path="/mentor-dashboard" element={<MentorRoute><MentorDashboard /></MentorRoute>} />
+
+          {/* Shared */}
+          <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
+          <Route path="/chat/:roomId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+          <Route path="/video-call/:roomId" element={<ProtectedRoute><VideoCall /></ProtectedRoute>} />
+          <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
+          <Route path="/community" element={<ProtectedRoute><PostRedirect /></ProtectedRoute>} />
+          <Route path="/communities" element={<ProtectedRoute><Communities /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
+          <Route path="/general-group" element={<ProtectedRoute><GeneralGroup /></ProtectedRoute>} />
+          <Route path="/broadcast" element={<ProtectedRoute><Broadcast /></ProtectedRoute>} />
+          <Route path="/broadcast-live" element={<ProtectedRoute><BroadcastLive /></ProtectedRoute>} />
+          <Route path="/school-channel" element={<ProtectedRoute><SchoolChannel /></ProtectedRoute>} />
+          <Route path="/school-channel-admin" element={<ProtectedRoute><SchoolChannelAdmin /></ProtectedRoute>} />
+
+          {/* Legal Pages - Public */}
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-conditions" element={<TermsConditions />} />
+
+          {/* Admin — standalone, no navbar */}
+          <Route path="/admin" element={<AdminPanel />} />
+
+          {/* Default */}
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to={token ? (user?.role === 'mentor' ? '/mentor-dashboard' : '/communities') : '/login'}
+                replace
+              />
+            }
+          />
+        </Routes>
+      </Suspense>
+    </div>
+  )
+}
+
+function ProtectedRoute({ children }) {
+  const { token } = useAuthStore()
+  return token ? children : <Navigate to="/login" />
+}
+
+function MentorRoute({ children }) {
+  const { token, user } = useAuthStore()
+  if (!token) return <Navigate to="/login" />
+  if (user?.role !== 'mentor') return <Navigate to="/dashboard" />
+  return children
+}
+
+function StudentRoute({ children }) {
+  const { token, user } = useAuthStore()
+  if (!token) return <Navigate to="/login" />
+  if (user?.role === 'mentor') return <Navigate to="/communities" />
+  return children
+}
+
+export default function App() {
+  return (
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <ScrollToTop />
+      <AppShell />
+    </Router>
+  )
+}

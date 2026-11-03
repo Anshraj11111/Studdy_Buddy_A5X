@@ -1,0 +1,340 @@
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { LogIn, Mail, Lock, UserCircle, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { useAuthStore } from '../store/authStore'
+import { useThemeStore } from '../store/themeStore'
+import ThemeToggle from '../components/ThemeToggle'
+import { hapticSuccess, hapticError, hapticLight, hapticMedium } from '../utils/haptics'
+const a5xLogo = '/studdybuddy-logo.png'
+
+import SEO from '../components/SEO'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '867585915737-m2jb6me5u1dpp5vp3dum130lm1rp1sfc.apps.googleusercontent.com'
+
+export default function Login() {
+  const [formData, setFormData] = useState({ email: '', password: '', role: 'student', mentorCode: '', schoolPassword: '' })
+  const [errors, setErrors] = useState({})
+  const [showPassword, setShowPassword] = useState(false)
+  const [showSchoolPassword, setShowSchoolPassword] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const { login, googleLogin, loading } = useAuthStore()
+  const { theme } = useThemeStore()
+  const isDark = theme === 'dark'
+  const navigate = useNavigate()
+  const googleBtnRef = useRef(null)
+
+  useEffect(() => {
+    const initGoogle = () => {
+      if (window.google && GOOGLE_CLIENT_ID) {
+        try {
+          window.google.accounts.id.initialize({ 
+            client_id: GOOGLE_CLIENT_ID, 
+            callback: handleGoogleResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          })
+          // Render on hidden div - needed for SDK to work
+          const hiddenDiv = document.getElementById('google-btn-hidden-login')
+          if (hiddenDiv) {
+            window.google.accounts.id.renderButton(hiddenDiv, {
+              theme: 'outline', size: 'large', width: 1
+            })
+          }
+        } catch (error) {
+          console.warn('Google init failed:', error)
+        }
+      }
+    }
+    // Try immediately or wait for script to load
+    if (window.google) {
+      initGoogle()
+    } else {
+      window.addEventListener('load', initGoogle)
+      return () => window.removeEventListener('load', initGoogle)
+    }
+  }, [])
+
+  const handleGoogleResponse = async (response) => {
+    setGoogleLoading(true)
+    try {
+      const { user } = await googleLogin(response.credential, formData.role, formData.mentorCode)
+      navigate(user.role === 'mentor' ? '/mentor-dashboard' : '/communities', { replace: true })
+    } catch (err) { setErrors({ submit: err.message || 'Google login failed' }) }
+    finally { setGoogleLoading(false) }
+  }
+
+  const validate = () => {
+    const e = {}
+    if (!formData.email) e.email = 'Email is required'
+    
+    // For students: Either password OR schoolPassword is required (at least one)
+    if (formData.role === 'student') {
+      if (!formData.password && !formData.schoolPassword) {
+        e.password = 'Either password or school password is required'
+        e.schoolPassword = 'Either password or school password is required'
+      }
+    } else {
+      // For mentors: password is mandatory
+      if (!formData.password) e.password = 'Password is required'
+    }
+    
+    if (formData.role === 'mentor' && !formData.mentorCode) e.mentorCode = 'Mentor code is required'
+    return e
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault(); setErrors({})
+    const errs = validate()
+    if (Object.keys(errs).length) { 
+      hapticError(); // Vibrate on validation error
+      setErrors(errs); 
+      return 
+    }
+    
+    hapticMedium(); // Vibrate on form submit
+    
+    try {
+      // Pass schoolPassword to backend for alternative authentication
+      const { user } = await login(
+        formData.email, 
+        formData.password || '', // Empty string if not provided
+        formData.role, 
+        formData.mentorCode,
+        formData.schoolPassword || '' // Empty string if not provided
+      )
+      
+      hapticSuccess(); // Success vibration on login
+      navigate(user.role === 'mentor' ? '/mentor-dashboard' : '/communities', { replace: true })
+    } catch (err) {
+      hapticError(); // Error vibration on login failure
+      // Better error messages for users
+      let errorMsg = err.message || 'Login failed';
+      
+      // Check for specific error codes
+      if (err.message?.includes('Account not found')) {
+        errorMsg = '⚠️ Account not found. Please create an account first using Sign Up.';
+      } else if (err.message?.includes('Invalid password')) {
+        errorMsg = '🔒 Invalid password. Try using your school password if you forgot your personal password.';
+      } else if (err.message?.includes('Invalid school password')) {
+        errorMsg = '🏫 Invalid school password. Please check and try again.';
+      } else if (err.message?.includes('No school password set')) {
+        errorMsg = '⚠️ No school password found. Please use your personal password to login.';
+      } else if (err.message?.includes('Both passwords are incorrect')) {
+        errorMsg = '❌ Both passwords are incorrect. Please check your credentials and try again.';
+      }
+      
+      setErrors({ submit: errorMsg });
+    }
+  }
+
+  const inputClass = `w-full pl-11 pr-4 py-3 rounded-xl text-sm transition-all outline-none bg-white/[0.05] border border-white/10 text-white placeholder-gray-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white/[0.08]`
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
+      style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%)' }}>
+      <SEO
+        title="Sign In"
+        description="Sign in to Studdy Buddy — access your Robotics, IoT and AI courses, mentors and student community by A5X Industries."
+        path="/login"
+        noindex={false}
+      />
+
+      {/* Background Image - Drone */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: `url('/login-bg.png')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        opacity: 0.25,
+      }} />
+
+      {/* Theme Toggle — top right */}
+      <div className="absolute top-4 right-4 z-20">
+        <ThemeToggle />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+
+        <div className="rounded-3xl p-8 relative overflow-hidden"
+          style={{
+            background: 'rgba(20,20,30,0.6)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(10px)',
+          }}>
+
+          {/* A5X Logo */}
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 mx-auto mb-5 flex items-center justify-center">
+              <img src={a5xLogo} alt="A5X Logo" className="w-full h-full object-contain" />
+            </div>
+            <h1 className="text-3xl font-bold mb-2 text-white">
+              Welcome <span style={{ color: '#818cf8' }}>Back!</span>
+            </h1>
+            <p className="text-sm" style={{ color: 'rgba(156,163,175,0.9)' }}>
+              Sign in to your <span style={{ color: '#6366f1' }}>Studdy Buddy</span> account
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-400">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                <input type="email" name="email" placeholder="you@example.com"
+                  value={formData.email} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))}
+                  className={inputClass} />
+              </div>
+              {errors.email && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.email}</p>}
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-400">
+                Password {formData.role === 'student' && <span className="text-gray-500 font-normal">(Optional if using school password)</span>}
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                <input type={showPassword ? 'text' : 'password'} name="password" placeholder="••••••••"
+                  value={formData.password} onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
+                  className={inputClass + ' pr-11'} />
+                <button type="button" onClick={() => { hapticLight(); setShowPassword(v => !v); }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.password}</p>}
+              <div className="flex justify-end mt-1.5">
+                <Link to="/forgot-password" className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition">
+                  Forgot Password?
+                </Link>
+              </div>
+            </div>
+
+            {/* Role */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-400">I am a</label>
+              <div className="relative">
+                <UserCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+                <select name="role" value={formData.role} onChange={e => setFormData(p => ({ ...p, role: e.target.value }))}
+                  className={inputClass + ' appearance-none cursor-pointer'}
+                  style={{ colorScheme: 'dark' }}>
+                  <option value="student" className="bg-gray-800 text-white">Student</option>
+                  <option value="mentor" className="bg-gray-800 text-white">Mentor</option>
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1.5L6 6.5L11 1.5" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Student School Password */}
+            {formData.role === 'student' && (
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-400">
+                  School Password <span className="text-gray-500 font-normal">(Optional if using personal password)</span>
+                </label>
+                <div className="relative">
+                  <input type={showSchoolPassword ? 'text' : 'password'} name="schoolPassword" placeholder="Enter your school password"
+                    value={formData.schoolPassword} onChange={e => setFormData(p => ({ ...p, schoolPassword: e.target.value }))}
+                    className={inputClass.replace('pl-11', 'pl-4') + ' pr-11'} />
+                  <button type="button" onClick={() => { hapticLight(); setShowSchoolPassword(v => !v); }}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition">
+                    {showSchoolPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {errors.schoolPassword && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.schoolPassword}</p>}
+                <p className="text-xs text-gray-500 mt-1.5">
+                  💡 Use school password if you forgot your personal password!
+                </p>
+              </div>
+            )}
+
+            {/* Mentor Code */}
+            {formData.role === 'mentor' && (
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-400">Mentor Code</label>
+                <input type="text" name="mentorCode" placeholder="Enter your mentor code"
+                  value={formData.mentorCode} onChange={e => setFormData(p => ({ ...p, mentorCode: e.target.value }))}
+                  className={inputClass.replace('pl-11', 'pl-4')} />
+                {errors.mentorCode && <p className="text-red-400 text-xs mt-1.5 flex items-center gap-1"><AlertCircle size={12} /> {errors.mentorCode}</p>}
+              </div>
+            )}
+
+            {errors.submit && (
+              <div className="p-3 rounded-xl text-sm flex items-center gap-2"
+                style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+                <AlertCircle size={16} /> {errors.submit}
+              </div>
+            )}
+
+            <button type="submit" disabled={loading}
+              className="w-full py-3 text-white font-semibold rounded-xl flex items-center justify-center gap-2 mt-5 disabled:opacity-50 transition-all"
+              style={{ 
+                background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%)', 
+                boxShadow: '0 4px 15px rgba(99,102,241,0.4)' 
+              }}>
+              {loading ? <><Loader2 size={18} className="animate-spin" /> Signing in...</> : <><LogIn size={18} /> Sign In</>}
+            </button>
+
+            {loading && (
+              <p className="text-center text-xs text-gray-500">
+                ⚡ Server is waking up, please wait...
+              </p>
+            )}
+          </form>
+
+          {/* Divider + Google */}
+          <div className="mt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-gray-700" />
+              <span className="text-xs text-gray-500">or continue with</span>
+              <div className="flex-1 h-px bg-gray-700" />
+            </div>
+            <div ref={googleBtnRef} className="hidden" id="google-btn-hidden-login" />
+            <button
+              type="button"
+              onClick={() => {
+                hapticMedium(); // Vibrate on Google sign in
+                // Click the hidden Google rendered button
+                const hiddenBtn = document.querySelector('#google-btn-hidden-login div[role="button"]')
+                if (hiddenBtn) {
+                  hiddenBtn.click()
+                } else if (window.google?.accounts?.id) {
+                  window.google.accounts.id.prompt()
+                }
+              }}
+              disabled={googleLoading}
+              className="w-full flex items-center justify-center gap-3 py-3 rounded-xl font-semibold text-sm transition disabled:opacity-60"
+              style={{
+                background: isDark ? 'rgba(255,255,255,0.06)' : '#ffffff',
+                border: isDark ? '1px solid rgba(255,255,255,0.15)' : '1px solid #dadce0',
+                color: isDark ? '#ffffff' : '#3c4043',
+                boxShadow: isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
+              }}>
+              {googleLoading
+                ? <Loader2 size={18} className="animate-spin" />
+                : <svg width="18" height="18" viewBox="0 0 48 48">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                    <path fill="none" d="M0 0h48v48H0z"/>
+                  </svg>
+              }
+              <span>{googleLoading ? 'Signing in...' : 'Sign in with Google'}</span>
+            </button>
+          </div>
+
+          <p className="text-center text-sm mt-5 text-gray-400">
+            Don't have an account?{' '}
+            <Link to="/signup" className="font-semibold hover:underline text-indigo-400">Sign up</Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}

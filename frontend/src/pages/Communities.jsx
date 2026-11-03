@@ -1,0 +1,3307 @@
+import { useEffect, useState, useCallback, useRef } from 'react'
+import SEO from '../components/SEO'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { feedAPI, connectionAPI, followAPI, roomAPI } from '../services/api'
+import { useAuthStore } from '../store/authStore'
+import { useThemeStore } from '../store/themeStore'
+import { uploadToCloudinary } from '../utils/cloudinary'
+import Navbar from '../components/Navbar'
+import { getSocket } from '../services/socket'
+import {
+  Heart, MessageCircle, Trash2, Send, Users, UserPlus, UserCheck,
+  UserX, Search, Loader2, Image, Video, X, Cpu, Wifi, BrainCircuit,
+  Zap, FolderKanban, GraduationCap, Globe2, TrendingUp, BarChart3,
+  Sparkles, ChevronDown, Bell, BellOff, Edit2, MoreHorizontal, MessageSquare, Smile
+} from 'lucide-react'
+
+const CATEGORIES = [
+  { label: 'All', icon: Globe2 },
+  { label: 'Robotics', icon: Cpu },
+  { label: 'IoT', icon: Wifi },
+  { label: 'Embedded Systems', icon: Zap },
+  { label: 'AI/ML', icon: BrainCircuit },
+  { label: 'Projects', icon: FolderKanban },
+  { label: 'Mentorship', icon: GraduationCap },
+]
+
+const CAT_COLOR = {
+  Robotics: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  IoT: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  'Embedded Systems': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  'AI/ML': 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
+  Projects: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
+  Mentorship: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  All: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+}
+
+const CAT_GRADIENT = {
+  Robotics: 'from-blue-500 to-cyan-500',
+  IoT: 'from-emerald-500 to-teal-500',
+  'Embedded Systems': 'from-amber-500 to-orange-500',
+  'AI/ML': 'from-purple-500 to-violet-600',
+  Projects: 'from-pink-500 to-rose-500',
+  Mentorship: 'from-indigo-500 to-blue-600',
+  All: 'from-indigo-500 to-purple-600',
+}
+
+// Comment Item Component
+function CommentItem({ comment, postId, user, onUpdate }) {
+  const [editingComment, setEditingComment] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [showReplies, setShowReplies] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiCategory, setEmojiCategory] = useState('smileys');
+  
+  const isCommentOwner = String(comment.userId?._id) === String(user?._id);
+  const hasReplies = comment.replies && comment.replies.length > 0;
+
+  const emojiCategories = {
+    smileys: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓'],
+    gestures: ['👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '💪', '🦾', '🦵', '🦶', '👂', '🦻', '👃', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✊', '👊', '🤛', '🤜'],
+    hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '💌'],
+    objects: ['⭐', '🌟', '✨', '⚡', '💥', '💫', '💦', '💨', '🚀', '🛸', '🔥', '💧', '🌊', '🎓', '📚', '📖', '✏️', '📝', '💻', '⌨️', '🖥️', '📱', '☎️', '📞', '💡', '🔦', '🕯️', '💰', '💳', '💎', '⚖️', '🔧', '🔨', '⚒️', '🛠️', '⚙️']
+  };
+
+  const categoryIcons = {
+    smileys: '😊',
+    gestures: '👍',
+    hearts: '❤️',
+    objects: '⭐'
+  };
+
+  const addEmoji = (emoji) => {
+    setReplyText(replyText + emoji);
+  };
+
+  const handleEditComment = async () => {
+    if (!editText.trim()) return;
+    setEditSubmitting(true);
+    try {
+      const res = await feedAPI.editComment(postId, comment._id, { content: editText.trim() });
+      onUpdate(res.data.data.post);
+      setEditingComment(false);
+    } catch (err) {
+      alert(err.response?.data?.error?.message || 'Failed to edit comment');
+    }
+    setEditSubmitting(false);
+  };
+
+  const handleDeleteComment = async () => {
+    if (!confirm('Delete this comment?')) return;
+    try {
+      const res = await feedAPI.deleteComment(postId, comment._id);
+      onUpdate(res.data.data.post);
+    } catch (err) {
+      alert('Failed to delete comment');
+    }
+  };
+
+  const handleAddReply = async () => {
+    if (!replyText.trim()) return;
+    setReplySubmitting(true);
+    try {
+      const res = await feedAPI.addReply(postId, comment._id, { content: replyText.trim() });
+      onUpdate(res.data.data.post);
+      setReplyText('');
+      setShowReplyInput(false);
+      setShowReplies(true);
+    } catch (err) {
+      alert(err.response?.data?.error?.message || 'Failed to add reply');
+    }
+    setReplySubmitting(false);
+  };
+
+  const handleDeleteReply = async (replyId) => {
+    if (!confirm('Delete this reply?')) return;
+    try {
+      const res = await feedAPI.deleteReply(postId, comment._id, replyId);
+      onUpdate(res.data.data.post);
+    } catch (err) {
+      alert('Failed to delete reply');
+    }
+  };
+
+  return (
+    <div className="flex gap-2.5 items-start group py-1">
+      <Avatar 
+        src={comment.userId?.profileImage} 
+        name={comment.userId?.name || 'Deleted User'} 
+        size={8} 
+      />
+      <div className="flex-1 min-w-0">
+        {editingComment ? (
+          <div className="flex gap-2 items-start">
+            <input
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleEditComment()}
+              className="flex-1 rounded-lg px-3 py-2 text-xs focus:outline-none"
+              style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)", color: 'var(--text-primary)' }}
+              autoFocus
+            />
+            <button
+              onClick={handleEditComment}
+              disabled={editSubmitting || !editText.trim()}
+              className="p-1.5 rounded text-indigo-500 disabled:opacity-40 flex-shrink-0"
+            >
+              {editSubmitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+            </button>
+            <button
+              onClick={() => { setEditingComment(false); setEditText(comment.content); }}
+              className="p-1.5 rounded text-gray-500 flex-shrink-0"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="rounded-lg px-3 py-2 pr-16 relative" style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }}>
+              <p className="text-xs font-bold text-theme-primary break-words">
+                {comment.userId?.name || <span style={{ opacity: 0.5, fontStyle: 'italic' }}>Deleted User</span>}
+              </p>
+              <p className="text-xs mt-0.5 text-theme-secondary break-words">{comment.content}</p>
+              {isCommentOwner && (
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <button
+                    onClick={() => setEditingComment(true)}
+                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title="Edit comment"
+                  >
+                    <Edit2 size={12} className="text-gray-600 dark:text-gray-400" />
+                  </button>
+                  <button
+                    onClick={handleDeleteComment}
+                    className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                    title="Delete comment"
+                  >
+                    <Trash2 size={12} className="text-red-600" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Reply Button & Count */}
+            <div className="flex items-center gap-3 mt-1.5 ml-3">
+              <button
+                onClick={() => setShowReplyInput(!showReplyInput)}
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+              >
+                Reply
+              </button>
+              {hasReplies && (
+                <button
+                  onClick={() => setShowReplies(!showReplies)}
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:underline flex items-center gap-1"
+                >
+                  <MessageSquare size={12} />
+                  {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'}
+                </button>
+              )}
+            </div>
+
+            {/* Reply Input */}
+            {showReplyInput && (
+              <div className="mt-2 ml-3">
+                <div className="flex gap-2 items-start">
+                  <Avatar src={user?.profileImage} name={user?.name} size={6} />
+                  <div className="flex-1 relative">
+                    <input
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && !showEmojiPicker && handleAddReply()}
+                      placeholder="Write a reply..."
+                      className="w-full rounded-lg px-3 py-2 pr-10 text-xs focus:outline-none"
+                      style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)", color: 'var(--text-primary)' }}
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      title="Add emoji"
+                    >
+                      <Smile size={16} className="text-gray-500" />
+                    </button>
+                    
+                    {/* Emoji Picker Dropdown - WhatsApp Style */}
+                    {showEmojiPicker && (
+                      <>
+                        {/* Backdrop */}
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setShowEmojiPicker(false)}
+                        />
+                        {/* Picker - Fixed position to avoid cut-off */}
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="fixed z-50 rounded-2xl shadow-2xl overflow-hidden"
+                          style={{ 
+                            background: 'var(--bg-primary)', 
+                            border: '1px solid var(--border-primary)',
+                            width: '352px',
+                            maxWidth: 'calc(100vw - 32px)',
+                            bottom: '80px',
+                            right: '16px',
+                            maxHeight: 'calc(100vh - 160px)'
+                          }}
+                        >
+                          {/* Category Tabs */}
+                          <div className="flex border-b px-2 py-2 sticky top-0 z-10" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-primary)' }}>
+                            {Object.entries(categoryIcons).map(([cat, icon]) => (
+                              <button
+                                key={cat}
+                                onClick={() => setEmojiCategory(cat)}
+                                className={`flex-1 py-2 text-xl rounded-lg transition-colors ${
+                                  emojiCategory === cat 
+                                    ? 'bg-indigo-100 dark:bg-indigo-900/30' 
+                                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                                }`}
+                              >
+                                {icon}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          {/* Emoji Grid - Scrollable */}
+                          <div 
+                            className="p-3 overflow-y-auto overflow-x-hidden"
+                            style={{ 
+                              maxHeight: 'calc(100vh - 240px)',
+                              minHeight: '200px'
+                            }}
+                          >
+                            <div className="grid grid-cols-8 gap-1">
+                              {emojiCategories[emojiCategory].map((emoji, i) => (
+                                <button
+                                  key={i}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addEmoji(emoji);
+                                  }}
+                                  className="text-2xl hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg p-2 transition-all hover:scale-110 transform flex items-center justify-center"
+                                  style={{ width: '40px', height: '40px' }}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleAddReply}
+                    disabled={replySubmitting || !replyText.trim()}
+                    className="p-1.5 rounded text-indigo-500 disabled:opacity-40 flex-shrink-0"
+                  >
+                    {replySubmitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                  </button>
+                  <button
+                    onClick={() => { setShowReplyInput(false); setReplyText(''); setShowEmojiPicker(false); }}
+                    className="p-1.5 rounded text-gray-500 flex-shrink-0"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Replies List */}
+            {showReplies && hasReplies && (
+              <div className="mt-3 ml-6 space-y-2 border-l-2 border-indigo-200 dark:border-indigo-800 pl-3">
+                {comment.replies.map((reply) => (
+                  <div key={reply._id} className="flex gap-2 items-start group/reply py-1">
+                    <Avatar src={reply.userId?.profileImage} name={reply.userId?.name} size={6} />
+                    <div className="flex-1 min-w-0">
+                      <div className="rounded-lg px-2.5 py-1.5 pr-12 relative" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+                        <p className="text-xs font-bold text-theme-primary break-words">{reply.userId?.name}</p>
+                        <p className="text-xs mt-0.5 text-theme-secondary break-words">{reply.content}</p>
+                        {String(reply.userId?._id) === String(user?._id) && (
+                          <button
+                            onClick={() => handleDeleteReply(reply._id)}
+                            className="absolute top-1.5 right-1.5 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors opacity-0 group-hover/reply:opacity-100"
+                            title="Delete reply"
+                          >
+                            <Trash2 size={11} className="text-red-600" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Avatar({ src, name, size = 9 }) {
+  const palette = ['bg-indigo-500', 'bg-purple-500', 'bg-blue-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500']
+  const bg = palette[(name?.charCodeAt(0) || 0) % palette.length]
+  const sz = `w-${size} h-${size}`
+  if (src) return <img src={src} alt={name} className={`${sz} rounded-full object-cover flex-shrink-0`} style={{ boxShadow: '0 0 0 2px var(--bg-primary)' }} />
+  return (
+    <div className={`${sz} rounded-full ${bg} flex items-center justify-center flex-shrink-0 text-white font-bold text-sm`} style={{ boxShadow: '0 0 0 2px var(--bg-primary)' }}>
+      {name?.[0]?.toUpperCase() || '?'}
+    </div>
+  )
+}
+
+function RoleBadge({ role }) {
+  return (
+    <span className={`inline-flex items-center text-xs px-2 py-0.5 rounded-full font-semibold ${
+      role === 'mentor'
+        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+    }`}>
+      {role === 'mentor' ? '✦ Mentor' : '● Student'}
+    </span>
+  )
+}
+
+// ─── USER PROFILE MODAL (LinkedIn-style) ─────────────────────────────────────
+function UserProfileModal({ userId, currentUserId, onClose, onFollowChange, onPostClick }) {
+  const isDark = useThemeStore(s => s.isDark)
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [following, setFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
+  const [userPosts, setUserPosts] = useState([])
+  const [postsLoading, setPostsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!userId) return
+    setLoading(true)
+    followAPI.getProfile(userId)
+      .then(res => {
+        const { user, isFollowing, followersCount, followingCount } = res.data.data
+        setProfile({ ...user, isFollowing, followersCount, followingCount })
+        setFollowing(isFollowing || false)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+    
+    // Fetch user's posts
+    setPostsLoading(true)
+    feedAPI.getPostsByUser(userId, 1)
+      .then(res => {
+        const posts = res.data?.data?.posts || []
+        setUserPosts(posts.slice(0, 5)) // Show only 5 recent posts
+      })
+      .catch(() => {})
+      .finally(() => setPostsLoading(false))
+  }, [userId])
+
+  const handleFollow = async () => {
+    // Optimistic update — instantly toggle UI, API runs in background
+    const wasFollowing = following
+    setFollowing(!wasFollowing)
+    setProfile(p => ({
+      ...p,
+      followersCount: wasFollowing
+        ? Math.max(0, (p.followersCount || 1) - 1)
+        : (p.followersCount || 0) + 1
+    }))
+    try {
+      if (wasFollowing) {
+        await followAPI.unfollow(userId)
+      } else {
+        await followAPI.follow(userId)
+      }
+      // Notify parent component of follow state change
+      if (onFollowChange) onFollowChange(userId, !wasFollowing)
+    } catch {
+      // Revert on failure
+      setFollowing(wasFollowing)
+      setProfile(p => ({
+        ...p,
+        followersCount: wasFollowing
+          ? (p.followersCount || 0) + 1
+          : Math.max(0, (p.followersCount || 1) - 1)
+      }))
+    }
+  }
+  const isOwn = String(userId) === String(currentUserId)
+  const hasEdu = profile?.education?.institution
+  const hasExp = profile?.experience?.company
+  const hasSocial = profile?.socialLinks && Object.values(profile.socialLinks).some(Boolean)
+  const [showPhoto, setShowPhoto] = useState(false)
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        key="user-profile-modal-backdrop"
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.75)',
+          zIndex: 99998,
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.93, y: 24 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.93, y: 24 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          top: 0, left: 0,
+          right: 0, bottom: 0,
+          margin: 'auto',
+          width: 'min(560px, calc(100vw - 24px))',
+          height: 'fit-content',
+          maxHeight: '92vh',
+          zIndex: 99999,
+          background: isDark ? 'rgba(8,6,28,0.98)' : 'rgba(255,255,255,0.98)',
+          border: `1px solid ${isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.2)'}`,
+          borderRadius: '24px',
+          boxShadow: isDark ? '0 28px 80px rgba(0,0,0,0.9)' : '0 28px 80px rgba(0,0,0,0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+        {/* Gradient top line */}
+        <div style={{ height: 2, flexShrink: 0, background: 'linear-gradient(90deg,transparent,#6366f1,#8b5cf6,transparent)' }} />
+
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260, flexDirection: 'column', gap: 12 }}>
+            <Loader2 size={30} className="animate-spin" style={{ color: '#818cf8' }} />
+            <span style={{ color: "var(--text-secondary)", fontSize: '0.8rem' }}>Loading profile...</span>
+          </div>
+        ) : !profile ? (
+          <div style={{ padding: 32, textAlign: 'center', color: "var(--text-secondary)" }}>Profile not found</div>
+        ) : (
+          /* Scrollable body */
+          <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+            {/* Banner + Avatar (avatar overlaps banner from inside it) */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{
+                height: 130,
+                position: 'relative',
+                background: profile.bannerImage
+                  ? `url(${profile.bannerImage}) center/cover no-repeat`
+                  : 'linear-gradient(135deg,rgba(99,102,241,0.45),rgba(139,92,246,0.45))',
+              }}>
+                {!profile.bannerImage && (
+                  <div style={{ position: 'absolute', inset: 0, opacity: 0.2, backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
+                )}
+                <button onClick={onClose}
+                  style={{ position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', flexShrink: 0 }}>
+                  <X size={16} color="white" />
+                </button>
+              </div>
+              {/* Avatar anchored to bottom of banner, sticks out below */}
+              <div
+                onClick={() => profile.profileImage && setShowPhoto(true)}
+                style={{
+                  position: 'absolute',
+                  bottom: -46,
+                  left: 22,
+                  width: 92, height: 92, borderRadius: '50%', overflow: 'hidden',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                  boxShadow: '0 0 28px rgba(99,102,241,0.55)',
+                  border: `4px solid ${isDark ? 'rgba(8,6,28,0.98)' : 'rgba(255,255,255,0.98)'}`,
+                  color: '#ffffff', fontWeight: 700, fontSize: 28,
+                  cursor: profile.profileImage ? 'pointer' : 'default',
+                }}>
+                {profile.profileImage
+                  ? <img src={profile.profileImage} alt={profile.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : profile.name?.[0]?.toUpperCase()}
+              </div>
+
+              {/* Full photo lightbox */}
+              {showPhoto && profile.profileImage && createPortal(
+                <div
+                  onClick={() => setShowPhoto(false)}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 999999,
+                    background: 'rgba(0,0,0,0.92)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(8px)',
+                    cursor: 'zoom-out',
+                  }}>
+                  <img
+                    src={profile.profileImage}
+                    alt={profile.name}
+                    onClick={e => e.stopPropagation()}
+                    style={{
+                      maxWidth: '90vw', maxHeight: '90vh',
+                      borderRadius: '16px',
+                      boxShadow: '0 0 60px rgba(0,0,0,0.8)',
+                      objectFit: 'contain',
+                    }}
+                  />
+                  <button
+                    onClick={() => setShowPhoto(false)}
+                    style={{
+                      position: 'fixed', top: 16, right: 16,
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.15)',
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', color: 'white',
+                    }}>
+                    <X size={20} />
+                  </button>
+                </div>,
+                document.body
+              )}
+            </div>
+
+            {/* Profile content with padding-top to clear the avatar */}
+            <div style={{ padding: '54px 22px 28px' }}>
+              {/* Name + info row */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 800, color: isDark ? '#f1f5f9' : '#0f172a', lineHeight: 1.2 }}>{profile.name}</h2>
+                  {profile.headline && (
+                    <p style={{ margin: '5px 0 0', fontSize: '0.88rem', color: isDark ? 'rgba(148,163,184,0.85)' : '#475569', lineHeight: 1.4 }}>{profile.headline}</p>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <RoleBadge role={profile.role} />
+                    {profile.address && (
+                      <span style={{ fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.9)' : '#374151', fontWeight: 500 }}>
+                        📍 {profile.address.split(',').slice(0, 2).join(',')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {/* Follower count */}
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <p style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: isDark ? '#e2e8f0' : '#0f172a' }}>{profile?.followersCount ?? 0}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.75rem', fontWeight: 600, color: isDark ? 'rgba(148,163,184,0.7)' : '#475569' }}>followers</p>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              {!isOwn && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                  <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                    onClick={handleFollow} disabled={followLoading}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      padding: '9px 22px', borderRadius: 22,
+                      fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
+                      border: following ? '1px solid rgba(139,92,246,0.45)' : 'none',
+                      background: following ? 'rgba(139,92,246,0.18)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                      color: following ? '#c4b5fd' : 'white',
+                      boxShadow: following ? 'none' : '0 2px 16px rgba(99,102,241,0.45)',
+                      opacity: followLoading ? 0.7 : 1,
+                    }}>
+                    {followLoading ? <Loader2 size={14} className="animate-spin" /> : following ? <UserCheck size={14} /> : <UserPlus size={14} />}
+                    {following ? 'Following' : '+ Follow'}
+                  </motion.button>
+                </div>
+              )}
+
+              {/* ── About ─────────────────────────────────────── */}
+              {profile.bio && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.2)'}` }}>
+                  <p style={{ margin: '0 0 8px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(99,102,241,0.9)' : '#4f46e5', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About</p>
+                  <p style={{ margin: 0, fontSize: '0.87rem', lineHeight: 1.65, color: isDark ? 'rgba(226,232,240,0.85)' : '#334155' }}>{profile.bio}</p>
+                </div>
+              )}
+
+              {/* ── Education ─────────────────────────────────── */}
+              {hasEdu && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.2)'}` }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(52,211,153,0.9)' : '#059669', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🎓 Education</p>
+                  <div style={{ display: 'flex', gap: 13 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: isDark ? 'rgba(52,211,153,0.1)' : 'rgba(5,150,105,0.08)', border: `1px solid ${isDark ? 'rgba(52,211,153,0.25)' : 'rgba(5,150,105,0.2)'}` }}>🎓</div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{profile.education.institution}</p>
+                      {profile.education.degree && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{profile.education.degree}{profile.education.field ? ` · ${profile.education.field}` : ''}</p>}
+                      {(profile.education.startYear || profile.education.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>{profile.education.startYear}{profile.education.startYear && profile.education.endYear ? ' – ' : ''}{profile.education.endYear}</p>}
+                      {profile.education.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: isDark ? 'rgba(148,163,184,0.65)' : '#475569' }}>{profile.education.description}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Experience ────────────────────────────────── */}
+              {hasExp && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.2)'}` }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(196,181,253,0.9)' : '#7c3aed', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Experience</p>
+                  <div style={{ display: 'flex', gap: 13 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: isDark ? 'rgba(139,92,246,0.1)' : 'rgba(124,58,237,0.08)', border: `1px solid ${isDark ? 'rgba(139,92,246,0.25)' : 'rgba(124,58,237,0.2)'}` }}>🏢</div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem', color: isDark ? '#f1f5f9' : '#0f172a' }}>{profile.experience.role || profile.experience.company}</p>
+                      {profile.experience.role && <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: isDark ? 'rgba(148,163,184,0.75)' : '#475569' }}>{profile.experience.company}</p>}
+                      {(profile.experience.startYear || profile.experience.endYear) && <p style={{ margin: '3px 0 0', fontSize: '0.75rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b' }}>{profile.experience.startYear}{profile.experience.startYear && profile.experience.endYear ? ' – ' : ''}{profile.experience.endYear || 'Present'}</p>}
+                      {profile.experience.description && <p style={{ margin: '7px 0 0', fontSize: '0.78rem', lineHeight: 1.5, color: isDark ? 'rgba(148,163,184,0.65)' : '#475569' }}>{profile.experience.description}</p>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Skills ────────────────────────────────────── */}
+              {profile.skills?.length > 0 && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.15)'}` }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(99,102,241,0.7)' : 'rgba(99,102,241,0.9)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Skills</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                    {profile.skills.map(s => (
+                      <span key={s} style={{ fontSize: '0.78rem', padding: '4px 11px', borderRadius: 20, fontWeight: 600, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#6366f1' }}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Social Links ──────────────────────────────── */}
+              {hasSocial && (
+                <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid rgba(99,102,241,0.12)' }}>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Links</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {profile.socialLinks?.github && (
+                      <a href={profile.socialLinks.github} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: isDark ? 'rgba(226,232,240,0.08)' : 'rgba(15,23,42,0.06)', border: isDark ? '1px solid rgba(226,232,240,0.15)' : '1px solid rgba(15,23,42,0.15)', color: isDark ? '#e2e8f0' : '#0f172a', textDecoration: 'none' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                        GitHub
+                      </a>
+                    )}
+                    {profile.socialLinks?.linkedin && (
+                      <a href={profile.socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', color: '#60a5fa', textDecoration: 'none' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                        LinkedIn
+                      </a>
+                    )}
+                    {profile.socialLinks?.instagram && (
+                      <a href={profile.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(244,114,182,0.08)', border: '1px solid rgba(244,114,182,0.2)', color: '#f472b6', textDecoration: 'none' }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                        Instagram
+                      </a>
+                    )}
+                    {profile.socialLinks?.website && (
+                      <a href={profile.socialLinks.website} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 12, fontSize: '0.78rem', fontWeight: 600, background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', textDecoration: 'none' }}>
+                        🌐 Portfolio
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Recent Posts ──────────────────────────────── */}
+              <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.15)'}` }}>
+                <p style={{ margin: '0 0 12px', fontSize: '0.7rem', fontWeight: 700, color: isDark ? 'rgba(167,139,250,0.9)' : '#8b5cf6', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>📝 Recent Posts</p>
+                {postsLoading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0' }}>
+                    <Loader2 size={20} className="animate-spin" style={{ color: '#818cf8' }} />
+                  </div>
+                ) : userPosts.length === 0 ? (
+                  <p style={{ fontSize: '0.8rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b', textAlign: 'center', padding: '16px 0' }}>No posts yet</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {userPosts.map(post => (
+                      <div key={post._id} 
+                        onClick={() => {
+                          console.log('🖱️ Post clicked in modal:', post._id, 'by user:', userId)
+                          onClose()
+                          if (onPostClick) {
+                            console.log('📍 Calling onPostClick with:', post._id, userId)
+                            onPostClick(post._id, userId)
+                          } else {
+                            console.log('⚠️ onPostClick is not defined')
+                          }
+                        }}
+                        style={{ 
+                          padding: '12px', 
+                          borderRadius: 12, 
+                          background: isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.03)', 
+                          border: `1px solid ${isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)'}`,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.06)'
+                          e.currentTarget.style.borderColor = isDark ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.2)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.03)'
+                          e.currentTarget.style.borderColor = isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)'
+                        }}>
+                        <p style={{ 
+                          margin: 0, 
+                          fontSize: '0.82rem', 
+                          lineHeight: 1.5, 
+                          color: isDark ? 'rgba(226,232,240,0.85)' : '#334155',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>{post.content}</p>
+                        {post.media && (
+                          <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', maxHeight: 120, pointerEvents: 'none' }}>
+                            {post.media.type === 'image' && (
+                              <img src={post.media.url} alt="Post" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            )}
+                            {post.media.type === 'video' && (
+                              <video src={post.media.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            )}
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, fontSize: '0.72rem', color: isDark ? 'rgba(148,163,184,0.6)' : '#64748b', pointerEvents: 'none' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Heart size={12} /> {post.likes?.length || 0}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <MessageCircle size={12} /> {post.comments?.length || 0}
+                          </span>
+                          <span style={{ marginLeft: 'auto' }}>
+                            {new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>,
+    document.body
+  )
+}
+
+// ─── POST COMPOSER ────────────────────────────────────────────────────────────
+function PostComposer({ user, onPost }) {
+  const [open, setOpen] = useState(false)
+  const [content, setContent] = useState('')
+  const [category, setCategory] = useState('All')
+  const [media, setMedia] = useState(null)
+  const [posting, setPosting] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [mentions, setMentions] = useState([]) // Store mentioned users
+  const [showMentions, setShowMentions] = useState(false)
+  const [mentionSearch, setMentionSearch] = useState('')
+  const [mentionUsers, setMentionUsers] = useState([])
+  const [showHashtags, setShowHashtags] = useState(false)
+  const [hashtagSuggestions, setHashtagSuggestions] = useState([])
+  const [cursorPosition, setCursorPosition] = useState(0)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 })
+  const [showPollCreator, setShowPollCreator] = useState(false)
+  const [pollQuestion, setPollQuestion] = useState('')
+  const [pollOptions, setPollOptions] = useState(['', ''])
+  const [pollDuration, setPollDuration] = useState(24) // hours
+  const fileRef = useRef()
+  const textRef = useRef()
+
+  const openFull = () => { setOpen(true); setTimeout(() => textRef.current?.focus(), 80) }
+
+  const pickFile = (accept, type) => {
+    fileRef.current.accept = accept
+    fileRef.current._type = type
+    fileRef.current.click()
+  }
+
+  const onFileChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const type = fileRef.current._type
+    // Show local preview immediately
+    const localUrl = URL.createObjectURL(file)
+    setMedia({ dataUrl: localUrl, type, name: file.name, uploading: true })
+    setUploading(true)
+    try {
+      const { url } = await uploadToCloudinary(file, 'studdy-buddy/posts')
+      setMedia({ dataUrl: url, type, name: file.name, uploading: false })
+    } catch {
+      setMedia(null)
+    } finally {
+      setUploading(false)
+    }
+    e.target.value = ''
+  }
+
+  // Detect @ mentions and # hashtags
+  const handleContentChange = async (e) => {
+    const text = e.target.value.slice(0, 7000)
+    const cursorPos = e.target.selectionStart
+    setContent(text)
+    setCursorPosition(cursorPos)
+
+    // Check if user is typing @mention
+    const textBeforeCursor = text.substring(0, cursorPos)
+    const mentionMatch = textBeforeCursor.match(/@(\w+)$/)
+    const hashtagMatch = textBeforeCursor.match(/#(\w+)$/)
+    
+    if (mentionMatch) {
+      const searchQuery = mentionMatch[1]
+      setMentionSearch(searchQuery)
+      setShowHashtags(false)
+      
+      if (searchQuery.length >= 1) {
+        try {
+          const res = await feedAPI.searchUsers(searchQuery)
+          setMentionUsers(res.data.data.users || [])
+          
+          // Calculate dropdown position relative to textarea
+          if (textRef.current) {
+            const rect = textRef.current.getBoundingClientRect()
+            setDropdownPosition({
+              top: rect.bottom + 5,
+              left: rect.left,
+              width: rect.width
+            })
+          }
+          
+          setShowMentions(true)
+        } catch (err) {
+          console.error('Failed to search users:', err)
+        }
+      } else {
+        setShowMentions(false)
+      }
+    } else if (hashtagMatch) {
+      const searchQuery = hashtagMatch[1]
+      setShowMentions(false)
+      
+      if (searchQuery.length >= 1) {
+        try {
+          // Get trending hashtags
+          const res = await feedAPI.getTrendingHashtags(20)
+          const trending = res.data.data.hashtags || []
+          
+          // Filter hashtags by search query
+          const filtered = trending.filter(h => 
+            h.tag.toLowerCase().startsWith(searchQuery.toLowerCase())
+          )
+          
+          setHashtagSuggestions(filtered)
+          
+          // Calculate dropdown position
+          if (textRef.current) {
+            const rect = textRef.current.getBoundingClientRect()
+            setDropdownPosition({
+              top: rect.bottom + 5,
+              left: rect.left,
+              width: rect.width
+            })
+          }
+          
+          setShowHashtags(true)
+        } catch (err) {
+          console.error('Failed to fetch hashtags:', err)
+        }
+      } else {
+        setShowHashtags(false)
+      }
+    } else {
+      setShowMentions(false)
+      setShowHashtags(false)
+    }
+  }
+
+  // Select a user from mention dropdown
+  const selectMention = (mentionedUser) => {
+    const textBeforeCursor = content.substring(0, cursorPosition)
+    const textAfterCursor = content.substring(cursorPosition)
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/)
+    
+    if (mentionMatch) {
+      const newText = textBeforeCursor.substring(0, mentionMatch.index) + 
+                      `@${mentionedUser.name} ` + 
+                      textAfterCursor
+      setContent(newText)
+      
+      // Add to mentions array if not already there
+      if (!mentions.find(m => m._id === mentionedUser._id)) {
+        setMentions([...mentions, mentionedUser])
+      }
+    }
+    
+    setShowMentions(false)
+    textRef.current?.focus()
+  }
+
+  // Select a hashtag from dropdown
+  const selectHashtag = (hashtag) => {
+    const textBeforeCursor = content.substring(0, cursorPosition)
+    const textAfterCursor = content.substring(cursorPosition)
+    const hashtagMatch = textBeforeCursor.match(/#(\w*)$/)
+    
+    if (hashtagMatch) {
+      const newText = textBeforeCursor.substring(0, hashtagMatch.index) + 
+                      `#${hashtag} ` + 
+                      textAfterCursor
+      setContent(newText)
+    }
+    
+    setShowHashtags(false)
+    textRef.current?.focus()
+  }
+
+  const submit = async () => {
+    if (!content.trim() && !media && !showPollCreator) return
+    
+    // Validate poll if present
+    if (showPollCreator) {
+      if (!pollQuestion.trim()) {
+        alert('⚠️ Please enter a poll question');
+        return;
+      }
+      const validOptions = pollOptions.filter(opt => opt.trim());
+      if (validOptions.length < 2) {
+        alert('⚠️ Poll must have at least 2 options');
+        return;
+      }
+    }
+    
+    setPosting(true)
+    try {
+      const postData = { 
+        content, 
+        category, 
+        mediaUrl: media?.dataUrl || null, 
+        mediaType: media?.type || null,
+        mentions: mentions.map(m => m._id)
+      };
+      
+      // Add poll data if poll is being created
+      if (showPollCreator) {
+        postData.poll = {
+          question: pollQuestion.trim(),
+          options: pollOptions.filter(opt => opt.trim()),
+          duration: pollDuration
+        };
+      }
+      
+      await onPost(postData);
+      setContent(''); setCategory('All'); setMedia(null); setMentions([]); 
+      setShowPollCreator(false); setPollQuestion(''); setPollOptions(['', '']); setPollDuration(24);
+      setOpen(false);
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || 'Failed to post'
+      alert('⚠️ ' + msg)
+    } finally { setPosting(false) }
+  }
+
+  const addPollOption = () => {
+    if (pollOptions.length < 6) {
+      setPollOptions([...pollOptions, ''])
+    }
+  }
+
+  const removePollOption = (idx) => {
+    if (pollOptions.length > 2) {
+      setPollOptions(pollOptions.filter((_, i) => i !== idx))
+    }
+  }
+
+  const updatePollOption = (idx, value) => {
+    const newOptions = [...pollOptions]
+    newOptions[idx] = value
+    setPollOptions(newOptions)
+  }
+
+  return (
+    <>
+      <input ref={fileRef} type="file" className="hidden" onChange={onFileChange} />
+
+      {/* Collapsed bar */}
+      {!open && (
+        <div className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+          <div className="flex items-center gap-3">
+            <Avatar src={user?.profileImage} name={user?.name} size={10} />
+            <button onClick={openFull}
+              className="flex-1 text-left px-4 py-2.5 rounded-full text-sm transition"
+              style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)", color: "var(--text-tertiary)" }}>
+              Share something with the community...
+            </button>
+          </div>
+          <div className="flex items-center gap-1 mt-3 pt-3" style={{ borderTop: '1px solid var(--border-primary)' }}>
+            <button onClick={() => { openFull(); setTimeout(() => pickFile('image/*', 'image'), 200) }}
+              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-lg transition hover:bg-blue-50"
+              style={{ color: '#6366f1' }}>
+              <Image size={15} /> Photo
+            </button>
+            <button onClick={() => { openFull(); setTimeout(() => pickFile('video/*', 'video'), 200) }}
+              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-lg transition hover:bg-green-50"
+              style={{ color: '#10b981' }}>
+              <Video size={15} /> Video
+            </button>
+            <button onClick={() => { openFull(); setShowPollCreator(true) }}
+              className="flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-lg transition hover:bg-purple-50"
+              style={{ color: '#8b5cf6' }}>
+              <BarChart3 size={15} /> Poll
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded modal */}
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setOpen(false)}
+              className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="fixed inset-x-4 top-20 z-50 rounded-lg shadow-2xl max-w-lg mx-auto overflow-hidden max-h-[80vh] flex flex-col"
+              style={{ background: "var(--bg-card)", border: '1px solid var(--border-primary)' }}
+            >
+              <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border-primary)" }}>
+                <div className="flex items-center gap-3">
+                  <Avatar src={user?.profileImage} name={user?.name} size={10} />
+                  <div>
+                    <p className="font-bold text-sm text-theme-primary">{user?.name}</p>
+                    <select value={category} onChange={e => setCategory(e.target.value)}
+                      className="text-xs font-semibold cursor-pointer mt-0.5 focus:outline-none text-theme-secondary"
+                      style={{ background: 'transparent' }}>
+                      {CATEGORIES.map(c => <option key={c.label} value={c.label} style={{ background: 'var(--bg-primary)' }}>{c.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <button onClick={() => setOpen(false)} className="p-2 rounded-full transition" style={{ background: 'var(--bg-primary)' }}>
+                  <X size={18} style={{ color: "var(--text-secondary)" }} />
+                </button>
+              </div>
+
+              <div className="px-5 py-4 flex-1 overflow-y-auto">
+                <textarea ref={textRef} value={content} onChange={handleContentChange}
+                  placeholder="What do you want to talk about? (Use @ to mention someone)"
+                  rows={5}
+                  maxLength={7000}
+                  className="w-full bg-transparent text-sm text-theme-primary placeholder-gray-500 resize-none focus:outline-none leading-relaxed" />
+                
+                {content.length > 6000 && (
+                  <p className="text-xs mt-1 text-right" style={{ color: content.length >= 7000 ? '#ef4444' : '#f59e0b' }}>
+                    {content.length}/7000
+                  </p>
+                )}
+                {media && (
+                  <div className="relative mt-2 rounded-lg overflow-hidden" style={{ border: "1px solid var(--border-primary)" }}>
+                    {media.type === 'image'
+                      ? <img src={media.dataUrl} alt="preview" className="w-full max-h-64 object-cover" />
+                      : <video src={media.dataUrl} controls className="w-full max-h-64" />
+                    }
+                    <button onClick={() => setMedia(null)}
+                      className="absolute top-2 right-2 rounded-full p-1 transition" style={{ background: 'rgba(0,0,0,0.6)', color: 'white' }}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Poll Creator */}
+                {showPollCreator && (
+                  <div className="mt-3 p-4 rounded-lg" style={{ background: 'rgba(139,92,246,0.1)', border: '2px solid #8b5cf6' }}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 size={18} style={{ color: '#8b5cf6' }} />
+                      <p className="font-bold text-sm" style={{ color: '#8b5cf6' }}>Create Poll</p>
+                      <button onClick={() => setShowPollCreator(false)} className="ml-auto p-1">
+                        <X size={16} style={{ color: '#8b5cf6' }} />
+                      </button>
+                    </div>
+                    
+                    <input 
+                      type="text"
+                      value={pollQuestion}
+                      onChange={(e) => setPollQuestion(e.target.value)}
+                      placeholder="Ask a question..."
+                      maxLength={200}
+                      className="w-full px-3 py-2 mb-3 rounded-lg text-sm focus:outline-none"
+                      style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+
+                    <div className="space-y-2 mb-3">
+                      {pollOptions.map((opt, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <input 
+                            type="text"
+                            value={opt}
+                            onChange={(e) => updatePollOption(idx, e.target.value)}
+                            placeholder={`Option ${idx + 1}`}
+                            maxLength={100}
+                            className="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none"
+                            style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                          />
+                          {pollOptions.length > 2 && (
+                            <button onClick={() => removePollOption(idx)} className="p-2">
+                              <X size={16} style={{ color: '#ef4444' }} />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {pollOptions.length < 6 && (
+                      <button onClick={addPollOption} className="text-xs font-semibold mb-3" style={{ color: '#8b5cf6' }}>
+                        + Add option (max 6)
+                      </button>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-theme-secondary">Poll duration:</label>
+                      <select 
+                        value={pollDuration} 
+                        onChange={(e) => setPollDuration(Number(e.target.value))}
+                        className="px-2 py-1 text-xs rounded focus:outline-none"
+                        style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}
+                      >
+                        <option value={1}>1 hour</option>
+                        <option value={6}>6 hours</option>
+                        <option value={12}>12 hours</option>
+                        <option value={24}>1 day</option>
+                        <option value={72}>3 days</option>
+                        <option value={168}>1 week</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: '1px solid var(--border-primary)', background: 'var(--bg-primary)' }}>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => pickFile('image/*', 'image')}
+                    className="p-2 rounded-lg transition" style={{ color: '#6366f1', background: '#e0e7ff' }} title="Add photo">
+                    <Image size={18} />
+                  </button>
+                  <button onClick={() => pickFile('video/*', 'video')}
+                    className="p-2 rounded-lg transition" style={{ color: '#10b981', background: '#d1fae5' }} title="Add video">
+                    <Video size={18} />
+                  </button>
+                </div>
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                  onClick={submit} disabled={posting || uploading || (!content.trim() && !media)}
+                  className="flex items-center gap-2 px-5 py-2 text-white text-sm font-semibold rounded-full transition disabled:opacity-50"
+                  style={{ background: '#6366f1' }}>
+                  {posting || uploading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  {posting ? 'Posting...' : uploading ? 'Uploading...' : 'Post'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Mention Dropdown Portal - Renders outside modal */}
+      {showMentions && mentionUsers.length > 0 && createPortal(
+        <div 
+          className="rounded-lg shadow-2xl"
+          style={{ 
+            position: 'fixed',
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${Math.min(dropdownPosition.width, 450)}px`,
+            zIndex: 9999,
+            background: 'var(--bg-card)', 
+            border: '2px solid var(--border-primary)', 
+            maxHeight: '280px', 
+            overflowY: 'auto',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+          }}>
+          {mentionUsers.map((u, idx) => (
+            <button
+              key={u._id}
+              onClick={() => selectMention(u)}
+              className="w-full flex items-center gap-4 px-4 py-3 text-left transition-all hover:opacity-80"
+              style={{ 
+                background: idx % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)',
+                borderBottom: idx < mentionUsers.length - 1 ? '1px solid var(--border-primary)' : 'none'
+              }}
+            >
+              <div className="flex-shrink-0">
+                <Avatar src={u.profileImage} name={u.name} size={12} />
+              </div>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="text-base font-bold text-theme-primary truncate">{u.name}</p>
+                <p className="text-xs text-theme-secondary capitalize">{u.role || 'Student'}</p>
+              </div>
+              <div className="flex-shrink-0">
+                <div className="px-2 py-1 rounded text-xs font-semibold" 
+                  style={{ 
+                    background: u.role === 'mentor' ? '#6366f1' : '#10b981',
+                    color: 'white'
+                  }}>
+                  @{u.name.split(' ')[0]}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+
+      {/* Hashtag Dropdown Portal - Renders outside modal */}
+      {showHashtags && hashtagSuggestions.length > 0 && createPortal(
+        <div 
+          className="rounded-lg shadow-2xl"
+          style={{ 
+            position: 'fixed',
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+            width: `${Math.min(dropdownPosition.width, 450)}px`,
+            zIndex: 9999,
+            background: 'var(--bg-card)', 
+            border: '2px solid #10b981', 
+            maxHeight: '280px', 
+            overflowY: 'auto',
+            boxShadow: '0 10px 40px rgba(16,185,129,0.3)'
+          }}>
+          <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide" 
+            style={{ 
+              background: 'rgba(16,185,129,0.1)', 
+              color: '#10b981',
+              borderBottom: '1px solid var(--border-primary)'
+            }}>
+            Trending Hashtags
+          </div>
+          {hashtagSuggestions.map((h, idx) => (
+            <button
+              key={h.tag}
+              onClick={() => selectHashtag(h.tag)}
+              className="w-full flex items-center gap-4 px-4 py-3 text-left transition-all hover:opacity-80"
+              style={{ 
+                background: idx % 2 === 0 ? 'var(--bg-secondary)' : 'var(--bg-primary)',
+                borderBottom: idx < hashtagSuggestions.length - 1 ? '1px solid var(--border-primary)' : 'none'
+              }}
+            >
+              <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full" 
+                style={{ background: 'rgba(16,185,129,0.1)' }}>
+                <span className="text-xl font-bold" style={{ color: '#10b981' }}>#</span>
+              </div>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="text-base font-bold text-theme-primary">#{h.tag}</p>
+                <p className="text-xs text-theme-secondary">{h.count} {h.count === 1 ? 'post' : 'posts'}</p>
+              </div>
+              <div className="flex-shrink-0">
+                <div className="px-3 py-1 rounded-full text-xs font-semibold" 
+                  style={{ 
+                    background: 'rgba(16,185,129,0.15)',
+                    color: '#10b981'
+                  }}>
+                  Trending
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  )
+}
+
+// ─── EMOJI PICKER ─────────────────────────────────────────────────────────
+// Lazy load emojis - only when needed
+const EMOJIS = ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕', '🤑', '🤠', '👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', '🔠', '🔡', '🔢', '🔣', '🔤', '🅿️', '🚾', '🔽', '🔼', '🔙', '🔚', '🔛', '🔜', '🔝', '🛗', '🔃', '🔄', '🔁', '🔂', '▶️', '⏩', '⏭️', '⏯️', '◀️', '⏪', '⏮️', '🔼', '⏫', '🔽', '⏬', '⏸️', '⏹️', '⏺️', '⏏️', '🎦', '🔅', '🔆', '📶', '📳', '📴', '♀️', '♂️', '⚧️', '✖️', '➕', '➖', '➗', '♾️', '‼️', '⁉️', '❓', '❔', '❕', '❗', '〰️', '💱', '💲', '⚕️', '♻️', '⚜️', '🔱', '📛', '🔰', '⭐', '🌟', '✨', '⚡', '💥', '💫', '💦', '💨', '🕊️', '🦅', '🦆', '🦢', '🦉', '🦤', '🪶', '🦩', '🦚', '🦜', '🐦', '🐧', '🐥', '🐣', '🐤', '🦆', '🦃', '🐔', '🐓', '🐣', '🐥', '🦆', '🪿', '🦢', '🦜', '🦚', '🦩', '🦤', '🦉', '🦅', '🦇', '🦋', '🐌', '🐛', '🦟', '🦗', '🪰', '🪱', '🪲', '🪳', '🦂', '🕷️', '🕸️', '🐚', '🐙', '🦑', '🦀', '🦞', '🦐', '🦪', '🐠', '🐟', '🐡', '🐬', '🦈', '🐳', '🐋', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🪶', '🦜', '🦩', '🦚', '🐦', '🦃', '🦅', '🦆', '🦢', '🦉', '🦚', '🪶', '🐓', '🐔', '🐣', '🐤', '🐥', '🦆', '🐧', '🕊️', '🦩', '🦤', '🦜', '🦚', '🦉', '🦅', '🦇', '🦋', '🐌', '🐛', '🦟', '🦗', '🕷️', '🐚', '🐙', '🦑', '🦀', '🦞', '🦐', '🦪', '🐠', '🐟', '🐡', '🐬', '🦈', '🐳', '🐋', '🚀', '🛸', '🛰️', '💺', '🚁', '🛩️', '✈️', '🛫', '🛬', '🪂', '💈', '🛎️', '🧳', '⌛', '⏳', '⌚', '⏰', '⏱️', '⏲️', '🕰️', '🕛', '🕧', '🕐', '🕜', '🕑', '🕝', '🕒', '🕞', '🕓', '🕟', '🕔', '🕠', '🕕', '🕡', '🕖', '🕢', '🕗', '🕣', '🕘', '🕤', '🕙', '🕥', '🕚', '🕦', '🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘', '🌙', '🌚', '🌛', '🌜', '🌡️', '☀️', '🌝', '🌞', '🪐', '⭐', '🌟', '🌠', '🌌', '☁️', '⛅', '⛈️', '🌤️', '🌥️', '🌦️', '🌧️', '🌨️', '🌩️', '🌪️', '🌫️', '🌬️', '🌀', '🌈', '🌂', '☂️', '☔', '⛱️', '⚡', '❄️', '☃️', '⛄', '☄️', '🔥', '💧', '🌊'];
+
+function EmojiPicker({ onSelect, onClose }) {
+  const pickerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      ref={pickerRef}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="absolute bottom-full mb-2 right-0 rounded-xl shadow-2xl p-3 z-50"
+      style={{ 
+        background: 'var(--bg-secondary)', 
+        border: '1px solid var(--border-primary)',
+        maxWidth: '280px',
+        maxHeight: '200px',
+        overflowY: 'auto'
+      }}
+    >
+      <div className="grid grid-cols-8 gap-1">
+        {EMOJIS.map((emoji, idx) => (
+          <button
+            key={idx}
+            onClick={() => {
+              onSelect(emoji);
+              onClose();
+            }}
+            className="text-xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1 transition"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── SINGLE POST CARD ─────────────────────────────────────────────────────────
+function PostCard({ post, user, onLike, onDelete, onComment, onFollow, onUpdate, initialFollowing }) {
+  const [showComments, setShowComments] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [following, setFollowing] = useState(initialFollowing || false)
+  const [followLoading, setFollowLoading] = useState(false)
+  const [showShare, setShowShare] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const PREVIEW_LIMIT = 300 // chars shown before "Read more"
+  const [copied, setCopied] = useState(false)
+  const [viewProfileId, setViewProfileId] = useState(null)
+  const [showImageLightbox, setShowImageLightbox] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [emojiCategory, setEmojiCategory] = useState('smileys')
+  const shareRef = useRef(null)
+  const isLiked = (post.likes || []).map(String).includes(String(user?._id))
+  const isOwner = String(post.userId?._id) === String(user?._id)
+  const grad = CAT_GRADIENT[post.category] || CAT_GRADIENT.All
+
+  // Format content with clickable @mentions and #hashtags
+  const formatContent = (text) => {
+    if (!text) return null;
+    
+    const parts = text.split(/(@\w+|#\w+)/g);
+    return parts.map((part, i) => {
+      // @mentions - blue color
+      if (part.match(/^@\w+$/)) {
+        return (
+          <span key={i} className="font-semibold cursor-pointer hover:underline" style={{ color: '#6366f1' }}>
+            {part}
+          </span>
+        );
+      }
+      // #hashtags - green color
+      if (part.match(/^#\w+$/)) {
+        return (
+          <span key={i} className="font-semibold cursor-pointer hover:underline" style={{ color: '#10b981' }}>
+            {part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
+  const emojiCategories = {
+    smileys: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓'],
+    gestures: ['👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟', '🤘', '🤙', '💪', '🦾', '🦵', '🦶', '👂', '🦻', '👃', '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✊', '👊', '🤛', '🤜'],
+    hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '♥️', '💌'],
+    objects: ['⭐', '🌟', '✨', '⚡', '💥', '💫', '💦', '💨', '🚀', '🛸', '🔥', '💧', '🌊', '🎓', '📚', '📖', '✏️', '📝', '💻', '⌨️', '🖥️', '📱', '☎️', '📞', '💡', '🔦', '🕯️', '💰', '💳', '💎', '⚖️', '🔧', '🔨', '⚒️', '🛠️', '⚙️']
+  };
+
+  const categoryIcons = {
+    smileys: '😊',
+    gestures: '👍',
+    hearts: '❤️',
+    objects: '⭐'
+  };
+
+  const addEmoji = (emoji) => {
+    setCommentText(commentText + emoji);
+  };
+
+  // Sync follow state when parent followingSet loads (initialFollowing goes null → true/false)
+  useEffect(() => {
+    if (initialFollowing !== null && initialFollowing !== undefined) {
+      setFollowing(initialFollowing)
+    }
+  }, [initialFollowing])
+
+  // Close share dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => { if (shareRef.current && !shareRef.current.contains(e.target)) setShowShare(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleFollow = async () => {
+    // Optimistic update — instant toggle, API in background
+    const wasFollowing = following
+    setFollowing(!wasFollowing)
+    try {
+      if (wasFollowing) {
+        await followAPI.unfollow(post.userId?._id)
+      } else {
+        await followAPI.follow(post.userId?._id)
+      }
+    } catch {
+      // Revert on failure
+      setFollowing(wasFollowing)
+    }
+  }
+
+  const postUrl = `${window.location.origin}/community?post=${post._id}`
+  const shareText = `${post.userId?.name} posted on Studdy Buddy: ${post.content?.slice(0, 100) || ''}...`
+  
+  // console.log('🔗 [SHARE] Generating share URL for post:', post._id, '| URL:', postUrl)
+
+  const shareOptions = [
+    {
+      label: 'WhatsApp',
+      color: '#25D366',
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+      ),
+      action: () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText + '\n' + postUrl)}`, '_blank'),
+    },
+    {
+      label: 'Twitter / X',
+      color: '#1DA1F2',
+      icon: (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.254 5.622 5.91-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+      ),
+      action: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(postUrl)}`, '_blank'),
+    },
+    {
+      label: 'Copy Link',
+      color: '#a5b4fc',
+      icon: copied
+        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>,
+      action: () => {
+        navigator.clipboard.writeText(postUrl)
+        setCopied(true)
+        setTimeout(() => { setCopied(false); setShowShare(false) }, 1800)
+      },
+    },
+  ]
+
+  const submitComment = async () => {
+    if (!commentText.trim()) return
+    setSubmitting(true)
+    await onComment(post._id, commentText)
+    setCommentText('')
+    setSubmitting(false)
+    setShowComments(true)
+  }
+
+  return (
+    <>
+    <div 
+      data-post-id={post._id}
+      className="rounded-lg overflow-hidden" 
+      style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+      <div className="p-4 sm:p-5">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="cursor-pointer flex-shrink-0" onClick={() => setViewProfileId(post.userId?._id)}>
+              <Avatar src={post.userId?.profileImage} name={post.userId?.name} size={10} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-bold text-sm text-theme-primary cursor-pointer hover:text-indigo-600 transition"
+                  onClick={() => setViewProfileId(post.userId?._id)}>{post.userId?.name}</span>
+                <RoleBadge role={post.userId?.role} />
+                {/* Follow button — only for other users' posts */}
+                {!isOwner && (
+                  <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                    onClick={handleFollow} disabled={followLoading}
+                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold transition disabled:opacity-50"
+                    style={following
+                      ? { background: '#e0e7ff', color: '#6366f1' }
+                      : { background: '#f3f4f6', color: '#6b7280' }}>
+                    {followLoading
+                      ? <Loader2 size={10} className="animate-spin" />
+                      : following ? <UserCheck size={10} /> : <UserPlus size={10} />}
+                    {following ? 'Following' : '+ Follow'}
+                  </motion.button>
+                )}
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <span className="text-xs text-theme-tertiary">
+                  {new Date(post.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </span>
+                {post.category && post.category !== 'All' && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CAT_COLOR[post.category]}`}>{post.category}</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right side — delete (owner) + 3-dot share menu */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {isOwner && (
+              <button onClick={() => onDelete(post._id)}
+                className="p-1.5 rounded-lg transition hover:bg-red-50"
+                style={{ color: '#ef4444' }}>
+                <Trash2 size={14} />
+              </button>
+            )}
+            {/* 3-dot share menu */}
+            <div className="relative" ref={shareRef}>
+              <button onClick={() => setShowShare(v => !v)}
+                className="p-1.5 rounded-lg transition hover:bg-gray-100"
+                style={{ color: "var(--text-tertiary)" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                </svg>
+              </button>
+              <AnimatePresence>
+                {showShare && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.92, y: -6 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.92, y: -6 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-1 rounded-lg overflow-hidden z-30"
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', boxShadow: '0 8px 32px rgba(0,0,0,0.1)', minWidth: '160px' }}>
+                    <div className="px-3 pt-2.5 pb-1">
+                      <p className="text-xs font-bold text-theme-tertiary">Share post</p>
+                    </div>
+                    {shareOptions.map(opt => (
+                      <button key={opt.label} onClick={opt.action}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition hover:bg-gray-100"
+                        style={{ color: opt.color }}>
+                        <span style={{ color: opt.color }}>{opt.icon}</span>
+                        {opt.label === 'Copy Link' && copied ? 'Copied!' : opt.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        {post.content && (
+          <div className="mb-3">
+            <p className="text-sm text-theme-primary whitespace-pre-wrap leading-relaxed">
+              {expanded || post.content.length <= PREVIEW_LIMIT
+                ? formatContent(post.content)
+                : formatContent(post.content.slice(0, PREVIEW_LIMIT) + '...')}
+            </p>
+            {post.content.length > PREVIEW_LIMIT && (
+              <button
+                onClick={() => setExpanded(e => !e)}
+                className="text-xs font-semibold mt-1 transition-colors"
+                style={{ color: '#6366f1' }}
+              >
+                {expanded ? 'Show less ▲' : 'Read more ▼'}
+              </button>
+            )}
+          </div>
+        )}
+
+        {post.mediaUrl && (
+          <div className="rounded-lg overflow-hidden mb-3" style={{ border: "1px solid var(--border-primary)" }}>
+            {post.mediaType === 'image'
+              ? <img
+                  src={post.mediaUrl}
+                  alt="post media"
+                  loading="lazy"
+                  className="w-full max-h-96 object-cover cursor-zoom-in"
+                  onClick={() => setShowImageLightbox(true)}
+                />
+              : <video src={post.mediaUrl} controls className="w-full max-h-96" />}
+          </div>
+        )}
+
+        {/* Image Lightbox */}
+        {showImageLightbox && post.mediaUrl && createPortal(
+          <div
+            onClick={() => setShowImageLightbox(false)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 999999,
+              background: 'rgba(0,0,0,0.92)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backdropFilter: 'blur(8px)',
+              cursor: 'zoom-out',
+            }}>
+            <img
+              src={post.mediaUrl}
+              alt="post"
+              onClick={e => e.stopPropagation()}
+              style={{
+                maxWidth: '95vw', maxHeight: '95vh',
+                borderRadius: '12px',
+                boxShadow: '0 0 60px rgba(0,0,0,0.8)',
+                objectFit: 'contain',
+              }}
+            />
+            <button
+              onClick={() => setShowImageLightbox(false)}
+              style={{
+                position: 'fixed', top: 16, right: 16,
+                width: 40, height: 40, borderRadius: '50%',
+                background: 'rgba(255,255,255,0.15)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', color: 'white',
+              }}>
+              <X size={20} />
+            </button>
+          </div>,
+          document.body
+        )}
+
+        {/* Poll Display */}
+        {post.poll && post.poll.question && (
+          <PollDisplay post={post} user={user} onVote={async (optionIndex) => {
+            try {
+              const res = await feedAPI.votePoll(post._id, optionIndex);
+              
+              // Check if response is valid
+              if (!res || !res.data) {
+                alert('Failed to vote: Invalid server response');
+                return;
+              }
+              
+              // Backend returns: { success: true, data: { poll: {...} } }
+              if (res.data.success && res.data.data && res.data.data.poll) {
+                // Update the specific post with new poll data
+                const updatedPost = { ...post, poll: res.data.data.poll };
+                onUpdate(updatedPost);
+              } else {
+                alert('Vote may have been recorded but display update failed');
+              }
+            } catch (err) {
+              console.error('Vote error:', err);
+              alert('Failed to vote: ' + (err.response?.data?.error?.message || err.message || 'Unknown error'));
+            }
+          }} />
+        )}
+
+        {/* Stats */}
+        {((post.likes?.length > 0) || (post.comments?.length > 0)) && (
+          <div className="flex items-center justify-between text-xs pb-2 mb-2 text-theme-tertiary" style={{ borderBottom: "1px solid var(--border-primary)" }}>
+            {post.likes?.length > 0 && (
+              <span className="flex items-center gap-1">
+                <span className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
+                  <Heart size={9} fill="white" className="text-white" />
+                </span>
+                {post.likes.length}
+              </span>
+            )}
+            {post.comments?.length > 0 && (
+              <button onClick={() => setShowComments(v => !v)} className="hover:underline ml-auto text-theme-secondary">
+                {post.comments.length} comment{post.comments.length !== 1 ? 's' : ''}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          <button onClick={() => onLike(post._id)}
+            className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition"
+            style={{ 
+              background: isLiked ? '#fee2e2' : 'var(--bg-primary)', 
+              color: isLiked ? '#ef4444' : 'var(--text-tertiary)',
+              border: `1px solid ${isLiked ? '#fecaca' : 'var(--border-primary)'}`
+            }}>
+            <Heart size={15} fill={isLiked ? 'currentColor' : 'none'} /> Like
+          </button>
+          <button onClick={() => setShowComments(v => !v)}
+            className="flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition text-theme-tertiary"
+            style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}>
+            <MessageCircle size={15} /> Comment
+          </button>
+        </div>
+
+        {/* Comments */}
+        <AnimatePresence>
+          {showComments && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-3 space-y-3 px-1">
+              {(post.comments || []).map(c => (
+                <CommentItem 
+                  key={c._id} 
+                  comment={c} 
+                  postId={post._id} 
+                  user={user} 
+                  onUpdate={onUpdate} 
+                />
+              ))}
+              <div className="flex gap-2 items-center">
+                <Avatar src={user?.profileImage} name={user?.name} size={8} />
+                <div className="flex-1 flex items-center gap-2 rounded-full px-3 py-2 relative" style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }}>
+                  <input value={commentText} onChange={e => setCommentText(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && submitComment()}
+                    placeholder="Add a comment..."
+                    className="flex-1 bg-transparent text-xs focus:outline-none text-theme-primary placeholder-gray-500" />
+                  
+                  {/* Emoji Picker Button */}
+                  <button 
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                    type="button"
+                  >
+                    <Smile size={16} />
+                  </button>
+
+                  <button onClick={submitComment} disabled={submitting || !commentText.trim()}
+                    style={{ color: '#6366f1' }} className="disabled:opacity-40 transition">
+                    {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                  </button>
+
+                  {/* Emoji Picker Dropdown - WhatsApp Style */}
+                  {showEmojiPicker && (
+                    <>
+                      {/* Backdrop */}
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setShowEmojiPicker(false)}
+                      />
+                      {/* Picker */}
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="fixed z-50 rounded-2xl shadow-2xl overflow-hidden"
+                        style={{ 
+                          background: 'var(--bg-primary)', 
+                          border: '1px solid var(--border-primary)',
+                          width: '352px',
+                          maxWidth: 'calc(100vw - 32px)',
+                          bottom: '80px',
+                          right: '16px',
+                          maxHeight: 'calc(100vh - 160px)'
+                        }}
+                      >
+                        {/* Category Tabs */}
+                        <div className="flex border-b px-2 py-2 sticky top-0 z-10" style={{ borderColor: 'var(--border-primary)', background: 'var(--bg-primary)' }}>
+                          {Object.entries(categoryIcons).map(([cat, icon]) => (
+                            <button
+                              key={cat}
+                              onClick={() => setEmojiCategory(cat)}
+                              className={`flex-1 py-2 text-xl rounded-lg transition-colors ${
+                                emojiCategory === cat 
+                                  ? 'bg-indigo-100 dark:bg-indigo-900/30' 
+                                  : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                              }`}
+                            >
+                              {icon}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {/* Emoji Grid */}
+                        <div 
+                          className="p-3 overflow-y-auto overflow-x-hidden"
+                          style={{ 
+                            maxHeight: 'calc(100vh - 240px)',
+                            minHeight: '200px'
+                          }}
+                        >
+                          <div className="grid grid-cols-8 gap-1">
+                            {emojiCategories[emojiCategory].map((emoji, i) => (
+                              <button
+                                key={i}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  addEmoji(emoji);
+                                }}
+                                className="text-2xl hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg p-2 transition-all hover:scale-110 transform flex items-center justify-center"
+                                style={{ width: '40px', height: '40px' }}
+                              >
+                                {emoji}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+
+    {/* LinkedIn-style profile modal on author click */}
+    <AnimatePresence>
+      {viewProfileId && (
+        <UserProfileModal
+          key={viewProfileId}
+          userId={viewProfileId}
+          currentUserId={user?._id}
+          onClose={() => setViewProfileId(null)}
+        />
+      )}
+    </AnimatePresence>
+  </>
+  )
+}
+
+// ─── FEED TAB ─────────────────────────────────────────────────────────────────
+function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange, useLatestSort, initialPosts = [], isDeepLink = false }) {
+  const [posts, setPosts] = useState(initialPosts)
+  const [loading, setLoading] = useState(!isDeepLink)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [activeSearch, setActiveSearch] = useState('')
+  const [filterCat, setFilterCat] = useState('All')
+  const [catOpen, setCatOpen] = useState(false)
+  const [followingSet, setFollowingSet] = useState(null) // Set of userId strings I follow
+  const catRef = useRef()
+  const observerTarget = useRef(null)
+  
+  // Notify parent when posts change
+  useEffect(() => {
+    if (onPostsChange) {
+      onPostsChange(posts)
+    }
+  }, [posts, onPostsChange])
+  
+  // Sync with external initial posts (e.g., from deep links)
+  useEffect(() => {
+    if (isDeepLink && initialPosts && initialPosts.length > 0) {
+      console.log('📌 [FEED TAB] Deep link mode - setting posts to:', initialPosts.length)
+      setPosts(initialPosts)
+      setLoading(false)
+    }
+  }, [initialPosts, isDeepLink])
+
+  // Fetch who I follow once — used to correctly init follow buttons on posts
+  useEffect(() => {
+    // Defer following list fetch to not block initial render
+    const timer = setTimeout(() => {
+      followAPI.getFollowing(user._id)
+        .then(res => {
+          const following = res.data?.data?.following || []
+          // Filter out null/undefined users (deleted accounts)
+          const ids = new Set(following.filter(f => f && f._id).map(f => String(f._id)))
+          setFollowingSet(ids)
+        })
+        .catch(err => {
+          console.error('❌ FeedTab: Failed to load following:', err)
+          setFollowingSet(new Set())
+        })
+    }, 100) // Defer by 100ms to prioritize posts loading
+    
+    return () => clearTimeout(timer)
+  }, [user._id])
+
+  // Register follow change callback for profile modal
+  useEffect(() => {
+    if (setFollowChangeCallback) {
+      setFollowChangeCallback(() => handleFollowChange)
+    }
+  }, [setFollowChangeCallback])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => { if (catRef.current && !catRef.current.contains(e.target)) setCatOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const fetchPosts = useCallback(async (cat, q, pageNum = 1, append = false, userId = null, sortOrder = null) => {
+    if (append) setLoadingMore(true)
+    else setLoading(true)
+    
+    try {
+      let res
+      if (userId) {
+        // Fetch posts by specific user
+        console.log('📥 Fetching posts for user:', userId)
+        res = await feedAPI.getPostsByUser(userId, pageNum)
+      } else {
+        // Fetch all posts with category/search
+        // Use provided sort or default to 'random'
+        const sort = sortOrder || (useLatestSort ? 'latest' : 'random')
+        console.log('📥 Fetching feed with sort:', sort)
+        res = await feedAPI.getPosts(cat, pageNum, q, '', sort)
+      }
+      
+      const newPosts = res.data.data?.posts || []
+      
+      if (append) {
+        setPosts(prev => [...prev, ...newPosts])
+      } else {
+        setPosts(newPosts)
+      }
+      
+      // If we got less than 20 posts, no more pages
+      setHasMore(newPosts.length === 20)
+    } catch { 
+      setHasMore(false)
+    } finally { 
+      if (append) setLoadingMore(false)
+      else setLoading(false)
+    }
+  }, [useLatestSort])
+
+  // Infinite scroll observer
+  useEffect(() => {
+    // Skip infinite scroll in deep link mode
+    if (isDeepLink) {
+      console.log('⏭️ [FEED TAB] Deep link mode - disabling infinite scroll')
+      return
+    }
+    
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+          const nextPage = page + 1
+          setPage(nextPage)
+          fetchPosts(filterCat, activeSearch, nextPage, true)
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    const currentTarget = observerTarget.current
+    if (currentTarget) observer.observe(currentTarget)
+
+    return () => {
+      if (currentTarget) observer.unobserve(currentTarget)
+    }
+  }, [hasMore, loading, loadingMore, page, filterCat, activeSearch, fetchPosts, isDeepLink])
+
+  useEffect(() => { 
+    // Only fetch all posts if no user filter is active AND not a deep link
+    if (!filterUserId && !isDeepLink) {
+      console.log('📥 [FEED TAB] Initial fetch triggered')
+      const timer = setTimeout(() => {
+        setPage(1)
+        setHasMore(true)
+        fetchPosts('All', '', 1, false)
+      }, 200)
+      return () => clearTimeout(timer)
+    } else if (isDeepLink) {
+      console.log('⏭️ [FEED TAB] Deep link mode - skipping normal fetch')
+    }
+  }, [fetchPosts, filterUserId, isDeepLink])
+
+  // Watch for filterUserId changes - load posts by specific user
+  useEffect(() => {
+    if (filterUserId) {
+      console.log('🔍 Filter changed to user:', filterUserId)
+      setPage(1)
+      setHasMore(true)
+      setFilterCat('All')
+      setActiveSearch('')
+      setSearch('')
+      fetchPosts('All', '', 1, false, filterUserId)
+    }
+  }, [filterUserId, fetchPosts])
+
+  const handleSearch = () => {
+    setActiveSearch(search)
+    setFilterCat('All')
+    setPage(1)
+    setHasMore(true)
+    fetchPosts('All', search, 1, false)
+  }
+
+  const handleCatFilter = (cat) => {
+    setFilterCat(cat)
+    setActiveSearch('')
+    setSearch('')
+    setPage(1)
+    setHasMore(true)
+    fetchPosts(cat, '', 1, false)
+    setCatOpen(false)
+  }
+
+  const clearFilter = () => {
+    setActiveSearch(''); setSearch(''); setFilterCat('All')
+    setPage(1)
+    setHasMore(true)
+    fetchPosts('All', '', 1, false)
+  }
+
+  const handlePost = async (data) => {
+    try {
+      const res = await feedAPI.createPost(data)
+      setPosts(prev => [res.data.data.post, ...prev])
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || 'Failed to create post'
+      throw new Error(msg) // propagate to composer's catch
+    }
+  }
+
+  const handleLike = async (id) => {
+    console.log('🔵 Like clicked for post:', id)
+    
+    // Optimistic update - instantly toggle like in UI
+    const originalPosts = posts
+    setPosts(prev => prev.map(p => {
+      if (p._id !== id) return p
+      const liked = (p.likes || []).map(String).includes(String(user._id))
+      console.log('🔵 Current like status:', liked, 'Toggling to:', !liked)
+      return { ...p, likes: liked ? (p.likes || []).filter(l => String(l) !== String(user._id)) : [...(p.likes || []), user._id] }
+    }))
+    
+    try {
+      // Wait for API response to confirm
+      console.log('🔵 Calling API: feedAPI.likePost')
+      const response = await feedAPI.likePost(id)
+      console.log('✅ Like API response:', response.data)
+      
+      const { liked, likeCount } = response.data.data
+      
+      // Update with server response - liked is the FINAL state from backend
+      setPosts(prev => prev.map(p => {
+        if (p._id !== id) return p
+        // If liked = true, add userId; if liked = false, remove userId
+        const newLikes = liked 
+          ? [...(p.likes || []).filter(l => String(l) !== String(user._id)), user._id]
+          : (p.likes || []).filter(l => String(l) !== String(user._id))
+        return { 
+          ...p, 
+          likes: newLikes
+        }
+      }))
+      console.log('✅ Like updated successfully. New state: liked =', liked)
+    } catch (err) {
+      console.error('❌ Like API failed:', err)
+      console.error('❌ Error response:', err.response?.data)
+      // Revert on failure
+      setPosts(originalPosts)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try { await feedAPI.deletePost(id); setPosts(prev => prev.filter(p => p._id !== id)) } catch { /* ignore */ }
+  }
+
+  const handleFollowChange = (userId, isFollowing) => {
+    // Update followingSet when user follows/unfollows from profile modal
+    console.log('🔄 FeedTab: handleFollowChange called', { userId, isFollowing })
+    setFollowingSet(prev => {
+      const newSet = new Set(prev)
+      if (isFollowing) newSet.add(String(userId))
+      else newSet.delete(String(userId))
+      console.log('✅ FeedTab: Updated followingSet:', Array.from(newSet))
+      return newSet
+    })
+  }
+
+  const handleComment = async (postId, text) => {
+    try {
+      const res = await feedAPI.addComment(postId, { content: text })
+      setPosts(prev => prev.map(p => p._id === postId ? res.data.data.post : p))
+    } catch { /* ignore */ }
+  }
+
+  const handleUpdate = (updatedPost) => {
+    if (!updatedPost || !updatedPost._id) {
+      console.error('handleUpdate called with invalid post:', updatedPost);
+      return;
+    }
+    setPosts(prev => prev.map(p => p && p._id === updatedPost._id ? updatedPost : p).filter(Boolean));
+  }
+
+  const activeCat = CATEGORIES.find(c => c.label === filterCat)
+
+  return (
+    <div className="space-y-4">
+      {/* Search + Category bar */}
+      <div className="rounded-lg p-3 mb-4" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+        <div className="flex gap-2">
+          {/* Category dropdown */}
+          <div className="relative" ref={catRef}>
+            <button onClick={() => setCatOpen(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-lg border transition-colors whitespace-nowrap"
+              style={{
+                background: filterCat !== 'All' ? '#e0e7ff' : 'var(--bg-primary)',
+                border: `1px solid ${filterCat !== 'All' ? '#e0e7ff' : 'var(--border-primary)'}`,
+                color: filterCat !== 'All' ? '#6366f1' : 'var(--text-tertiary)',
+              }}>
+              {activeCat && <activeCat.icon size={14} />}
+              <span className="hidden sm:inline">{filterCat}</span>
+              <ChevronDown size={13} className={`transition-transform ${catOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+              {catOpen && (
+                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                  className="absolute left-0 top-full mt-1 z-30 rounded-lg shadow-xl overflow-hidden min-w-[180px]"
+                  style={{ background: "var(--bg-card)", border: "1px solid var(--border-primary)" }}>
+                  {CATEGORIES.map(({ label, icon: Icon }) => (
+                    <button key={label} onClick={() => handleCatFilter(label)}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium transition hover:bg-blue-50 text-left whitespace-nowrap"
+                      style={{ background: filterCat === label ? '#e0e7ff' : 'transparent', color: filterCat === label ? '#6366f1' : 'var(--text-secondary)' }}>
+                      <Icon size={16} className="flex-shrink-0" /> 
+                      <span className="flex-1">{label}</span>
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Search input */}
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary" />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              placeholder="Search posts..."
+              className="w-full pl-9 pr-3 py-2.5 text-sm text-theme-primary placeholder-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }} />
+          </div>
+          <button onClick={handleSearch}
+            className="px-4 py-2.5 text-white text-sm font-semibold rounded-lg transition"
+            style={{ background: '#6366f1' }}>
+            Search
+          </button>
+        </div>
+
+        {/* Active filter chip */}
+        {(activeSearch || filterCat !== 'All') && (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-xs text-theme-tertiary">Showing:</span>
+            <span className="text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1"
+              style={{ background: '#e0e7ff', color: '#6366f1' }}>
+              {activeSearch ? `"${activeSearch}"` : filterCat}
+              <button onClick={clearFilter} className="ml-0.5 hover:opacity-70"><X size={11} /></button>
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Composer */}
+      <PostComposer user={user} onPost={handlePost} />
+
+      {/* Posts */}
+      {loading ? (
+        <div className="flex flex-col items-center py-16 gap-3">
+          <Loader2 size={30} style={{ color: '#6366f1' }} className="animate-spin" />
+          <p className="text-sm text-theme-secondary">Loading posts...</p>
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="rounded-lg p-10 text-center" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+          <div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4"
+            style={{ background: '#e0e7ff' }}>
+            <Sparkles size={28} style={{ color: '#6366f1' }} />
+          </div>
+          <p className="font-bold text-theme-primary mb-1">
+            {activeSearch ? `No posts found for "${activeSearch}"` : filterCat !== 'All' ? `No posts in ${filterCat} yet` : 'No posts yet'}
+          </p>
+          <p className="text-sm text-theme-secondary">
+            {activeSearch ? 'Try a different keyword or browse all posts' : 'Be the first to share something!'}
+          </p>
+          {(activeSearch || filterCat !== 'All') && (
+            <button onClick={clearFilter}
+              className="mt-4 px-4 py-2 text-white text-sm font-medium rounded-lg transition"
+              style={{ background: '#6366f1' }}>
+              Browse all posts
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map((post, i) => (
+            <motion.div key={post._id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: Math.min(i * 0.04, 0.3) }}>
+              <PostCard post={post} user={user} onLike={handleLike} onDelete={handleDelete} onComment={handleComment} onUpdate={handleUpdate} initialFollowing={followingSet ? followingSet.has(String(post.userId?._id)) : null} />
+            </motion.div>
+          ))}
+          
+          {/* Infinite scroll trigger */}
+          <div ref={observerTarget} className="py-4 flex justify-center">
+            {loadingMore && (
+              <div className="flex items-center gap-2 text-sm text-theme-secondary">
+                <Loader2 size={16} className="animate-spin" style={{ color: '#6366f1' }} />
+                <span>Loading more posts...</span>
+              </div>
+            )}
+            {!hasMore && posts.length > 0 && (
+              <div className="text-sm text-theme-tertiary">
+                🎉 You've reached the end!
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── CONNECTIONS TAB ──────────────────────────────────────────────────────────
+function ConnectionsTab({ user, setViewProfileId }) {
+  const navigate = useNavigate()
+  const [subTab, setSubTab] = useState('discover')
+  const [discoverUsers, setDiscoverUsers] = useState([])
+  const [search, setSearch] = useState('')
+  const [pending, setPending] = useState([])
+  const [myConns, setMyConns] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState({})
+  
+  // Infinite scroll state for Discover tab
+  const [discoverPage, setDiscoverPage] = useState(1)
+  const [hasMoreDiscover, setHasMoreDiscover] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  const fetchDiscover = useCallback(async (q = '', page = 1, append = false) => {
+    if (page === 1) {
+      setLoading(true)
+    } else {
+      setLoadingMore(true)
+    }
+    
+    try {
+      const [usersRes, followingRes] = await Promise.all([
+        connectionAPI.getUsers(q, page),
+        followAPI.getFollowing(user._id),
+      ])
+      const users = usersRes.data.data?.users || []
+      const total = usersRes.data.data?.total || 0
+      
+      // Filter out null following users (deleted accounts)
+      const followingIds = new Set((followingRes.data.data?.following || []).filter(f => f && f._id).map(f => String(f._id)))
+      const mappedUsers = users.map(u => ({ ...u, isFollowing: followingIds.has(String(u._id)) }))
+      
+      if (append) {
+        setDiscoverUsers(prev => [...prev, ...mappedUsers])
+      } else {
+        setDiscoverUsers(mappedUsers)
+      }
+      
+      // Check if there are more users to load
+      const currentCount = append ? discoverUsers.length + mappedUsers.length : mappedUsers.length
+      setHasMoreDiscover(currentCount < total)
+      
+    } catch (err) { 
+      console.error('❌ fetchDiscover error:', err)
+    } finally { 
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }, [user._id, discoverUsers.length])
+
+  // Real-time search with debounce
+  useEffect(() => {
+    if (subTab !== 'discover') return
+    
+    const timer = setTimeout(() => {
+      setDiscoverPage(1)
+      setHasMoreDiscover(true)
+      fetchDiscover(search, 1, false)
+    }, 300) // 300ms delay for debouncing
+
+    return () => clearTimeout(timer)
+  }, [search, subTab])
+
+  const fetchPending = useCallback(async () => {
+    setLoading(true)
+    try { const res = await connectionAPI.getPending(); setPending(res.data.data?.connections || []) }
+    catch { /* ignore */ } finally { setLoading(false) }
+  }, [])
+
+  const fetchMyConns = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [connsRes, followingRes] = await Promise.all([
+        connectionAPI.getMyConnections(),
+        followAPI.getFollowing(user._id),
+      ])
+      const conns = connsRes.data.data?.connections || []
+      // Filter out null following users (deleted accounts)
+      const followingIds = new Set((followingRes.data.data?.following || []).filter(f => f && f._id).map(f => String(f._id)))
+      const mappedConns = conns.map(c => ({ ...c, isFollowing: followingIds.has(String(c.user?._id)) }))
+      setMyConns(mappedConns)
+    } catch (err) { 
+      console.error('❌ fetchMyConns error:', err)
+    } finally { setLoading(false) }
+  }, [user._id])
+
+  useEffect(() => {
+    if (subTab === 'discover') {
+      setDiscoverPage(1)
+      setHasMoreDiscover(true)
+      fetchDiscover('', 1, false)
+    }
+    else if (subTab === 'pending') fetchPending()
+    else fetchMyConns()
+  }, [subTab])
+
+  useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
+    const handleConnectionRequest = () => { if (subTab === 'pending') fetchPending() }
+    socket.on('connectionRequest', handleConnectionRequest)
+    return () => socket.off('connectionRequest', handleConnectionRequest)
+  }, [subTab])
+
+  const act = async (key, fn) => {
+    setActionLoading(p => ({ ...p, [key]: true }))
+    try { await fn() } catch { /* ignore */ }
+    finally { setActionLoading(p => ({ ...p, [key]: false })) }
+  }
+
+  const sendReq = (uid) => {
+    // Optimistic update - instantly show Pending
+    setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, connectionStatus: 'pending', iRequested: true } : u))
+    setActionLoading(p => ({ ...p, [uid + '_conn']: true }))
+    connectionAPI.sendRequest(uid)
+      .then(res => {
+        // Store the connectionId returned from backend so we can cancel later
+        const connId = res.data?.data?.connection?._id || res.data?.data?._id
+        if (connId) {
+          setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, connectionId: connId } : u))
+        }
+      })
+      .catch(() => {
+        // Revert on failure
+        setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, connectionStatus: null, iRequested: false, connectionId: null } : u))
+      })
+      .finally(() => setActionLoading(p => ({ ...p, [uid + '_conn']: false })))
+  }
+
+  const toggleFollow = async (uid, isFollowing) => {
+    // Optimistic update - instantly toggle follow state
+    setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, isFollowing: !isFollowing } : u))
+    setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: !isFollowing } : c))
+    setActionLoading(p => ({ ...p, [uid + '_follow']: true }))
+    
+    try {
+      const apiCall = isFollowing ? followAPI.unfollow(uid) : followAPI.follow(uid)
+      await apiCall
+      
+      // Update followingSet in FeedTab too for consistency
+      if (!isFollowing) {
+        // Just followed
+        setFollowingSet && setFollowingSet(prev => {
+          const newSet = new Set(prev)
+          newSet.add(String(uid))
+          return newSet
+        })
+      } else {
+        // Just unfollowed
+        setFollowingSet && setFollowingSet(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(String(uid))
+          return newSet
+        })
+      }
+    } catch (err) {
+      console.error('❌ Follow toggle failed:', err)
+      // Revert on failure
+      setDiscoverUsers(p => p.map(u => String(u._id) === uid ? { ...u, isFollowing: isFollowing } : u))
+      setMyConns(p => p.map(c => String(c.user?._id) === uid ? { ...c, isFollowing: isFollowing } : c))
+    } finally {
+      setActionLoading(p => ({ ...p, [uid + '_follow']: false }))
+    }
+  }
+  const accept = (id, requesterId) => act(id, async () => {
+    await connectionAPI.accept(id)
+    setPending(p => p.filter(c => c._id !== id))
+    setDiscoverUsers(p => p.map(u => String(u._id) === String(requesterId)
+      ? { ...u, connectionStatus: 'accepted', isFollowing: true } : u))
+  })
+  const reject = (id) => act(id, async () => { await connectionAPI.reject(id); setPending(p => p.filter(c => c._id !== id)) })
+  const remove = (id) => act(id, async () => { await connectionAPI.remove(id); setMyConns(p => p.filter(c => c.connectionId !== id)) })
+
+  // ── Message: create/get DM room and navigate to chat ──────────────────────
+  const handleMessage = async (uid) => {
+    try {
+      const res = await roomAPI.createDirect(uid)
+      const roomId = res.data.data?.room?._id
+      if (roomId) navigate(`/chat/${roomId}`)
+    } catch (err) {
+      console.error('Failed to open chat:', err)
+    }
+  }
+
+  // ── Reusable User Card ──────────────────────────────────────────────────────
+  const UserCard = ({ u, connId, isConn, showRemove, setViewProfileId }) => {
+    const uid = String(u._id || u.user?._id || '')
+    const name = u.name || u.user?.name
+    const role = u.role || u.user?.role
+    const skills = u.skills || u.user?.skills || []
+    const profileImage = u.profileImage || u.user?.profileImage
+    const isFollowing = !!u.isFollowing
+    const connStatus = u.connectionStatus
+    const iReq = u.iRequested
+    const pendingConnId = u.connectionId  // ID of pending connection to cancel
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+        className="rounded-lg overflow-hidden"
+        style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="cursor-pointer flex-shrink-0" onClick={() => setViewProfileId(uid)}>
+              <Avatar src={profileImage} name={name} size={12} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm text-theme-primary truncate cursor-pointer hover:text-indigo-600 transition" 
+                 onClick={() => setViewProfileId(uid)}>{name}</p>
+              <RoleBadge role={role} />
+            </div>
+          </div>
+          {skills.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3">
+              {skills.slice(0, 3).map(s => (
+                <span key={s} className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: '#e0e7ff', color: '#6366f1' }}>{s}</span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-2">
+            {/* Connect / status */}
+            {!isConn && !showRemove && (
+              !connStatus ? (
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => sendReq(uid)} disabled={!!actionLoading[uid + '_conn']}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white py-2 rounded-lg disabled:opacity-50"
+                  style={{ background: '#6366f1' }}>
+                  {actionLoading[uid + '_conn'] ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />} Connect
+                </motion.button>
+              ) : connStatus === 'pending' && iReq ? (
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={async () => {
+                    setActionLoading(p => ({ ...p, [uid + '_conn']: true }))
+                    try {
+                      let connIdToUse = pendingConnId
+                      // If we don't have connectionId locally, fetch from backend
+                      if (!connIdToUse) {
+                        const res = await connectionAPI.getUsers('', 1)
+                        const found = (res.data?.data?.users || []).find(u2 => String(u2._id) === uid)
+                        connIdToUse = found?.connectionId
+                      }
+                      if (connIdToUse) {
+                        await connectionAPI.remove(connIdToUse)
+                      }
+                      // Optimistic update - revert to Connect
+                      setDiscoverUsers(p => p.map(u2 =>
+                        u2._id === uid
+                          ? { ...u2, connectionStatus: null, iRequested: false, connectionId: null }
+                          : u2
+                      ))
+                    } catch {
+                      // silently fail - state stays as pending
+                    } finally {
+                      setActionLoading(p => ({ ...p, [uid + '_conn']: false }))
+                    }
+                  }}
+                  disabled={!!actionLoading[uid + '_conn']}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: '#f59e0b' }}
+                >
+                  {actionLoading[uid + '_conn']
+                    ? <Loader2 size={12} className="animate-spin" />
+                    : <X size={12} />
+                  }
+                  Pending
+                </motion.button>
+              ) : connStatus === 'accepted' ? (
+                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                  onClick={() => handleMessage(uid)}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white py-2 rounded-lg"
+                  style={{ background: '#6366f1' }}>
+                  <MessageSquare size={12} /> Message
+                </motion.button>
+              ) : null
+            )}
+            {/* Message + Remove (connected tab) */}
+            {showRemove && (
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={() => handleMessage(uid)}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-white py-2 rounded-lg"
+                style={{ background: '#6366f1' }}>
+                <MessageSquare size={12} /> Message
+              </motion.button>
+            )}
+            {showRemove && (
+              <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                onClick={() => remove(connId)} disabled={!!actionLoading[connId]}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs py-2 rounded-lg disabled:opacity-50"
+                style={{ background: '#fee2e2', color: '#ef4444' }}>
+                {actionLoading[connId] ? <Loader2 size={12} className="animate-spin" /> : <UserX size={12} />} Remove
+              </motion.button>
+            )}
+            {/* Follow / Unfollow */}
+            <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              onClick={() => toggleFollow(uid, isFollowing)} disabled={!!actionLoading[uid + '_follow']}
+              className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
+              style={isFollowing
+                ? { background: '#e0e7ff', color: '#6366f1' }
+                : { background: 'var(--bg-primary)', color: 'var(--text-tertiary)', border: '1px solid var(--border-primary)' }}>
+              {actionLoading[uid + '_follow']
+                ? <Loader2 size={12} className="animate-spin" />
+                : isFollowing ? <BellOff size={12} /> : <Bell size={12} />}
+              {isFollowing ? 'Following' : 'Follow'}
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 p-1 rounded-lg"
+        style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+        {[
+          { key: 'discover', label: 'Discover', icon: Search },
+          { key: 'pending', label: `Pending${pending.length ? ` (${pending.length})` : ''}`, icon: UserPlus },
+          { key: 'connections', label: 'Connected', icon: Users },
+        ].map(({ key, label, icon: Icon }) => (
+          <button key={key} onClick={() => setSubTab(key)}
+            className="flex-1 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-semibold py-2.5 rounded-lg transition-all"
+            style={{
+              background: subTab === key ? '#e0e7ff' : 'transparent',
+              color: subTab === key ? '#6366f1' : 'var(--text-tertiary)',
+            }}>
+            <Icon size={14} /><span>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {subTab === 'discover' && (
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary" />
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); fetchDiscover(search); } }}
+                placeholder="Search by name, skill, or role..."
+                className="w-full pl-9 pr-3 py-2.5 text-sm text-theme-primary placeholder-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                style={{ background: 'var(--bg-primary)', border: "1px solid var(--border-primary)" }} />
+              {search && (
+                <button onClick={() => { setSearch(''); fetchDiscover(''); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-theme-tertiary hover:text-theme-primary">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <button onClick={() => fetchDiscover(search)}
+              className="px-4 py-2.5 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition"
+              style={{ background: '#6366f1' }}>
+              Search
+            </button>
+          </div>
+          {loading
+            ? <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={26} style={{ color: '#6366f1' }} /></div>
+            : discoverUsers.length === 0
+              ? <div className="text-center py-12 text-sm text-theme-tertiary">No users found</div>
+              : <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {discoverUsers.map(u => <UserCard key={u._id} u={u} setViewProfileId={setViewProfileId} />)}
+                  </div>
+                  
+                  {/* Load More Button */}
+                  {hasMoreDiscover && (
+                    <div className="flex justify-center pt-4">
+                      <button
+                        onClick={() => {
+                          const nextPage = discoverPage + 1
+                          setDiscoverPage(nextPage)
+                          fetchDiscover(search, nextPage, true)
+                        }}
+                        disabled={loadingMore}
+                        className="px-6 py-2.5 text-white text-sm font-semibold rounded-lg hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2"
+                        style={{ background: '#6366f1' }}>
+                        {loadingMore ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            Loading...
+                          </>
+                        ) : (
+                          'Load More Users'
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </>
+          }
+        </div>
+      )}
+
+      {subTab === 'pending' && (
+        <div className="space-y-3">
+          {loading
+            ? <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={26} style={{ color: '#6366f1' }} /></div>
+            : pending.length === 0
+              ? <div className="flex flex-col items-center py-16 gap-3 text-theme-tertiary">
+                  <UserPlus size={36} className="opacity-30" /><p className="text-sm">No pending requests</p>
+                </div>
+              : pending.map(c => (
+                  <motion.div key={c._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    className="rounded-lg overflow-hidden"
+                    style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+                    <div className="p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="cursor-pointer flex-shrink-0" onClick={() => setViewProfileId(String(c.requester?._id))}>
+                          <Avatar src={c.requester?.profileImage} name={c.requester?.name} size={12} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm text-theme-primary truncate cursor-pointer hover:text-indigo-600 transition" 
+                             onClick={() => setViewProfileId(String(c.requester?._id))}>{c.requester?.name}</p>
+                          <RoleBadge role={c.requester?.role} />
+                        </div>
+                      </div>
+                      {c.requester?.skills?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {c.requester.skills.slice(0, 3).map(s => (
+                            <span key={s} className="text-xs px-2 py-0.5 rounded-full"
+                              style={{ background: '#e0e7ff', color: '#6366f1' }}>{s}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={() => accept(c._id, c.requester?._id)} disabled={!!actionLoading[c._id]}
+                          className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold text-white py-2 rounded-lg disabled:opacity-50"
+                          style={{ background: '#10b981' }}>
+                          {actionLoading[c._id] ? <Loader2 size={11} className="animate-spin" /> : <UserCheck size={11} />} Accept & Follow
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={() => handleMessage(String(c.requester?._id))}
+                          disabled={!c.requester?._id}
+                          className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold text-white py-2 rounded-lg disabled:opacity-50"
+                          style={{ background: '#6366f1' }}>
+                          <MessageSquare size={11} /> Message
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                          onClick={() => reject(c._id)} disabled={!!actionLoading[c._id]}
+                          className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold py-2 rounded-lg disabled:opacity-50"
+                          style={{ background: '#fee2e2', color: '#ef4444' }}>
+                          <UserX size={11} /> Decline
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+          }
+        </div>
+      )}
+
+      {subTab === 'connections' && (
+        <div className="space-y-3">
+          {loading
+            ? <div className="flex justify-center py-12"><Loader2 className="animate-spin" size={26} style={{ color: '#6366f1' }} /></div>
+            : myConns.length === 0
+              ? <div className="flex flex-col items-center py-16 gap-3 text-theme-tertiary">
+                  <Users size={36} className="opacity-30" />
+                  <p className="text-sm font-medium">No connections yet</p>
+                  <p className="text-xs">Start discovering people!</p>
+                </div>
+              : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {myConns.map(c => (
+                    <UserCard key={c.connectionId} u={{ ...c.user, isFollowing: c.isFollowing }}
+                      connId={c.connectionId} isConn showRemove setViewProfileId={setViewProfileId} />
+                  ))}
+                </div>
+          }
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── LEFT SIDEBAR ─────────────────────────────────────────────────────────────
+function ProfileSidebar({ user }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const hasEducation = user?.education?.institution
+  const hasExperience = user?.experience?.company
+  const hasSocialLinks = user?.socialLinks && Object.values(user.socialLinks).some(v => v)
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+        {/* Banner */}
+        <div className="h-20 relative overflow-hidden"
+          style={{
+            background: user?.bannerImage
+              ? `url(${user.bannerImage}) center/cover no-repeat`
+              : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+          }}>
+        </div>
+
+        <div className="px-4 pb-4">
+          {/* Avatar */}
+          <div className="-mt-8 mb-2 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xl flex-shrink-0 relative"
+            style={{ background: '#6366f1', border: '3px solid var(--bg-secondary)' }}>
+            {user?.profileImage
+              ? <img src={user.profileImage} alt={user?.name} loading="lazy" className="w-full h-full object-cover" />
+              : user?.name?.[0]?.toUpperCase() || '?'}
+          </div>
+
+          {/* Name + Headline */}
+          <p className="font-bold text-theme-primary text-sm leading-tight">{user?.name}</p>
+          {user?.headline && (
+            <p className="text-xs mt-0.5 leading-snug text-theme-secondary">{user.headline}</p>
+          )}
+          <div className="mt-1.5"><RoleBadge role={user?.role} /></div>
+
+          {/* Location */}
+          {user?.address && (
+            <p className="flex items-center gap-1 text-xs mt-1.5 text-theme-tertiary">
+              📍 <span className="truncate">{user.address.split(',').slice(0, 2).join(',')}</span>
+            </p>
+          )}
+
+          {/* Bio preview */}
+          {user?.bio && (
+            <p className="text-xs mt-2 leading-relaxed line-clamp-2 text-theme-secondary">{user.bio}</p>
+          )}
+
+          {/* Skills preview */}
+          {user?.skills?.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2.5">
+              {user.skills.slice(0, 3).map(s => (
+                <span key={s} className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ background: '#e0e7ff', color: '#6366f1' }}>{s}</span>
+              ))}
+              {user.skills.length > 3 && (
+                <span className="text-xs px-2 py-0.5 rounded-full text-theme-tertiary"
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)' }}>
+                  +{user.skills.length - 3}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* My Recent Posts Button */}
+          <Link to="/profile">
+            <button
+              className="mt-3 w-full py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' }}>
+              <MessageSquare size={14} />
+              My Recent Posts
+            </button>
+          </Link>
+
+          {/* View Full Profile toggle button */}
+          <button onClick={() => setExpanded(v => !v)}
+            className="mt-2 w-full py-2 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5"
+            style={{ background: expanded ? '#e0e7ff' : 'var(--bg-primary)', border: '1px solid var(--border-primary)', color: expanded ? '#6366f1' : 'var(--text-tertiary)' }}>
+            {expanded ? '▲ Show Less' : '▼ View Full Profile'}
+          </button>
+        </div>
+
+        {/* ── Inline expanded section ─────────────────────────── */}
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              style={{ overflow: 'hidden' }}>
+              <div className="px-4 pb-4 space-y-4" style={{ borderTop: '1px solid rgba(99,102,241,0.12)' }}>
+
+                {/* Full bio */}
+                {user?.bio && (
+                  <div className="pt-3">
+                    <p className="text-xs font-bold mb-1.5" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>About</p>
+                    <p className="text-xs leading-relaxed" style={{ color: 'rgba(226,232,240,0.8)' }}>{user.bio}</p>
+                  </div>
+                )}
+
+                {/* Education */}
+                {hasEducation && (
+                  <div>
+                    <p className="text-xs font-bold mb-2" style={{ color: 'rgba(52,211,153,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🎓 Education</p>
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
+                        style={{ background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)' }}>🎓</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-xs text-theme-primary">{user.education.institution}</p>
+                        {user.education.degree && <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{user.education.degree}{user.education.field ? ` · ${user.education.field}` : ''}</p>}
+                        {(user.education.startYear || user.education.endYear) && (
+                          <p className="text-xs mt-0.5" style={{ color: "var(--text-tertiary)" }}>
+                            {user.education.startYear}{user.education.startYear && user.education.endYear ? ' – ' : ''}{user.education.endYear}
+                          </p>
+                        )}
+                        {user.education.description && (
+                          <p className="text-xs mt-1.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{user.education.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Experience */}
+                {hasExperience && (
+                  <div>
+                    <p className="text-xs font-bold mb-2" style={{ color: 'rgba(196,181,253,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>🏢 Experience</p>
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base"
+                        style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)' }}>🏢</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-xs text-theme-primary">{user.experience.role || user.experience.company}</p>
+                        {user.experience.role && <p className="text-xs mt-0.5" style={{ color: "var(--text-secondary)" }}>{user.experience.company}</p>}
+                        {(user.experience.startYear || user.experience.endYear) && (
+                          <p className="text-xs mt-0.5" style={{ color: "var(--text-tertiary)" }}>
+                            {user.experience.startYear}{user.experience.startYear && user.experience.endYear ? ' – ' : ''}{user.experience.endYear || 'Present'}
+                          </p>
+                        )}
+                        {user.experience.description && (
+                          <p className="text-xs mt-1.5 leading-relaxed" style={{ color: "var(--text-secondary)" }}>{user.experience.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* All Skills */}
+                {user?.skills?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold mb-2" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Skills</p>
+                    <div className="flex flex-wrap gap-1">
+                      {user.skills.map(s => (
+                        <span key={s} className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}>{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Social Links */}
+                {hasSocialLinks && (
+                  <div>
+                    <p className="text-xs font-bold mb-2" style={{ color: 'rgba(99,102,241,0.7)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Links</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {user.socialLinks?.github && (
+                        <a href={user.socialLinks.github} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition hover:scale-105"
+                          style={{ background: 'rgba(226,232,240,0.08)', border: '1px solid rgba(226,232,240,0.15)', color: "var(--text-primary)", textDecoration: 'none' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                          GitHub
+                        </a>
+                      )}
+                      {user.socialLinks?.linkedin && (
+                        <a href={user.socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition hover:scale-105"
+                          style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)', color: '#60a5fa', textDecoration: 'none' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                          LinkedIn
+                        </a>
+                      )}
+                      {user.socialLinks?.instagram && (
+                        <a href={user.socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition hover:scale-105"
+                          style={{ background: 'rgba(244,114,182,0.08)', border: '1px solid rgba(244,114,182,0.2)', color: '#f472b6', textDecoration: 'none' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                          Instagram
+                        </a>
+                      )}
+                      {user.socialLinks?.website && (
+                        <a href={user.socialLinks.website} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition hover:scale-105"
+                          style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', color: '#34d399', textDecoration: 'none' }}>
+                          🌐 Portfolio
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Topics */}
+      <div className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+        <p className="text-xs font-bold mb-3 text-theme-tertiary">Topics</p>
+        <div className="space-y-0.5">
+          {CATEGORIES.filter(c => c.label !== 'All').map(({ label, icon: Icon }) => (
+            <div key={label} className="flex items-center gap-2.5 py-2 px-2 rounded-lg transition-colors cursor-default hover:bg-gray-100">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#e0e7ff' }}>
+                <Icon size={14} style={{ color: '#6366f1' }} />
+              </div>
+              <span className="text-sm font-medium text-theme-secondary whitespace-nowrap">{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── RIGHT SIDEBAR ────────────────────────────────────────────────────────────
+function TrendingSidebar() {
+  const tips = [
+    { icon: '🤖', title: 'Robotics Basics', desc: 'Start with servo motors and Arduino' },
+    { icon: '📡', title: 'IoT with ESP32', desc: 'Connect sensors to the cloud easily' },
+    { icon: '🧠', title: 'ML on Edge', desc: 'Run TensorFlow Lite on microcontrollers' },
+    { icon: '⚡', title: 'RTOS Fundamentals', desc: 'FreeRTOS task scheduling explained' },
+    { icon: '🔌', title: 'Embedded C Tips', desc: 'Memory-efficient coding patterns' },
+  ]
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: "1px solid var(--border-primary)" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#e0e7ff' }}>
+            <TrendingUp size={14} style={{ color: '#6366f1' }} />
+          </div>
+          <p className="text-sm font-bold text-theme-primary">Trending Topics</p>
+        </div>
+        <div className="space-y-2">
+          {tips.map((t, i) => (
+            <div key={i} className="flex items-start gap-3 p-3 rounded-lg transition-colors cursor-pointer bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <span className="text-lg leading-none mt-0.5">{t.icon}</span>
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{t.title}</p>
+                <p className="text-xs mt-0.5 text-gray-600 dark:text-gray-300">{t.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-lg p-4" style={{ background: '#e0e7ff', border: '1px solid #c7d2fe' }}>
+        <p className="font-bold text-sm mb-1" style={{ color: '#6366f1' }}>🚀 Share your project!</p>
+        <p className="text-xs leading-relaxed" style={{ color: '#4f46e5' }}>Post your robotics or IoT project and get feedback from the community.</p>
+      </div>
+    </div>
+  )
+}
+
+// ─── POLL DISPLAY COMPONENT ───────────────────────────────────────────────────
+function PollDisplay({ post, user, onVote }) {
+  const poll = post.poll;
+  if (!poll || !poll.question) return null;
+
+  const hasExpired = new Date() > new Date(poll.expiresAt);
+  const userId = String(user?._id);
+  
+  // Check if user voted and which option
+  let userVotedIndex = -1;
+  poll.options.forEach((opt, idx) => {
+    if (opt.votes && opt.votes.map(String).includes(userId)) {
+      userVotedIndex = idx;
+    }
+  });
+
+  const hasVoted = userVotedIndex !== -1;
+
+  // Calculate percentages
+  const totalVotes = poll.totalVotes || 0;
+
+  return (
+    <div className="mb-3 p-4 rounded-lg" style={{ background: 'rgba(139,92,246,0.05)', border: '2px solid rgba(139,92,246,0.2)' }}>
+      <div className="flex items-center gap-2 mb-3">
+        <BarChart3 size={18} style={{ color: '#8b5cf6' }} />
+        <p className="font-bold text-sm text-theme-primary">{poll.question}</p>
+      </div>
+
+      <div className="space-y-2 mb-3">
+        {poll.options.map((option, idx) => {
+          const voteCount = option.votes?.length || 0;
+          const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+          const isUserVote = idx === userVotedIndex;
+
+          return (
+            <button
+              key={idx}
+              onClick={() => !hasExpired && onVote(idx)}
+              disabled={hasExpired}
+              className="w-full text-left rounded-lg overflow-hidden transition-all"
+              style={{
+                border: isUserVote ? '2px solid #8b5cf6' : '1px solid var(--border-primary)',
+                background: 'var(--bg-primary)',
+                opacity: hasExpired ? 0.6 : 1,
+                cursor: hasExpired ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <div className="relative p-3">
+                {/* Progress bar */}
+                <div
+                  className="absolute inset-0 transition-all duration-500"
+                  style={{
+                    background: isUserVote ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.1)',
+                    width: `${percentage}%`
+                  }}
+                />
+                
+                {/* Option text and percentage */}
+                <div className="relative flex items-center justify-between">
+                  <span className="text-sm font-medium text-theme-primary flex items-center gap-2">
+                    {option.text}
+                    {isUserVote && <span className="text-xs" style={{ color: '#8b5cf6' }}>✓ Your vote</span>}
+                  </span>
+                  <span className="text-sm font-bold" style={{ color: '#8b5cf6' }}>
+                    {hasVoted || hasExpired ? `${percentage}%` : ''}
+                  </span>
+                </div>
+
+                {/* Vote count */}
+                {(hasVoted || hasExpired) && (
+                  <p className="relative text-xs text-theme-secondary mt-1">
+                    {voteCount} {voteCount === 1 ? 'vote' : 'votes'}
+                  </p>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-theme-secondary">
+        <span>{totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}</span>
+        <span>
+          {hasExpired ? (
+            <span className="text-red-500">Poll ended</span>
+          ) : (
+            `Ends ${new Date(poll.expiresAt).toLocaleDateString()}`
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
+export default function Communities() {
+  const { user } = useAuthStore()
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState(() => searchParams.get('tab') || 'feed')
+  const [viewProfileId, setViewProfileId] = useState(null)
+  const [onFollowChangeCallback, setOnFollowChangeCallback] = useState(null)
+  const [scrollToPostId, setScrollToPostId] = useState(null)
+  const [filterUserId, setFilterUserId] = useState(null) // Filter feed by specific user
+  const [feedPosts, setFeedPosts] = useState([]) // Track feed posts for debugging
+  const [useLatestSort, setUseLatestSort] = useState(false) // Use latest sort when coming from notification
+  const [isDeepLink, setIsDeepLink] = useState(false) // Track if we're loading from a deep link
+
+  // DEBUG: Log on every render
+  console.log('🔵 [COMMUNITIES] Component rendered', {
+    hasPostParam: !!searchParams.get('post'),
+    hasPostIdParam: !!searchParams.get('postId'),
+    postValue: searchParams.get('post'),
+    postIdValue: searchParams.get('postId'),
+    currentTab: tab
+  })
+
+  // Check for postId or post in URL params (from notifications or shared links)
+  useEffect(() => {
+    console.log('🟢 [DEEP LINK useEffect] Running...')
+    console.log('🟢 [DEEP LINK] Current URL:', window.location.href)
+    console.log('🟢 [DEEP LINK] Search params:', window.location.search)
+    console.log('🟢 [DEEP LINK] All searchParams:', Object.fromEntries(searchParams.entries()))
+    
+    const postIdFromUrl = searchParams.get('postId') || searchParams.get('post')
+    console.log('🟢 [DEEP LINK] Extracted postId:', postIdFromUrl)
+    
+    if (postIdFromUrl) {
+      console.log('🔍 [DEEP LINK] Post ID from URL:', postIdFromUrl)
+      
+      // Mark that we're loading from a deep link
+      setIsDeepLink(true)
+      
+      // IMPORTANT: Clear previous scroll target first
+      setScrollToPostId(null)
+      
+      // Fetch the specific post and add it to feed if not present
+      const fetchAndDisplayPost = async () => {
+        try {
+          console.log('📥 [DEEP LINK] Fetching post from API...')
+          const response = await feedAPI.getPostById(postIdFromUrl)
+          
+          if (response.data.success && response.data.data.post) {
+            const fetchedPost = response.data.data.post
+            console.log('✅ [DEEP LINK] Post fetched successfully:', fetchedPost._id)
+            
+            // Navigate to feed and set scroll target
+            setTab('feed')
+            setFilterUserId(null)
+            setUseLatestSort(false)
+            
+            // Set ONLY the fetched post - don't merge with other posts
+            setFeedPosts([fetchedPost])
+            
+            // Set scroll target after state updates - increased delay for deep link
+            setTimeout(() => {
+              setScrollToPostId(postIdFromUrl)
+              console.log('✅ [DEEP LINK] Navigation set - tab: feed, scrollTo:', postIdFromUrl)
+            }, 800)
+          }
+        } catch (err) {
+          console.error('❌ [DEEP LINK] Error fetching post:', err)
+          // Still try to navigate to feed
+          setIsDeepLink(false)
+          setTab('feed')
+        }
+      }
+      
+      fetchAndDisplayPost()
+    } else {
+      console.log('ℹ️ [DEEP LINK] No post parameter found')
+    }
+  }, [searchParams])
+
+  // Effect to scroll to post and highlight it
+  useEffect(() => {
+    if (scrollToPostId && tab === 'feed') {
+      console.log('🔎 Looking for post with ID:', scrollToPostId)
+      console.log('🔎 Current posts in feed:', feedPosts.map(p => p._id))
+      
+      let attempts = 0
+      const maxAttempts = 15 // Retry up to 15 times (increased for better reliability)
+      let scrolled = false // Flag to prevent multiple scrolls
+      
+      const scrollAndHighlight = () => {
+        if (scrolled) return // Already scrolled, skip
+        
+        const postElement = document.querySelector(`[data-post-id="${scrollToPostId}"]`)
+        console.log('🔍 Attempt', attempts + 1, '- Found element:', postElement ? 'YES' : 'NO')
+        
+        if (postElement) {
+          scrolled = true // Mark as scrolled
+          
+          // Wait a bit for any ongoing animations to complete
+          setTimeout(() => {
+            // Scroll to post with offset for better visibility
+            const yOffset = -100 // Offset from top
+            const y = postElement.getBoundingClientRect().top + window.pageYOffset + yOffset
+            window.scrollTo({ top: y, behavior: 'smooth' })
+            
+            // Add highlight animation
+            postElement.style.animation = 'highlight-pulse 2s ease-in-out'
+            postElement.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.3)'
+            
+            // Clear highlight after animation
+            setTimeout(() => {
+              postElement.style.boxShadow = ''
+              setScrollToPostId(null)
+            }, 2000)
+            
+            console.log('✅ Scrolled to post:', scrollToPostId)
+          }, 100)
+        } else {
+          attempts++
+          if (attempts < maxAttempts) {
+            // Retry after delay if post not found (might still be loading)
+            console.log(`⏳ Post not found, retrying... (${attempts}/${maxAttempts})`)
+            setTimeout(scrollAndHighlight, 400)
+          } else {
+            console.log('❌ Post not found after', maxAttempts, 'attempts:', scrollToPostId)
+            console.log('❌ Available posts:', feedPosts.map(p => ({ id: p._id, content: p.content?.substring(0, 30) })))
+            setScrollToPostId(null)
+          }
+        }
+      }
+      // Wait for tab switch animation and render to complete
+      setTimeout(scrollAndHighlight, 500)
+    }
+  }, [scrollToPostId, tab, feedPosts])
+
+  const handlePostClick = (postId, userId) => {
+    console.log('🎯 handlePostClick called with postId:', postId, 'userId:', userId)
+    setTab('feed')
+    setFilterUserId(userId) // Set filter to show only that user's posts
+    setScrollToPostId(postId)
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      <SEO
+        title="Student Community"
+        description="Join the Studdy Buddy student community — discuss Robotics, IoT, AI projects, share ideas and connect with fellow learners and mentors."
+        path="/communities"
+      />
+      <Navbar />
+      {/* User Profile Modal */}
+      {viewProfileId && (
+        <UserProfileModal
+          userId={viewProfileId}
+          currentUserId={user?._id}
+          onClose={() => setViewProfileId(null)}
+          onFollowChange={onFollowChangeCallback}
+          onPostClick={handlePostClick}
+        />
+      )}
+
+      <div className="mt-16 max-w-7xl mx-auto w-full flex-1">
+        <div className="px-3 sm:px-4 py-5 pb-20"  style={{ minHeight: 'calc(100vh - 4rem)' }}>
+
+          {/* Header */}
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-4 mb-5">
+            <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#e0e7ff' }}>
+              <Users size={22} style={{ color: '#6366f1' }} />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-theme-primary">Community</h1>
+              <p className="text-sm text-theme-secondary">Connect, share, and learn with fellow tech enthusiasts</p>
+            </div>
+          </motion.div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 mb-5 overflow-x-auto">
+            {[
+              { key: 'feed', label: 'Feed', icon: MessageCircle },
+              { key: 'connections', label: 'Network', icon: Users },
+            ].map(({ key, label, icon: Icon }) => (
+              <button key={key} onClick={() => setTab(key)}
+                className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg transition-all whitespace-nowrap flex-1"
+                style={{
+                  background: tab === key ? '#e0e7ff' : 'transparent',
+                  color: tab === key ? '#6366f1' : 'var(--text-tertiary)',
+                  border: `1px solid ${tab === key ? '#e0e7ff' : 'var(--border-primary)'}`,
+                }}>
+                <Icon size={15} /> {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <AnimatePresence mode="wait">
+            <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              {tab === 'feed' ? (
+                <div className="flex gap-4 items-start relative">
+                  {/* Left Sidebar - Fixed */}
+                  <div className="hidden lg:block w-[220px] flex-shrink-0">
+                    <div className="sticky top-[72px]">
+                      <ProfileSidebar user={user} />
+                    </div>
+                  </div>
+                  {/* Middle Feed - Scrolls */}
+                  <div className="flex-1 min-w-0">
+                    <FeedTab 
+                      user={user} 
+                      setFollowChangeCallback={setOnFollowChangeCallback}
+                      filterUserId={filterUserId}
+                      onPostsChange={setFeedPosts}
+                      useLatestSort={useLatestSort}
+                      initialPosts={feedPosts}
+                      isDeepLink={isDeepLink}
+                    />
+                  </div>
+                  {/* Right Sidebar - Fixed */}
+                  <div className="hidden lg:block w-[220px] flex-shrink-0">
+                    <div className="sticky top-[72px]">
+                      <TrendingSidebar />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="max-w-2xl mx-auto">
+                  <ConnectionsTab user={user} setViewProfileId={setViewProfileId} />
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  )
+}
