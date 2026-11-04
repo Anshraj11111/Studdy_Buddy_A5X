@@ -1034,6 +1034,43 @@ export const createLecture = async (req, res) => {
       });
     }
 
+    // 🔔 Send push notifications to all enrolled students
+    if (lectureData.courseId) {
+      try {
+        const CourseEnrollment = (await import('../models/CourseEnrollment.js')).default;
+        const Course = (await import('../models/Course.js')).default;
+        const { sendPushToUser } = await import('../services/webPush.service.js');
+
+        // Get course details
+        const course = await Course.findById(lectureData.courseId).lean();
+        
+        // Get all enrolled students
+        const enrollments = await CourseEnrollment.find({ 
+          courseId: lectureData.courseId,
+          status: 'active'
+        }).lean();
+
+        console.log(`📢 [New Lecture] Sending notifications to ${enrollments.length} enrolled students...`);
+
+        // Send push notification to each enrolled student
+        const pushPromises = enrollments.map(enrollment =>
+          sendPushToUser(String(enrollment.userId), {
+            title: '🎓 New Lecture Available!',
+            body: `${course?.title || 'Course'}: ${lectureData.title}`,
+            icon: '/icons/icon-192x192.png',
+            url: `/courses/${lectureData.courseId}`,
+            type: 'lecture',
+          })
+        );
+
+        await Promise.allSettled(pushPromises);
+        console.log(`📢 [New Lecture] Push notifications sent successfully`);
+      } catch (notifErr) {
+        // Don't fail lecture creation if notification fails
+        console.error('Failed to send lecture notifications:', notifErr);
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: { lecture },
