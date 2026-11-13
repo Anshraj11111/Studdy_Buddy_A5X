@@ -123,68 +123,44 @@ router.get('/', authenticate, async (req, res) => {
       query.userId = userId;
     }
 
-    // Random sort: Use MongoDB's $sample aggregation for true randomness
-    // Or use simple random ID offset for better performance
+    // Pseudo-random sort: Fast and scalable for production
+    // Instead of true random ($sample is slow), use random skip with createdAt sort
     let posts;
     
     if (sort === 'random') {
-      // Use aggregation pipeline for random posts (every refresh gets different posts)
-      posts = await FeedPost.aggregate([
-        { $match: query },
-        { $sample: { size: parseInt(limit) } }, // Random sampling
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'userId',
-            foreignField: '_id',
-            as: 'userId',
-            pipeline: [{ $project: { name: 1, profileImage: 1, role: 1, skills: 1 } }]
-          }
-        },
-        { $unwind: { path: '$userId', preserveNullAndEmptyArrays: true } },
-        // Populate comments.userId for each comment
-        {
-          $lookup: {
-            from: 'users',
-            localField: 'comments.userId',
-            foreignField: '_id',
-            as: 'commentUsers'
-          }
-        },
-        {
-          $addFields: {
-            comments: {
-              $map: {
-                input: '$comments',
-                as: 'comment',
-                in: {
-                  $mergeObjects: [
-                    '$$comment',
-                    {
-                      userId: {
-                        $arrayElemAt: [
-                          {
-                            $filter: {
-                              input: '$commentUsers',
-                              cond: { $eq: ['$$this._id', '$$comment.userId'] }
-                            }
-                          },
-                          0
-                        ]
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        },
-        {
-          $project: {
-            commentUsers: 0 // Remove temporary field
-          }
-        }
-      ]);
+      // Fast pseudo-random: Get total count (cached), then skip random offset
+      const total = await FeedPost.countDocuments(query);
+      
+      if (total <= parseInt(limit)) {
+        // If total posts <= limit, just return all (no need for random)
+        posts = await FeedPost.find(query)
+          .populate('userId', 'name profileImage role skills')
+          .populate({
+            path: 'comments.userId',
+            select: 'name profileImage',
+            options: { limit: 5 }
+          })
+          .sort({ createdAt: -1 })
+          .limit(parseInt(limit))
+          .lean()
+          .exec();
+      } else {
+        // Random skip: Fast and gives different posts each time
+        const randomSkip = Math.floor(Math.random() * (total - parseInt(limit)));
+        
+        posts = await FeedPost.find(query)
+          .populate('userId', 'name profileImage role skills')
+          .populate({
+            path: 'comments.userId',
+            select: 'name profileImage',
+            options: { limit: 5 }
+          })
+          .sort({ createdAt: -1 }) // Use indexed field for fast skip
+          .skip(randomSkip)
+          .limit(parseInt(limit))
+          .lean()
+          .exec();
+      }
     } else {
       // Default: Latest first (chronological)
       posts = await FeedPost.find(query)

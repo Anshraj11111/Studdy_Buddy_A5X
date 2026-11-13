@@ -36,6 +36,7 @@ export default function Mentors() {
   const [searchQuery, setSearchQuery] = useState('')
   const [onlineUsers, setOnlineUsers] = useState(new Set())
   const [selectedImage, setSelectedImage] = useState(null) // For image modal
+  const [imageErrors, setImageErrors] = useState(new Set()) // Track failed image loads
 
   useEffect(() => {
     const socket = getSocket()
@@ -196,12 +197,19 @@ export default function Mentors() {
                   <div className="flex flex-col items-center mb-4">
                     <div className="relative mb-3">
                       <div 
-                        onClick={() => mentor.profileImage && setSelectedImage({ url: mentor.profileImage, name: mentor.name })}
-                        className={`w-20 h-20 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-2xl ${mentor.profileImage ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                        onClick={() => mentor.profileImage && !imageErrors.has(mentor._id) && setSelectedImage({ url: mentor.profileImage, name: mentor.name })}
+                        className={`w-20 h-20 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-2xl ${mentor.profileImage && !imageErrors.has(mentor._id) ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
                         style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}>
-                        {mentor.profileImage
-                          ? <img src={mentor.profileImage} alt={mentor.name} className="w-full h-full object-cover" />
-                          : mentor.name?.charAt(0).toUpperCase() || 'M'}
+                        {mentor.profileImage && !imageErrors.has(mentor._id)
+                          ? <img 
+                              src={mentor.profileImage} 
+                              alt={mentor.name} 
+                              className="w-full h-full object-cover"
+                              onError={() => {
+                                setImageErrors(prev => new Set([...prev, mentor._id]));
+                              }}
+                            />
+                          : <span className="text-2xl font-bold">{mentor.name?.charAt(0).toUpperCase() || 'M'}</span>}
                       </div>
                       {/* Online indicator */}
                       <motion.div 
