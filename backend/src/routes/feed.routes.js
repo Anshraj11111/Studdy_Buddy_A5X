@@ -194,6 +194,13 @@ router.get('/', authenticate, async (req, res) => {
       },
     };
 
+    // Debug log for userId-specific requests
+    if (userId) {
+      console.log(`[Feed] userId=${userId} → found ${posts.length} posts (total=${total})`);
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.set('Pragma', 'no-cache');
+    }
+
     res.json(response);
   } catch (err) {
     console.error('Feed fetch error:', err);
