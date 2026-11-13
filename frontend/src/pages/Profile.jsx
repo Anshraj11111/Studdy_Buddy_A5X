@@ -80,8 +80,10 @@ export default function Profile() {
   }, [user?._id])
 
   useEffect(() => {
-    fetchRecentPosts()
-  }, [fetchRecentPosts])
+    if (user?._id) {
+      fetchRecentPosts()
+    }
+  }, [user?._id, fetchRecentPosts])
 
   // Load more posts
   const loadMorePosts = async () => {
