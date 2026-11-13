@@ -57,33 +57,41 @@ export default function Profile() {
   }, [])
 
   // Fetch recent posts
-  const fetchRecentPosts = useCallback(async () => {
-    if (!user?._id) return
-    setPostsLoading(true)
-    try {
-      const token = localStorage.getItem('token')
-      const res = await axios.get(`/api/feed?userId=${user._id}&page=1&limit=20&sort=latest`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (res.data?.success) {
-        const posts = res.data.data.posts || []
-        const total = res.data.data.pagination?.total || 0
-        setRecentPosts(posts)
-        setPostsHasMore(posts.length < total)
-        setPostsPage(1)
-      }
-    } catch (err) {
-      console.error('Failed to fetch posts:', err)
-    } finally {
-      setPostsLoading(false)
-    }
-  }, [user?._id])
-
   useEffect(() => {
-    if (user?._id) {
-      fetchRecentPosts()
+    const fetchPosts = async () => {
+      if (!user?._id) {
+        console.log('⏳ Profile: Waiting for user._id...')
+        return
+      }
+      console.log('🚀 Profile: Fetching posts for user:', user._id)
+      setPostsLoading(true)
+      try {
+        const token = localStorage.getItem('token')
+        const url = `/api/feed?userId=${user._id}&page=1&limit=20&sort=latest`
+        console.log('📡 Profile: API call:', url)
+        const res = await axios.get(url, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        console.log('✅ Profile: Posts response:', res.data)
+        if (res.data?.success) {
+          const posts = res.data.data.posts || []
+          const total = res.data.data.pagination?.total || 0
+          setRecentPosts(posts)
+          setPostsHasMore(posts.length < total)
+          setPostsPage(1)
+          console.log(`📝 Profile: Loaded ${posts.length} posts`)
+        }
+      } catch (err) {
+        console.error('❌ Profile: Failed to fetch posts:', err)
+      } finally {
+        setPostsLoading(false)
+      }
     }
-  }, [user?._id, fetchRecentPosts])
+    
+    if (activityTab === 'posts') {
+      fetchPosts()
+    }
+  }, [user?._id, activityTab])
 
   // Load more posts
   const loadMorePosts = async () => {
@@ -156,9 +164,8 @@ export default function Profile() {
   // Handle tab change
   const handleTabChange = (tab) => {
     setActivityTab(tab)
-    if (tab === 'posts' && recentPosts.length === 0) {
-      fetchRecentPosts()
-    } else if (tab === 'likes' && likedPosts.length === 0) {
+    // Posts tab is handled by useEffect that watches activityTab
+    if (tab === 'likes' && likedPosts.length === 0) {
       fetchLikedPosts()
     } else if (tab === 'comments' && commentedPosts.length === 0) {
       fetchCommentedPosts()
