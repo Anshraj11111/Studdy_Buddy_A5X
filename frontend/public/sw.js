@@ -1,6 +1,6 @@
 // Service Worker for Studdy Buddy PWA
-const CACHE_NAME = 'studdy-buddy-v1.0.5'
-const RUNTIME_CACHE = 'studdy-buddy-runtime'
+const CACHE_NAME = 'studdy-buddy-v1.0.6'
+const RUNTIME_CACHE = 'studdy-buddy-runtime-v2'
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
@@ -27,11 +27,12 @@ self.addEventListener('install', (event) => {
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating service worker...')
+  const VALID_CACHES = [CACHE_NAME, RUNTIME_CACHE]
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME && name !== RUNTIME_CACHE)
+          .filter((name) => !VALID_CACHES.includes(name))
           .map((name) => {
             console.log('[SW] Deleting old cache:', name)
             return caches.delete(name)
