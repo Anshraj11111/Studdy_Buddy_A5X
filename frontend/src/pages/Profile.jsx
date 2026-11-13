@@ -154,7 +154,9 @@ export default function Profile() {
   // Handle tab change
   const handleTabChange = (tab) => {
     setActivityTab(tab)
-    if (tab === 'likes' && likedPosts.length === 0) {
+    if (tab === 'posts' && recentPosts.length === 0) {
+      fetchRecentPosts()
+    } else if (tab === 'likes' && likedPosts.length === 0) {
       fetchLikedPosts()
     } else if (tab === 'comments' && commentedPosts.length === 0) {
       fetchCommentedPosts()
