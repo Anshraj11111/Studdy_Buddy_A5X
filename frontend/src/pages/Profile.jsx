@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
@@ -57,30 +57,31 @@ export default function Profile() {
   }, [])
 
   // Fetch recent posts
-  useEffect(() => {
-    const fetchRecentPosts = async () => {
-      if (!user?._id) return
-      setPostsLoading(true)
-      try {
-        const token = localStorage.getItem('token')
-        const res = await axios.get(`/api/feed?userId=${user._id}&page=1&limit=20`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (res.data?.success) {
-          const posts = res.data.data.posts || []
-          const total = res.data.data.pagination?.total || 0
-          setRecentPosts(posts)
-          setPostsHasMore(posts.length < total)
-          setPostsPage(1)
-        }
-      } catch (err) {
-        console.error('Failed to fetch posts:', err)
-      } finally {
-        setPostsLoading(false)
+  const fetchRecentPosts = useCallback(async () => {
+    if (!user?._id) return
+    setPostsLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const res = await axios.get(`/api/feed?userId=${user._id}&page=1&limit=20&sort=latest`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.data?.success) {
+        const posts = res.data.data.posts || []
+        const total = res.data.data.pagination?.total || 0
+        setRecentPosts(posts)
+        setPostsHasMore(posts.length < total)
+        setPostsPage(1)
       }
+    } catch (err) {
+      console.error('Failed to fetch posts:', err)
+    } finally {
+      setPostsLoading(false)
     }
-    fetchRecentPosts()
   }, [user?._id])
+
+  useEffect(() => {
+    fetchRecentPosts()
+  }, [fetchRecentPosts])
 
   // Load more posts
   const loadMorePosts = async () => {

@@ -366,6 +366,14 @@ class AuthService {
       // Don't allow updating email or password through this method
       const { email, password, ...allowedUpdates } = updateData;
 
+      // Handle image deletion: empty string means remove the image
+      if (allowedUpdates.profileImage === '') {
+        allowedUpdates.profileImage = null;
+      }
+      if (allowedUpdates.bannerImage === '') {
+        allowedUpdates.bannerImage = null;
+      }
+
       const user = await User.findByIdAndUpdate(
         userId,
         allowedUpdates,
