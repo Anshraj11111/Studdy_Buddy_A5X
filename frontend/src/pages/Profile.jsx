@@ -69,10 +69,15 @@ export default function Profile() {
       setPostsLoading(true)
       try {
         const token = localStorage.getItem('token')
-        const url = `/api/feed?userId=${userId}&page=1&limit=20&sort=latest`
+        // Add timestamp to bust browser/CDN cache (prevents 304 responses)
+        const url = `/api/feed?userId=${userId}&page=1&limit=20&sort=latest&_t=${Date.now()}`
         console.log('📡 Profile: API call:', url)
         const res = await axios.get(url, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
         })
         console.log('✅ Profile: Posts response:', res.data?.data?.posts?.length, 'posts')
         if (res.data?.success) {
