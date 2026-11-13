@@ -59,27 +59,28 @@ export default function Profile() {
   // Fetch recent posts
   useEffect(() => {
     const fetchPosts = async () => {
-      if (!user?._id) {
-        console.log('⏳ Profile: Waiting for user._id...')
+      // Get userId from user state OR fall back to localStorage
+      const userId = user?._id || JSON.parse(localStorage.getItem('user') || '{}')._id
+      if (!userId) {
+        console.log('⏳ Profile: No userId available yet, skipping fetch')
         return
       }
-      console.log('🚀 Profile: Fetching posts for user:', user._id)
+      console.log('🚀 Profile: Fetching posts for userId:', userId)
       setPostsLoading(true)
       try {
         const token = localStorage.getItem('token')
-        const url = `/api/feed?userId=${user._id}&page=1&limit=20&sort=latest`
+        const url = `/api/feed?userId=${userId}&page=1&limit=20&sort=latest`
         console.log('📡 Profile: API call:', url)
         const res = await axios.get(url, {
           headers: { Authorization: `Bearer ${token}` }
         })
-        console.log('✅ Profile: Posts response:', res.data)
+        console.log('✅ Profile: Posts response:', res.data?.data?.posts?.length, 'posts')
         if (res.data?.success) {
           const posts = res.data.data.posts || []
           const total = res.data.data.pagination?.total || 0
           setRecentPosts(posts)
           setPostsHasMore(posts.length < total)
           setPostsPage(1)
-          console.log(`📝 Profile: Loaded ${posts.length} posts`)
         }
       } catch (err) {
         console.error('❌ Profile: Failed to fetch posts:', err)
