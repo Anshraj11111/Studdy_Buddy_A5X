@@ -970,12 +970,34 @@ function PostComposer({ user, onPost }) {
     
     setPosting(true)
     try {
+      // Extract all @mentions from content text
+      const mentionMatches = content.match(/@(\w+(?:\s+\w+)*)/g) || [];
+      const mentionNames = mentionMatches.map(m => m.slice(1).trim()); // Remove @ and trim
+      
+      // Search for users by name to get their IDs
+      const mentionIds = [];
+      for (const name of mentionNames) {
+        try {
+          const res = await feedAPI.searchUsers(name);
+          const users = res.data.data.users || [];
+          // Find exact match (case-insensitive)
+          const exactMatch = users.find(u => 
+            u.name.toLowerCase() === name.toLowerCase()
+          );
+          if (exactMatch && !mentionIds.includes(exactMatch._id)) {
+            mentionIds.push(exactMatch._id);
+          }
+        } catch (err) {
+          console.error(`Failed to lookup mention: @${name}`, err);
+        }
+      }
+      
       const postData = { 
         content, 
         category, 
         mediaUrl: media?.dataUrl || null, 
         mediaType: media?.type || null,
-        mentions: mentions.map(m => m._id)
+        mentions: mentionIds // Use extracted IDs
       };
       
       // Add poll data if poll is being created
