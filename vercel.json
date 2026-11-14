@@ -3,6 +3,13 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "cd frontend && npm install",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
+    { 
+      "source": "/api/:path*",
+      "destination": "https://studdy-buddy-backend-a5x.onrender.com/api/:path*"
+    },
+    { 
+      "source": "/((?!api).*)",
+      "destination": "/" 
+    }
   ]
 }
