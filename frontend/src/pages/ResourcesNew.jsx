@@ -2619,7 +2619,7 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
   // Check if a lecture is accessible (first lecture is always free, rest need previous completed)
   const isLectureAccessible = (lectureIndex) => {
     // ✅ FREE COURSE - All lectures accessible without restrictions
-    if (data?.isFree) {
+    if (course?.isFree) {
       console.log(`✅ FREE COURSE - Lecture ${lectureIndex} always accessible`);
       return true;
     }
