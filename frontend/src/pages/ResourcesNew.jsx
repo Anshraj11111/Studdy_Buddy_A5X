@@ -1875,6 +1875,11 @@ function CourseCard({ course, onOpen }) {
         
         {/* Overlay badges */}
         <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+          {course.isFree && (
+            <span className="rounded-full bg-green-500 px-2.5 py-1 text-xs font-extrabold uppercase text-white shadow-lg">
+              FREE
+            </span>
+          )}
           {course.isNew && (
             <span className="rounded-full bg-yellow-400 px-2.5 py-1 text-xs font-extrabold uppercase text-yellow-900 shadow">
               New

@@ -328,14 +328,28 @@ export const getSecureVideoUrl = async (req, res) => {
       });
     }
     
-    // Check if user has premium access (with payment verification)
-    const hasPremiumAccess = await hasValidPremiumAccess(req.user);
-    
-    if (!hasPremiumAccess) {
-      return res.status(403).json({
+    // Check if course is free - if yes, allow access to everyone
+    const course = await Course.findById(module.courseId).lean();
+    if (!course) {
+      return res.status(404).json({
         success: false,
-        error: { message: 'Please enroll in the course to access this content' },
+        error: { message: 'Course not found' },
       });
+    }
+    
+    // ✅ FREE COURSE - Allow access to all authenticated users
+    if (course.isFree) {
+      console.log(`✅ FREE COURSE ACCESS - User ${req.user._id} accessing course: ${course._id}`);
+    } else {
+      // Check if user has premium access (with payment verification)
+      const hasPremiumAccess = await hasValidPremiumAccess(req.user);
+      
+      if (!hasPremiumAccess) {
+        return res.status(403).json({
+          success: false,
+          error: { message: 'Please enroll in the course to access this content' },
+        });
+      }
     }
     
     // ✅ Increment view count for this lecture (only on successful access)
@@ -449,8 +463,12 @@ export const enrollInCourse = async (req, res) => {
       });
     }
     
-    // Check if premium and user has access (with payment verification)
-    if (course.isPremium) {
+    // ✅ FREE COURSE - Allow everyone to enroll automatically
+    if (course.isFree) {
+      console.log(`✅ FREE COURSE ENROLLMENT - User ${req.user._id} enrolling in: ${course._id}`);
+      // No additional checks needed for free courses
+    } else if (course.isPremium) {
+      // Check if premium and user has access (with payment verification)
       const hasPremiumAccess = await hasValidPremiumAccess(req.user);
       if (!hasPremiumAccess) {
         return res.status(403).json({
@@ -473,7 +491,9 @@ export const enrollInCourse = async (req, res) => {
     res.status(201).json({
       success: true,
       data: { enrollment },
-      message: 'Successfully enrolled in course',
+      message: course.isFree 
+        ? 'Successfully enrolled in free course' 
+        : 'Successfully enrolled in course',
     });
   } catch (error) {
     console.error('Enroll error:', error);
