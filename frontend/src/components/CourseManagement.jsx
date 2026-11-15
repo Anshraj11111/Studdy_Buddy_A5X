@@ -196,8 +196,13 @@ function CourseCard({ course, onEdit, onDelete, onManageModules }) {
               PREMIUM
             </span>
           )}
-          {course.isActive ? (
+          {course.isFree && (
             <span className="rounded-full bg-green-500 px-2 py-0.5 text-xs font-bold text-white">
+              FREE
+            </span>
+          )}
+          {course.isActive ? (
+            <span className="rounded-full bg-blue-500 px-2 py-0.5 text-xs font-bold text-white">
               ACTIVE
             </span>
           ) : (
@@ -274,6 +279,7 @@ function CourseFormModal({ course, onClose, onSuccess, showToast }) {
     difficulty: course?.difficulty || 'Beginner',
     language: course?.language || 'English',
     isPremium: course?.isPremium || false,
+    isFree: course?.isFree || false,
     price: course?.price || 0,
     thumbnail: course?.thumbnail || '',
     tags: course?.tags?.join(', ') || '',
@@ -500,11 +506,22 @@ function CourseFormModal({ course, onClose, onSuccess, showToast }) {
                   <input
                     type="checkbox"
                     checked={form.isPremium}
-                    onChange={e => setForm(f => ({ ...f, isPremium: e.target.checked }))}
+                    onChange={e => setForm(f => ({ ...f, isPremium: e.target.checked, isFree: e.target.checked ? false : f.isFree }))}
                     className="h-5 w-5 text-purple-600 rounded focus:ring-purple-500"
                   />
                   <span className="text-sm font-semibold" style={{ color: '#374151' }}>Premium Course</span>
                 </label>
+                
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={form.isFree}
+                    onChange={e => setForm(f => ({ ...f, isFree: e.target.checked, isPremium: e.target.checked ? false : f.isPremium }))}
+                    className="h-5 w-5 text-green-600 rounded focus:ring-green-500"
+                  />
+                  <span className="text-sm font-semibold" style={{ color: '#374151' }}>Free Course</span>
+                </label>
+                
                 {form.isPremium && (
                   <div className="flex-1 sm:max-w-xs">
                     <label className="block text-xs font-semibold mb-2" style={{ color: '#4b5563' }}>Price (₹)</label>
