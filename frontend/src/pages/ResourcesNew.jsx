@@ -2764,12 +2764,33 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
               {!loading && (
                 <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin]">
                   {lectures.length === 0 ? (
-                    <div className="flex min-h-[300px] flex-col items-center justify-center text-center">
-                      <BookOpen size={42} className="mb-3 text-slate-300" />
-                      <h3 className="font-bold text-slate-700">No lectures yet</h3>
-                      <p className="mt-1 max-w-sm text-sm text-slate-400">
-                        Lectures for this module will appear here
-                      </p>
+                    {/* Coming Soon Poster */}
+                    <div className="flex min-h-[400px] flex-col items-center justify-center text-center">
+                      <div className="relative">
+                        {/* Coming Soon Badge/Poster */}
+                        <div className="rounded-2xl bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 px-16 py-12 shadow-2xl">
+                          <div className="flex flex-col items-center gap-4">
+                            <div className="rounded-full bg-white/20 p-6 backdrop-blur-sm">
+                              <BookOpen size={56} className="text-white" strokeWidth={1.5} />
+                            </div>
+                            <h2 className="text-4xl font-black uppercase tracking-wider text-white">
+                              Coming Soon
+                            </h2>
+                            <div className="h-1 w-32 rounded-full bg-white/40" />
+                            <p className="max-w-sm text-lg font-medium text-white/90">
+                              Exciting lectures are being prepared for this module
+                            </p>
+                            <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-white/80">
+                              <Clock size={16} />
+                              <span>Stay tuned for updates!</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Decorative elements */}
+                        <div className="absolute -top-4 -left-4 h-24 w-24 rounded-full bg-yellow-400/20 blur-2xl" />
+                        <div className="absolute -bottom-4 -right-4 h-24 w-24 rounded-full bg-pink-400/20 blur-2xl" />
+                      </div>
                     </div>
                   ) : (
                     lectures.map((lecture, index) => (
