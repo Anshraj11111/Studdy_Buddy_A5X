@@ -2764,7 +2764,7 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
               {!loading && (
                 <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin]">
                   {lectures.length === 0 ? (
-                    {/* Coming Soon Poster */}
+                    // Coming Soon Poster
                     <div className="flex min-h-[400px] flex-col items-center justify-center text-center">
                       <div className="relative">
                         {/* Coming Soon Badge/Poster */}
