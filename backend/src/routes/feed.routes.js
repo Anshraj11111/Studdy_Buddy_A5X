@@ -318,6 +318,9 @@ router.post('/', authenticate, writeLimiter, async (req, res) => {
 
     res.status(201).json({ success: true, data: { post: populated } });
   } catch (err) {
+    console.error('❌ Failed to create post:', err);
+    console.error('Error details:', err.message);
+    console.error('Stack trace:', err.stack);
     res.status(500).json({ success: false, error: { message: 'Failed to create post' } });
   }
 });

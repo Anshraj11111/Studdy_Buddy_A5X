@@ -11,8 +11,9 @@ const feedPostSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      required: true,
+      required: false, // Not required if media or poll is present
       maxlength: 7000,
+      default: '',
     },
     mentions: [{
       type: mongoose.Schema.Types.ObjectId,
