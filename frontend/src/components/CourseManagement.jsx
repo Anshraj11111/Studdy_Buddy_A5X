@@ -630,6 +630,7 @@ function ModuleManagement({ course, onBack, showToast }) {
   const [showLectureModal, setShowLectureModal] = useState(false);
   const [editingModule, setEditingModule] = useState(null);
   const [selectedModule, setSelectedModule] = useState(null);
+  const [expandedModuleId, setExpandedModuleId] = useState(null); // Track which module to keep expanded
 
   useEffect(() => {
     fetchModules();
@@ -766,6 +767,7 @@ function ModuleManagement({ course, onBack, showToast }) {
               key={module._id}
               module={module}
               index={idx}
+              isExpanded={expandedModuleId === module._id}
               onEdit={() => {
                 setEditingModule(module);
                 setShowModuleModal(true);
@@ -831,10 +833,15 @@ function ModuleManagement({ course, onBack, showToast }) {
             setSelectedModule(null);
           }}
           onSuccess={() => {
+            const moduleId = selectedModule?._id;
             setShowLectureModal(false);
             setSelectedModule(null);
-            fetchModules();
-            showToast('Lecture added successfully', 'success');
+            // Keep the module expanded after adding lecture
+            setExpandedModuleId(moduleId);
+            // Refresh modules to show new lecture
+            fetchModules().then(() => {
+              showToast('Lecture added successfully', 'success');
+            });
           }}
           showToast={showToast}
         />
@@ -919,8 +926,15 @@ function ModuleManagement({ course, onBack, showToast }) {
 }
 
 // Module Card Component
-function ModuleCard({ module, index, onEdit, onDelete, onAddLecture, onDeleteLecture, onEditLecture }) {
-  const [expanded, setExpanded] = useState(false);
+function ModuleCard({ module, index, isExpanded: initialExpanded = false, onEdit, onDelete, onAddLecture, onDeleteLecture, onEditLecture }) {
+  const [expanded, setExpanded] = useState(initialExpanded);
+  
+  // Update expanded state when initialExpanded changes (after lecture add)
+  useEffect(() => {
+    if (initialExpanded) {
+      setExpanded(true);
+    }
+  }, [initialExpanded]);
 
   return (
     <motion.div
