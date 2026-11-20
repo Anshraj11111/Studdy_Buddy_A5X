@@ -1,5 +1,6 @@
 import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
 import { useNotificationStore } from './store/notificationStore'
@@ -16,6 +17,7 @@ import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 
 // All other pages — lazy loaded
+const Landing           = lazy(() => import('./pages/Landing'))
 const Dashboard         = lazy(() => import('./pages/Dashboard'))
 const MentorDashboard   = lazy(() => import('./pages/MentorDashboard'))
 const Doubts            = lazy(() => import('./pages/Doubts'))
@@ -183,14 +185,18 @@ function AppShell() {
           {/* Admin — standalone, no navbar */}
           <Route path="/admin" element={<AdminPanel />} />
 
-          {/* Default */}
+          {/* Default - Landing page for visitors, dashboard for logged-in users */}
           <Route
             path="/"
             element={
-              <Navigate
-                to={token ? (user?.role === 'mentor' ? '/mentor-dashboard' : '/communities') : '/login'}
-                replace
-              />
+              token ? (
+                <Navigate
+                  to={user?.role === 'mentor' ? '/mentor-dashboard' : '/communities'}
+                  replace
+                />
+              ) : (
+                <Landing />
+              )
             }
           />
         </Routes>
@@ -220,14 +226,16 @@ function StudentRoute({ children }) {
 
 export default function App() {
   return (
-    <Router
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true,
-      }}
-    >
-      <ScrollToTop />
-      <AppShell />
-    </Router>
+    <HelmetProvider>
+      <Router
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <ScrollToTop />
+        <AppShell />
+      </Router>
+    </HelmetProvider>
   )
 }
