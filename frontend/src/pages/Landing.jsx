@@ -73,9 +73,9 @@ const FEATURE_GROUPS = [
 ]
 
 const STEPS = [
-  { title: 'Sign up', body: 'Create your account through your school\u2019s A5X partnership.' },
-  { title: 'Pick a course', body: 'Start with Robotics or jump straight into IoT.' },
-  { title: 'Build and earn XP', body: 'Finish lessons, ask doubts and climb the rewards board.' },
+  { title: 'Create your account', body: 'Sign up as an individual student or join through your school partnership. Both ways work!' },
+  { title: 'Pick a course', body: 'Choose from Robotics, IoT, AI/ML or Embedded Systems. Start with basics or jump to advanced.' },
+  { title: 'Learn and build', body: 'Complete lessons, build projects, ask doubts and earn XP. Learn at your own pace with mentor support.' },
 ]
 
 const TRENDING = [
@@ -86,10 +86,11 @@ const TRENDING = [
 ]
 
 const FAQ = [
-  { q: 'What is Studdy Buddy?', a: 'Studdy Buddy is a learning platform by A5X Industries where school students learn Robotics, IoT, AI/ML and Embedded Systems with mentor support.' },
-  { q: 'Which courses can I take?', a: 'Introduction to Robotics, IoT with ESP32, AI/ML on Edge, RTOS Fundamentals and Embedded C Programming.' },
-  { q: 'How do I join?', a: 'Students join through their school\u2019s A5X partnership. Sign up, pick a course and start learning.' },
-  { q: 'Who is A5X Industries?', a: 'A5X Industries is an Indian EdTech and Robotics company that brings hands-on technology education to schools.' },
+  { q: 'Can I join without school partnership?', a: 'Yes! Students can create individual accounts and start learning immediately. School partnership is optional and provides additional benefits like batch tracking and institutional support.' },
+  { q: 'What is Studdy Buddy?', a: 'Studdy Buddy is a learning platform by A5X Industries where students learn Robotics, IoT, AI/ML and Embedded Systems with expert mentor support, doubt resolution, and community learning.' },
+  { q: 'Which courses are available?', a: 'We offer courses in Robotics Fundamentals, IoT with ESP32, AI/ML on Edge Devices, RTOS (Real-Time Operating Systems), and Embedded C Programming.' },
+  { q: 'How much does it cost?', a: 'We offer both free and premium courses. Many fundamental courses are completely free to access. Premium courses provide advanced content and certification.' },
+  { q: 'Who is A5X Industries?', a: 'A5X Industries is an Indian EdTech and Robotics company focused on bringing hands-on technology education to students through innovative learning platforms and school partnerships.' },
 ]
 
 /* ---------------------------- helpers ----------------------------- */
@@ -400,10 +401,10 @@ export default function Landing() {
                 By A5X Industries
               </p>
               <h1 className="sb-display sb-rise mt-5 text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl" style={{ '--d': '90ms' }}>
-                Build real robots and IoT devices, starting in school.
+                Build real robots and IoT devices with expert guidance.
               </h1>
               <p className="sb-rise mt-5 max-w-xl text-lg leading-relaxed text-slate-600 dark:text-slate-300" style={{ '--d': '180ms' }}>
-                Courses in Robotics, IoT, AI/ML and Embedded Systems, with mentors who answer your doubts and a community that builds alongside you.
+                Learn Robotics, IoT, AI/ML and Embedded Systems at your own pace. Join as an individual student or through your school partnership. Expert mentors, doubt solving, and a supportive community.
               </p>
               <div className="sb-rise mt-8 flex flex-wrap gap-3" style={{ '--d': '270ms' }}>
                 <Link to="/signup" className={`group inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 font-semibold text-white shadow-lg shadow-indigo-600/25 transition hover:-translate-y-0.5 hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-600/30 active:translate-y-0 ${focusRing}`}>
@@ -417,6 +418,8 @@ export default function Landing() {
               <p className="sb-rise mt-5 text-sm text-slate-600 dark:text-slate-400" style={{ '--d': '350ms' }}>
                 Already a student?{' '}
                 <Link to="/login" className={`rounded font-semibold text-indigo-700 underline-offset-4 hover:underline dark:text-indigo-300 ${focusRing}`}>Log in</Link>
+                {' • '}
+                <span className="text-slate-500">Open to all students • No school partnership required</span>
               </p>
             </div>
 
@@ -623,9 +626,12 @@ export default function Landing() {
             <Reveal>
               <div className="grid items-center gap-8 rounded-3xl bg-indigo-600 p-8 text-white sm:p-12 md:grid-cols-[1.4fr_1fr]">
                 <div>
-                  <h2 className="sb-display text-3xl font-bold">Are you a school?</h2>
+                  <h2 className="sb-display text-3xl font-bold">Schools & Institutions</h2>
                   <p className="mt-3 max-w-xl text-indigo-100">
-                    Partner with A5X Industries and bring hands-on Robotics and IoT education to your students, with mentors and a platform that tracks their progress.
+                    Partner with A5X Industries to bring hands-on Robotics and IoT education to your students with dedicated support, progress tracking, and curriculum integration.
+                  </p>
+                  <p className="mt-2 text-sm text-indigo-200">
+                    ✨ Students can also join individually without school partnership
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3 md:justify-end">
@@ -639,7 +645,7 @@ export default function Landing() {
                     Partner with us
                   </a>
                   <Link to="/signup" className="rounded-xl border border-white/70 px-6 py-3 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600">
-                    Student sign up
+                    Join as student
                   </Link>
                 </div>
               </div>
