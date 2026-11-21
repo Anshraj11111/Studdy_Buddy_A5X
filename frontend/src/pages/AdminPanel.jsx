@@ -1043,15 +1043,65 @@ function PostModerationDashboard({ showToast }) {
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [deleting, setDeleting] = useState(null)
+  const [dateFilter, setDateFilter] = useState('all') // all, today, yesterday, last7days, last30days, custom
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
+  const [postsPerDay, setPostsPerDay] = useState({}) // Day-wise count
 
-  const fetchPosts = async (p = 1, s = '') => {
+  const fetchPosts = async (p = 1, s = '', dateRange = 'all') => {
     setLoading(true)
     try {
-      const res = await adminAPI.getAllPosts({ page: p, limit: 20, search: s })
+      const params = { page: p, limit: 20, search: s }
+      
+      // Add date filters
+      if (dateRange === 'today') {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        params.startDate = today.toISOString()
+      } else if (dateRange === 'yesterday') {
+        const yesterday = new Date()
+        yesterday.setDate(yesterday.getDate() - 1)
+        yesterday.setHours(0, 0, 0, 0)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        params.startDate = yesterday.toISOString()
+        params.endDate = today.toISOString()
+      } else if (dateRange === 'last7days') {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        sevenDaysAgo.setHours(0, 0, 0, 0)
+        params.startDate = sevenDaysAgo.toISOString()
+      } else if (dateRange === 'last30days') {
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+        thirtyDaysAgo.setHours(0, 0, 0, 0)
+        params.startDate = thirtyDaysAgo.toISOString()
+      } else if (dateRange === 'custom' && customStartDate) {
+        params.startDate = new Date(customStartDate).toISOString()
+        if (customEndDate) {
+          const endDate = new Date(customEndDate)
+          endDate.setHours(23, 59, 59, 999)
+          params.endDate = endDate.toISOString()
+        }
+      }
+
+      const res = await adminAPI.getAllPosts(params)
       if (res.data?.success) {
         setPosts(res.data.data.posts)
         setTotal(res.data.data.total)
         setTotalPages(res.data.data.totalPages)
+        
+        // Calculate day-wise count
+        const dayWise = {}
+        res.data.data.posts.forEach(post => {
+          const date = new Date(post.createdAt).toLocaleDateString('en-IN', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          })
+          dayWise[date] = (dayWise[date] || 0) + 1
+        })
+        setPostsPerDay(dayWise)
       }
     } catch (err) {
       showToast('Failed to fetch posts', 'error')
@@ -1060,12 +1110,17 @@ function PostModerationDashboard({ showToast }) {
     }
   }
 
-  useEffect(() => { fetchPosts(page, search) }, [page])
+  useEffect(() => { fetchPosts(page, search, dateFilter) }, [page, dateFilter])
 
   const handleSearch = (e) => {
     e.preventDefault()
     setPage(1)
-    fetchPosts(1, search)
+    fetchPosts(1, search, dateFilter)
+  }
+
+  const handleDateFilterChange = (filter) => {
+    setDateFilter(filter)
+    setPage(1)
   }
 
   const handleDelete = async (id) => {
@@ -1116,6 +1171,96 @@ function PostModerationDashboard({ showToast }) {
             Search
           </button>
         </form>
+      </div>
+
+      {/* Date Filter Section */}
+      <div className="px-5 py-3" style={{ background: "rgba(99,102,241,0.05)", borderBottom: "1px solid rgba(99,102,241,0.15)" }}>
+        <div className="flex items-center gap-2 mb-2">
+          <Calendar size={14} style={{ color: '#6366f1' }} />
+          <span className="text-xs font-semibold" style={{ color: "var(--text-primary)" }}>Filter by Date</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => handleDateFilterChange('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${dateFilter === 'all' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            All Time
+          </button>
+          <button
+            onClick={() => handleDateFilterChange('today')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${dateFilter === 'today' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => handleDateFilterChange('yesterday')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${dateFilter === 'yesterday' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            Yesterday
+          </button>
+          <button
+            onClick={() => handleDateFilterChange('last7days')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${dateFilter === 'last7days' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            Last 7 Days
+          </button>
+          <button
+            onClick={() => handleDateFilterChange('last30days')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${dateFilter === 'last30days' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            Last 30 Days
+          </button>
+          <button
+            onClick={() => handleDateFilterChange('custom')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${dateFilter === 'custom' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+          >
+            Custom Range
+          </button>
+        </div>
+
+        {/* Custom Date Range Inputs */}
+        {dateFilter === 'custom' && (
+          <div className="flex items-center gap-2 mt-3">
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="px-2 py-1 rounded text-xs"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--text-primary)" }}
+            />
+            <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>to</span>
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="px-2 py-1 rounded text-xs"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(99,102,241,0.2)", color: "var(--text-primary)" }}
+            />
+            <button
+              onClick={() => fetchPosts(1, search, 'custom')}
+              className="px-3 py-1 rounded text-xs font-semibold"
+              style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "white" }}
+            >
+              Apply
+            </button>
+          </div>
+        )}
+
+        {/* Day-wise Count Display */}
+        {Object.keys(postsPerDay).length > 0 && (
+          <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(99,102,241,0.1)" }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: "var(--text-primary)" }}>Posts per day:</p>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(postsPerDay)
+                .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+                .map(([date, count]) => (
+                  <div key={date} className="px-2 py-1 rounded text-xs" style={{ background: "rgba(99,102,241,0.15)", color: "var(--text-primary)" }}>
+                    <span className="font-semibold">{date}:</span> {count} post{count !== 1 ? 's' : ''}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content */}
