@@ -1850,7 +1850,7 @@ function CourseCard({ course, onOpen }) {
   // hasFreeAccess is calculated by backend: !!(schoolName && schoolPassword) || isPremium
   // Don't check schoolName alone — it must have BOTH schoolName AND schoolPassword
   const hasSchoolAccess = user?.hasFreeAccess;
-  const isLocked = course.isPremium && !hasSchoolAccess && !user?.hasPremiumAccess && !isEnrolled;
+  const isLocked = course.isPremium && !hasSchoolAccess && !user?.hasPremiumAccess && !isEnrolled && user?.role !== 'mentor';
 
   return (
     <motion.article
@@ -2191,8 +2191,8 @@ function CourseDetail({ course, onBack }) {
   const hasSchoolAccess = user?.hasFreeAccess;
   const data = courseData || course;
   const isEnrolled = data?.enrollment !== null;
-  const hasAccess = isEnrolled || user?.hasPremiumAccess || user?.hasFreeAccess || !data?.isPremium;
-  const isPremiumLocked = data?.isPremium && !hasSchoolAccess && !isEnrolled;
+  const hasAccess = user?.role === 'mentor' || isEnrolled || user?.hasPremiumAccess || user?.hasFreeAccess || !data?.isPremium;
+  const isPremiumLocked = data?.isPremium && !hasSchoolAccess && !isEnrolled && user?.role !== 'mentor';
 
   useEffect(() => {
     fetchCourseDetail();
@@ -2351,7 +2351,7 @@ function CourseDetail({ course, onBack }) {
           ) : (
             <div className="space-y-3">
               {data.modules.map((module, index) => {
-                const canAccess = isEnrolled || hasSchoolAccess || !data.isPremium;
+                const canAccess = user?.role === 'mentor' || isEnrolled || hasSchoolAccess || !data.isPremium;
                 const isLocked = !canAccess;
                 return (
                   <ModuleCard
@@ -2572,6 +2572,7 @@ function LectureCard({ lecture, isCompleted, isLocked, watchedPercentage, onClic
 }
 
 const LectureView = React.memo(function LectureView({ module, course, onBack }) {
+  const { user } = useAuthStore(); // Add user from auth store
   const [lectures, setLectures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLecture, setSelectedLecture] = useState(null);
@@ -2618,6 +2619,12 @@ const LectureView = React.memo(function LectureView({ module, course, onBack }) 
 
   // Check if a lecture is accessible (first lecture is always free, rest need previous completed)
   const isLectureAccessible = (lectureIndex) => {
+    // ✅ MENTOR - All lectures always accessible for mentors
+    if (user?.role === 'mentor') {
+      console.log(`✅ MENTOR ACCESS - Lecture ${lectureIndex} always accessible for mentor ${user.name}`);
+      return true;
+    }
+
     // ✅ FREE COURSE - All lectures accessible without restrictions
     if (course?.isFree) {
       console.log(`✅ FREE COURSE - Lecture ${lectureIndex} always accessible`);
