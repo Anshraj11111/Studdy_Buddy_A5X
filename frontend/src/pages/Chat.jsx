@@ -8,6 +8,86 @@ import { joinRoom, sendTyping, leaveRoom, getSocket, setupOnlineTracking } from 
 import { showMessageNotification, playNotificationSound, requestNotificationPermission, startCallingTone, stopCallingTone } from '../utils/notifications'
 import { Send, Video, ArrowLeft, Loader2, Phone, PhoneOff, X, Trash2, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
 
+// WhatsApp-style text formatter
+const formatMessageText = (text) => {
+  if (!text) return null
+  
+  // Split by newlines first to preserve them
+  const lines = text.split('\n')
+  
+  return lines.map((line, lineIndex) => {
+    if (!line) return <br key={lineIndex} />
+    
+    const parts = []
+    let remaining = line
+    let key = 0
+    
+    // Regex patterns for formatting
+    const patterns = [
+      { regex: /\*([^*]+)\*/g, tag: 'bold' },      // *bold*
+      { regex: /_([^_]+)_/g, tag: 'italic' },      // _italic_
+      { regex: /~([^~]+)~/g, tag: 'strike' },      // ~strike~
+      { regex: /`([^`]+)`/g, tag: 'code' },        // `code`
+    ]
+    
+    while (remaining.length > 0) {
+      let earliestMatch = null
+      let earliestPattern = null
+      
+      // Find the earliest match among all patterns
+      for (const pattern of patterns) {
+        pattern.regex.lastIndex = 0 // Reset regex
+        const match = pattern.regex.exec(remaining)
+        if (match && (!earliestMatch || match.index < earliestMatch.index)) {
+          earliestMatch = match
+          earliestPattern = pattern
+        }
+      }
+      
+      if (!earliestMatch) {
+        // No more matches, add remaining text
+        parts.push(<span key={`${lineIndex}-${key++}`}>{remaining}</span>)
+        break
+      }
+      
+      // Add text before match
+      if (earliestMatch.index > 0) {
+        parts.push(<span key={`${lineIndex}-${key++}`}>{remaining.slice(0, earliestMatch.index)}</span>)
+      }
+      
+      // Add formatted match
+      const content = earliestMatch[1]
+      if (earliestPattern.tag === 'bold') {
+        parts.push(<strong key={`${lineIndex}-${key++}`}>{content}</strong>)
+      } else if (earliestPattern.tag === 'italic') {
+        parts.push(<em key={`${lineIndex}-${key++}`}>{content}</em>)
+      } else if (earliestPattern.tag === 'strike') {
+        parts.push(<s key={`${lineIndex}-${key++}`}>{content}</s>)
+      } else if (earliestPattern.tag === 'code') {
+        parts.push(
+          <code 
+            key={`${lineIndex}-${key++}`} 
+            style={{ 
+              background: 'rgba(255,255,255,0.1)', 
+              padding: '2px 4px', 
+              borderRadius: 3,
+              fontFamily: 'monospace',
+              fontSize: '0.9em'
+            }}
+          >
+            {content}
+          </code>
+        )
+      }
+      
+      // Update remaining text
+      remaining = remaining.slice(earliestMatch.index + earliestMatch[0].length)
+    }
+    
+    return <div key={lineIndex}>{parts}</div>
+  })
+}
+
 export default function Chat() {
   const { roomId } = useParams()
   const navigate = useNavigate()
@@ -476,7 +556,9 @@ export default function Chat() {
                       </div>
                     )}
                     {msg.content && (
-                      <p className={isOwn ? 'text-white' : 'text-theme-primary'} style={{ fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word', margin: 0 }}>{msg.content}</p>
+                      <div className={isOwn ? 'text-white' : 'text-theme-primary'} style={{ fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word', margin: 0, whiteSpace: 'pre-wrap' }}>
+                        {formatMessageText(msg.content)}
+                      </div>
                     )}
                     <p className={isOwn ? 'text-indigo-100' : 'text-theme-tertiary'} style={{ fontSize: 10, marginTop: 4, textAlign: isOwn ? 'right' : 'left' }}>
                       {time}{msg.temp ? ' ✓' : ''}
@@ -642,16 +724,32 @@ export default function Chat() {
             </motion.div>
           </label>
           
-          <input
-            type="text"
-            placeholder="Type a message..."
+          <textarea
+            placeholder="Type a message... (Use *bold*, _italic_, ~strike~, `code`)"
             value={content}
             onChange={handleTypingChange}
+            onKeyDown={(e) => {
+              // Send on Enter, new line on Shift+Enter
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSendMessage(e)
+              }
+            }}
             autoComplete="off"
-            className="flex-1 px-4 py-3 text-sm rounded-lg outline-none transition text-theme-primary"
+            rows={1}
+            className="flex-1 px-4 py-3 text-sm rounded-lg outline-none transition text-theme-primary resize-none"
             style={{
               background: 'var(--bg-primary)',
               border: '1px solid var(--border-primary)',
+              minHeight: '44px',
+              maxHeight: '120px',
+              overflow: 'auto',
+              fontFamily: 'inherit',
+            }}
+            onInput={(e) => {
+              // Auto-resize textarea
+              e.target.style.height = 'auto'
+              e.target.style.height = e.target.scrollHeight + 'px'
             }}
             onFocus={e => e.target.style.border = '1px solid #6366f1'}
             onBlur={e => e.target.style.border = '1px solid var(--border-primary)'}
