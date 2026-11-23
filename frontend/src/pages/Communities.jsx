@@ -1928,9 +1928,10 @@ function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange, u
         res = await feedAPI.getPostsByUser(userId, pageNum)
       } else {
         // Fetch all posts with category/search
-        // Use provided sort or default to 'random'
-        const sort = sortOrder || (useLatestSort ? 'latest' : 'random')
-        console.log('📥 Fetching feed with sort:', sort)
+        // Check if first visit flag exists in sessionStorage
+        const isFirstLoad = !sessionStorage.getItem('communityVisited')
+        const sort = sortOrder || (isFirstLoad ? 'latest' : 'random')
+        console.log('📥 Fetching feed with sort:', sort, 'isFirstLoad:', isFirstLoad, 'sessionStorage:', sessionStorage.getItem('communityVisited'))
         res = await feedAPI.getPosts(cat, pageNum, q, '', sort)
       }
       
@@ -1950,7 +1951,7 @@ function FeedTab({ user, setFollowChangeCallback, filterUserId, onPostsChange, u
       if (append) setLoadingMore(false)
       else setLoading(false)
     }
-  }, [useLatestSort])
+  }, []) // No dependencies needed as we check sessionStorage directly
 
   // Infinite scroll observer
   useEffect(() => {
@@ -3079,8 +3080,24 @@ export default function Communities() {
   const [scrollToPostId, setScrollToPostId] = useState(null)
   const [filterUserId, setFilterUserId] = useState(null) // Filter feed by specific user
   const [feedPosts, setFeedPosts] = useState([]) // Track feed posts for debugging
-  const [useLatestSort, setUseLatestSort] = useState(false) // Use latest sort when coming from notification
+  // Show latest posts on first visit, then random posts on subsequent refreshes
+  const isFirstVisit = !sessionStorage.getItem('communityVisited')
+  const [useLatestSort, setUseLatestSort] = useState(isFirstVisit)
   const [isDeepLink, setIsDeepLink] = useState(false) // Track if we're loading from a deep link
+
+  // Mark community as visited after first load
+  useEffect(() => {
+    if (isFirstVisit) {
+      console.log('✅ First visit to community - showing latest posts')
+      sessionStorage.setItem('communityVisited', 'true')
+      // After marking as visited, switch to random for future refreshes
+      setTimeout(() => {
+        setUseLatestSort(false)
+      }, 1000)
+    } else {
+      console.log('🔄 Returning to community - showing random posts')
+    }
+  }, [])
 
   // DEBUG: Log on every render
   console.log('🔵 [COMMUNITIES] Component rendered', {
